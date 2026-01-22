@@ -15,23 +15,50 @@ This project provides a Coder v2+ template for DDEV-based development environmen
 
 ## Essential Commands
 
-### Template Deployment
+### Template Management
 ```bash
-# Deploy template to Coder server
-coder templates push --directory coder-ddev --name coder-ddev --yes
+# Deploy or update template
+coder templates push --directory coder-ddev coder-ddev --yes
 
-# Create workspace from template
-coder create --template coder-ddev <workspace-name>
+# List all templates
+coder templates list
+
+# Delete template (must delete workspaces first)
+coder templates delete coder-ddev --yes
+```
+
+### Workspace Management
+```bash
+# Create workspace
+coder create --template coder-ddev <workspace-name> --yes
+
+# List workspaces
+coder list
+
+# SSH into workspace
+coder ssh <workspace-name>
+
+# Stop/start workspace
+coder stop <workspace-name>
+coder start <workspace-name>
+
+# Delete workspace
+coder delete <workspace-name> --yes
 ```
 
 ### Docker Image Management
 ```bash
 # Build the base image (from image/ directory)
-docker build -t coder-ddev-base:latest .
+cd image
+docker build -t randyfay/coder-ddev:v0.1 .
 
-# Tag and push to registry
-docker tag coder-ddev-base:latest <registry>/coder-ddev-base:<version>
-docker push <registry>/coder-ddev-base:<version>
+# Push to Docker Hub
+docker push randyfay/coder-ddev:v0.1
+
+# Update version for new releases
+echo "v0.2" > ../coder-ddev/VERSION
+docker build -t randyfay/coder-ddev:v0.2 .
+docker push randyfay/coder-ddev:v0.2
 ```
 
 ### DDEV Commands (within workspace)
@@ -54,7 +81,7 @@ ddev describe
 # VS Code for Web is automatically available via Coder's official module
 # Access via Coder dashboard under "Apps" section
 # Opens at /home/coder directory with full IDE features
-# Module: registry.coder.com/modules/coder/vscode-web/coder v1.0.20
+# Module: registry.coder.com/coder/vscode-web/coder v1.0.20
 ```
 
 ### OpenSpec Workflow
@@ -117,13 +144,12 @@ The startup script in `coder-ddev/scripts/startup.sh` performs:
 
 ### Terraform Variables
 Key template variables in `coder-ddev/template.tf`:
-- `workspace_image_registry` - Docker registry URL (default: `index.docker.io/christianwiedemann/coder-ddev-base`)
-- `image_version` - Image tag (default: read from `VERSION` file or `1.0.0-beta1`)
-- `cpu` / `memory` - Resource limits
+- `workspace_image_registry` - Docker registry URL (default: `index.docker.io/randyfay/coder-ddev`)
+- `image_version` - Image tag (default: read from `VERSION` file or `v0.1`)
+- `cpu` / `memory` - Resource limits (defaults: 4 cores, 8GB RAM)
 - `node_version` - Node.js version (default: `20`)
 - `docker_gid` - Docker group GID (default: `988`)
-- `registry_username` / `registry_password` - Registry authentication
-- `ddev_php_version` - PHP version for DDEV projects (workspace parameter)
+- `registry_username` / `registry_password` - Registry authentication (optional)
 
 ## Project Conventions
 
@@ -157,14 +183,13 @@ This project uses OpenSpec for spec-driven development:
 The `image/Dockerfile` builds the base workspace image:
 
 ### Layer Strategy
-1. **Base packages** - curl, wget, git, vim, sudo, build tools
+1. **Base packages** - curl, wget, git, vim, sudo, build tools, bash-completion
 2. **User setup** - Rename ubuntu user → coder (UID 1000)
 3. **Scripts copy** - `COPY scripts /home/coder-files` (outside volume mount)
 4. **Python/Node** - Install Python 3, Node.js 22.x LTS
 5. **Global npm tools** - OpenSpec, TypeScript (in image, re-attempted in startup)
-6. **Docker CLI** - From official Docker repository
-7. **Docker daemon** - `docker-ce`, `containerd`, systemd for Sysbox
-8. **DDEV** - v1.24.10 from GitHub releases
+6. **Docker daemon** - `docker-ce`, `docker-ce-cli`, `containerd`, systemd for Sysbox
+7. **DDEV** - v1.24.10 from official apt package (pkg.ddev.com)
 
 ### Important Build Notes
 - User `coder` gets passwordless sudo: `coder ALL=(ALL) NOPASSWD:ALL`
