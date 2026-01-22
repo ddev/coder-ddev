@@ -20,7 +20,8 @@ RUN apt-get update && \
   build-essential \
   ca-certificates \
   passwd \
-  sudo && \
+  sudo \
+  bash-completion && \
   # Generate locale
   locale-gen en_US.UTF-8 && \
   rm -rf /var/lib/apt/lists/* && \

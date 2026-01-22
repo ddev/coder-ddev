@@ -77,27 +77,6 @@ data "coder_workspace_owner" "me" {}
 # Task metadata - makes this template task-capable
 data "coder_task" "me" {}
 
-# Workspace parameters for user customization
-data "coder_parameter" "ddev_php_version" {
-  name        = "PHP Version"
-  description = "PHP version for DDEV projects"
-  default     = "8.2"
-  type        = "string"
-  mutable     = true
-  option {
-    value = "8.1"
-    name  = "8.1"
-  }
-  option {
-    value = "8.2"
-    name  = "8.2"
-  }
-  option {
-    value = "8.3"
-    name  = "8.3"
-  }
-}
-
 locals {
   # Determine workspace home path
   # Sysbox Strategy: Use standard /home/coder
@@ -200,9 +179,6 @@ resource "coder_agent" "main" {
 
     # Force HOME to /home/coder (Standard Home Strategy)
     HOME = "/home/coder"
-
-    # PHP version from workspace parameter (passed to DDEV projects)
-    DDEV_PHP_VERSION = data.coder_parameter.ddev_php_version.value
   }
 
   metadata {
@@ -240,11 +216,48 @@ resource "coder_agent" "main" {
 
 # VS Code for Web
 module "vscode-web" {
-  count    = data.coder_workspace.me.start_count
-  source   = "registry.coder.com/modules/coder/vscode-web/coder"
-  version  = "1.0.20"
-  agent_id = coder_agent.main.id
-  folder   = "/home/coder"
+  count          = data.coder_workspace.me.start_count
+  source         = "registry.coder.com/coder/vscode-web/coder"
+  version        = "1.0.20"
+  agent_id       = coder_agent.main.id
+  folder         = "/home/coder"
+  accept_license = true
+}
+
+# DDEV Web Server (HTTP) - appears when DDEV project is running
+# Uses web container's direct HTTP port (8080) as configured in DDEV global_config.yaml
+resource "coder_app" "ddev-web" {
+  agent_id     = coder_agent.main.id
+  slug         = "ddev-web"
+  display_name = "DDEV Web"
+  url          = "http://localhost:8080"
+  icon         = "/icon/globe.svg"
+  subdomain    = true
+  share        = "owner"
+
+  healthcheck {
+    url       = "http://localhost:8080"
+    interval  = 10
+    threshold = 30
+  }
+}
+
+# Mailpit (DDEV email catcher)
+# Uses Mailpit's HTTP port (8025) inside the workspace container
+resource "coder_app" "mailpit" {
+  agent_id     = coder_agent.main.id
+  slug         = "mailpit"
+  display_name = "Mailpit"
+  url          = "http://localhost:8025"
+  icon         = "/icon/mail.svg"
+  subdomain    = false
+  share        = "owner"
+
+  healthcheck {
+    url       = "http://localhost:8025"
+    interval  = 10
+    threshold = 30
+  }
 }
 
 # Graceful DDEV shutdown when workspace stops
@@ -361,10 +374,6 @@ resource "coder_metadata" "workspace_info" {
   item {
     key   = "node_version"
     value = var.node_version
-  }
-  item {
-    key   = "php_version"
-    value = data.coder_parameter.ddev_php_version.value
   }
   item {
     key   = "cpu"

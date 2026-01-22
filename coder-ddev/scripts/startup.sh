@@ -106,6 +106,22 @@ fi
 # FIX: Remove stale GIT_SSH_COMMAND from .bashrc if present (from older versions)
 try sed -i '/export GIT_SSH_COMMAND=/d' ~/.bashrc
 
+# Enable bash completion (including git completion)
+if [ -f /usr/share/bash-completion/bash_completion ]; then
+  if ! grep -q "bash_completion" ~/.bashrc; then
+    echo "" >> ~/.bashrc
+    echo "# Enable bash completion" >> ~/.bashrc
+    echo "if [ -f /usr/share/bash-completion/bash_completion ]; then" >> ~/.bashrc
+    echo "  . /usr/share/bash-completion/bash_completion" >> ~/.bashrc
+    echo "fi" >> ~/.bashrc
+    echo "✓ Bash completion enabled (will be active in new shells)"
+  fi
+  # Source for current session
+  . /usr/share/bash-completion/bash_completion 2>/dev/null || true
+else
+  echo "Note: bash-completion not installed in image"
+fi
+
 # Node.js, TypeScript, and DDEV are now pre-installed in the Docker image (v3.0.30+)
 
 
