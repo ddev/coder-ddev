@@ -29,7 +29,7 @@ Coder workspace template for Drupal development with ddev, Docker-in-Docker supp
 Deploy the template to Coder:
 
 ```bash
-coder templates push --directory template --name coder-ddev-base --yes
+coder templates push --directory coder-ddev --name coder-ddev --yes
 ```
 
 ## Usage
@@ -37,5 +37,5 @@ coder templates push --directory template --name coder-ddev-base --yes
 Create a new workspace using the template:
 
 ```bash
-coder create --template coder-ddev-base <workspace-name>
+coder create --template coder-ddev <workspace-name>
 ```
