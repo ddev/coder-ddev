@@ -59,7 +59,7 @@ variable "registry_password" {
 variable "image_version" {
   description = "The version of the Docker image to use"
   type        = string
-  default     = "1.0.0-beta1"
+  default     = "v0.1"
 }
 
 variable "docker_gid" {
@@ -83,7 +83,7 @@ locals {
   workspace_home = "/home/coder"
 
   # Read image version from VERSION file if it exists, otherwise use variable default
-  image_version = try(trimspace(file("${path.module}/../VERSION")), var.image_version)
+  image_version = try(trimspace(file("${path.module}/VERSION")), var.image_version)
 }
 
 variable "workspace_image_registry" {
