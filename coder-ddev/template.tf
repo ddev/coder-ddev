@@ -59,7 +59,7 @@ variable "registry_password" {
 variable "image_version" {
   description = "The version of the Docker image to use"
   type        = string
-  default     = "v0.1"
+  default     = "v0.2"
 }
 
 variable "docker_gid" {

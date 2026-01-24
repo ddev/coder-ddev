@@ -83,6 +83,15 @@ if [ -d /home/coder-files ]; then
     try chown coder:coder ~/WELCOME.txt
     echo "✓ Copied WELCOME.txt from /home/coder-files"
   fi
+
+  # Copy configure-coder-hostname script if available (for manual use)
+  # Note: The DDEV host command version is the preferred method
+  if [ -f /home/coder-files/configure-coder-hostname.sh ] && [ ! -f ~/configure-coder-hostname.sh ]; then
+    cp /home/coder-files/configure-coder-hostname.sh ~/configure-coder-hostname.sh
+    chmod +x ~/configure-coder-hostname.sh
+    try chown coder:coder ~/configure-coder-hostname.sh
+    echo "✓ Copied configure-coder-hostname.sh script"
+  fi
 else
   echo "Warning: /home/coder-files not found in image"
 fi
@@ -187,6 +196,17 @@ if [ -d /home/coder-files/.ddev ]; then
   else
     echo "Warning: /home/coder-files/.ddev/global_config.yaml not found"
   fi
+
+  # Copy custom DDEV commands to global commands directory
+  if [ -d /home/coder-files/.ddev/commands ]; then
+    echo "Copying custom DDEV commands..."
+    cp -rf /home/coder-files/.ddev/commands ~/.ddev/
+    # Ensure host commands are executable
+    if [ -d ~/.ddev/commands/host ]; then
+      chmod +x ~/.ddev/commands/host/* 2>/dev/null || true
+    fi
+    echo "✓ DDEV custom commands copied"
+  fi
 else
   echo "Warning: /home/coder-files/.ddev not found, skipping ddev config copy"
 fi
@@ -219,33 +239,32 @@ if [ -f ~/WELCOME.txt ]; then
   echo "Welcome message saved to ~/WELCOME.txt"
 fi
 
-# Set workspace ID as environment variable (extracted from container name or Coder env)
-# Container name format: coder-{workspace-id}
+# Set workspace ID as environment variable
+# Extract from CODER_AGENT_URL (format: https://{workspace-id}.{domain}/)
+# Example: https://955tu8k2ih1ck.pit-1.try.coder.app/
 if [ -z "$CODER_WORKSPACE_ID" ]; then
-  # Try to extract from container hostname or environment
-  CODER_WORKSPACE_ID=$(hostname | sed 's/coder-//' || echo "")
+  if [ -n "${CODER_AGENT_URL:-}" ]; then
+    # Extract subdomain (workspace ID) from agent URL
+    URL_HOST=$(echo "$CODER_AGENT_URL" | sed -E 's|https?://([^/]+).*|\1|')
+    CODER_WORKSPACE_ID=$(echo "$URL_HOST" | cut -d'.' -f1)
+  else
+    # Fallback: use hostname
+    CODER_WORKSPACE_ID=$(hostname | sed 's/coder-//' || echo "")
+  fi
 fi
 if [ -z "$CODER_WORKSPACE_ID" ]; then
-  # Fallback: use first 8 characters of hostname or generate from hostname
+  # Final fallback: use first 8 characters of hostname or generate from hostname
   CODER_WORKSPACE_ID=$(hostname | cut -c1-8 || echo "workspace")
 fi
 export CODER_WORKSPACE_ID
 
-# Set workspace name as environment variable (for unique ddev project names)
-# Extract from hostname (format: coder-{workspace-id}) or use workspace ID
-# Workspace name is typically the last part before the workspace ID
+# Workspace name should already be set by Coder as CODER_WORKSPACE_NAME
+# Only set if missing (for backwards compatibility or non-Coder environments)
 if [ -z "$CODER_WORKSPACE_NAME" ]; then
-  # Try to get from hostname pattern: coder-{workspace-name}-{id}
-  # Or use a sanitized version of workspace ID
-  HOSTNAME_PART=$(hostname | sed 's/coder-//' | cut -d'-' -f1)
-  if [ -n "$HOSTNAME_PART" ] && [ "$HOSTNAME_PART" != "$CODER_WORKSPACE_ID" ]; then
-    CODER_WORKSPACE_NAME="$HOSTNAME_PART"
-  else
-    # Fallback: use first part of workspace ID or "main"
-    CODER_WORKSPACE_NAME=$(echo "$CODER_WORKSPACE_ID" | cut -d'-' -f1 | head -c 10 || echo "main")
-  fi
+  # Fallback: use first part of workspace ID
+  CODER_WORKSPACE_NAME=$(echo "$CODER_WORKSPACE_ID" | cut -d'-' -f1 | head -c 10 || echo "main")
+  export CODER_WORKSPACE_NAME
 fi
-export CODER_WORKSPACE_NAME
 
 # Ensure ddev is in PATH
 export PATH="$HOME/.ddev/bin:$PATH"

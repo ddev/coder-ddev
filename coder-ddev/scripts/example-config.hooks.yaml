@@ -1,0 +1,19 @@
+# Example DDEV hooks configuration for automatic Coder hostname setup
+#
+# Copy this file to your DDEV project:
+#   cp /path/to/example-config.hooks.yaml ~/projects/your-project/.ddev/config.hooks.yaml
+#
+# Or create it manually with these contents.
+#
+# This hook automatically configures the DDEV hostname to match Coder's
+# router URL pattern before DDEV starts, ensuring seamless integration.
+
+hooks:
+  # Run before DDEV starts - configures Coder-specific hostname
+  pre-start:
+    - exec-host: ddev configure-coder-hostname || true
+
+  # Optional: Show the configured URL after startup
+  post-start:
+    - exec: echo "✓ DDEV configured for Coder"
+    - exec: ddev describe | grep -A1 "HTTPS URL" || true

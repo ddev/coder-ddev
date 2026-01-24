@@ -5,7 +5,10 @@ FROM ubuntu:24.04
 # Install sudo so coder user can run privileged commands in startup script
 RUN apt-get update && \
   DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+  autojump \
   curl \
+  inetutils-ping \
+  less \
   wget \
   git \
   vim \
