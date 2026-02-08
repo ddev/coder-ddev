@@ -73,6 +73,20 @@ make deploy-no-cache     # Clean build and deploy
 
 **Note:** Keep the VERSION file and template.tf `image_version` in sync manually when releasing new versions.
 
+## Template Structure
+
+Templates are organized in directories where **the directory name is the template name**:
+
+```
+coder-ddev/
+├── ddev-user/          # ddev-user template
+│   └── template.tf
+├── ddev-developer/     # Future: ddev-developer template (more tools)
+│   └── template.tf
+├── image/              # Shared Docker image
+└── Makefile           # Build and deploy automation
+```
+
 ## Usage
 
 Create a new workspace using the template:
