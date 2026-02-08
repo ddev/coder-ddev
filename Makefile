@@ -5,7 +5,7 @@ IMAGE_NAME := randyfay/coder-ddev
 VERSION := $(shell cat VERSION 2>/dev/null || echo "1.0.0-beta1")
 DOCKERFILE_DIR := image
 DOCKERFILE := $(DOCKERFILE_DIR)/Dockerfile
-TEMPLATE_DIR := template
+TEMPLATE_DIR := ddev-user
 TEMPLATE_NAME := ddev-user
 
 # Full image tag
