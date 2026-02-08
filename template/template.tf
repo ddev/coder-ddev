@@ -61,9 +61,9 @@ variable "registry_password" {
 }
 
 variable "image_version" {
-  description = "The version of the Docker image to use"
+  description = "The version of the Docker image to use (auto-synced from VERSION file)"
   type        = string
-  default     = "1.0.0-beta1"
+  default     = "v0.4" # auto-updated from VERSION
 }
 
 
@@ -95,11 +95,10 @@ locals {
 variable "workspace_image_registry" {
   description = "Docker registry URL for the workspace base image (without tag, version is added automatically)"
   type        = string
-  # Image from GitLab Container Registry
-  # Requires registry_username and registry_password variables for authentication
-  # The version tag is appended automatically from VERSION file
-  # DO NOT include :latest or any version tag here - version is read from VERSION file
-  default = "index.docker.io/christianwiedemann/coder-ddev-base"
+  # The version tag is appended automatically using the image_version variable
+  # DO NOT include :latest or any version tag here - version comes from image_version variable
+  # To use a specific version, override the image_version variable when deploying
+  default = "index.docker.io/randyfay/coder-ddev"
 }
 
 # Local variable to ensure registry URL doesn't have any tag
@@ -115,12 +114,11 @@ locals {
 
 
 
-# Use pre-built image from GitLab Container Registry
-# The image is built and pushed by GitLab CI/CD pipeline to registry.example.com
+# Use pre-built image from Docker Hub
+# The image is built and pushed using the Makefile (see root Makefile and VERSION file)
 # This avoids prevent_destroy issues since the image is not managed by Terraform
-# NOTE: Authentication is required via registry_username and registry_password variables
 resource "docker_image" "workspace_image" {
-  # Always use version tag (never :latest) - version is read from VERSION file
+  # Always use version tag (never :latest) from the image_version variable
   # This ensures consistent image versions and prevents using stale images
   name = "${local.workspace_image_registry_base}:${var.image_version}"
 
@@ -131,6 +129,7 @@ resource "docker_image" "workspace_image" {
     var.image_version,
     local.workspace_image_registry_base,
     "${local.workspace_image_registry_base}:${var.image_version}",
+    "force-pull-2026-02-08-v2",  # Change this value to force a re-pull
   ]
 
   # Keep image locally after pull
