@@ -529,6 +529,34 @@ resource "coder_app" "ddev-web" {
   }
 }
 
+# PhpStorm via JetBrains Gateway
+resource "coder_app" "phpstorm" {
+  agent_id     = coder_agent.main.id
+  slug         = "phpstorm"
+  display_name = "PhpStorm"
+  icon         = "/icon/phpstorm.svg"
+  command      = "phpstorm"
+}
+
+# GoLand via JetBrains Gateway
+resource "coder_app" "goland" {
+  agent_id     = coder_agent.main.id
+  slug         = "goland"
+  display_name = "GoLand"
+  icon         = "/icon/goland.svg"
+  command      = "goland"
+}
+
+# Web Terminal for browser-based terminal access
+resource "coder_app" "terminal" {
+  agent_id     = coder_agent.main.id
+  slug         = "terminal"
+  display_name = "Terminal"
+  icon         = "/icon/terminal.svg"
+  command      = "login"
+  share        = "owner"
+}
+
 # Graceful DDEV shutdown when workspace stops
 resource "coder_script" "ddev_shutdown" {
   agent_id     = coder_agent.main.id
