@@ -163,4 +163,3 @@ USER coder
 # Verify installation
 RUN ddev --version && \
   docker --version
-RUN ddev utility download-images
