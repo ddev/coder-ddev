@@ -529,33 +529,9 @@ resource "coder_app" "ddev-web" {
   }
 }
 
-# PhpStorm via JetBrains Gateway
-resource "coder_app" "phpstorm" {
-  agent_id     = coder_agent.main.id
-  slug         = "phpstorm"
-  display_name = "PhpStorm"
-  icon         = "/icon/phpstorm.svg"
-  command      = "phpstorm"
-}
-
-# GoLand via JetBrains Gateway
-resource "coder_app" "goland" {
-  agent_id     = coder_agent.main.id
-  slug         = "goland"
-  display_name = "GoLand"
-  icon         = "/icon/goland.svg"
-  command      = "goland"
-}
-
-# Web Terminal for browser-based terminal access
-resource "coder_app" "terminal" {
-  agent_id     = coder_agent.main.id
-  slug         = "terminal"
-  display_name = "Terminal"
-  icon         = "/icon/terminal.svg"
-  command      = "login"
-  share        = "owner"
-}
+# Note: JetBrains IDEs (PhpStorm, GoLand, WebStorm, etc.) are supported via JetBrains Gateway
+# Users should install JetBrains Gateway locally and use the Coder plugin to connect
+# No explicit app definitions needed - coder-login module enables Gateway support
 
 # Graceful DDEV shutdown when workspace stops
 resource "coder_script" "ddev_shutdown" {
