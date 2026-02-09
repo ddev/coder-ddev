@@ -5,26 +5,27 @@ FROM ubuntu:24.04
 # Install sudo so coder user can run privileged commands in startup script
 RUN apt-get update && \
   DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-  autojump \
-  curl \
-  inetutils-ping \
-  less \
-  wget \
-  git \
-  vim \
-  nano \
-  openssh-client \
-  unzip \
-  gnupg \
-  lsb-release \
-  software-properties-common \
   apt-transport-https \
-  locales \
+  autojump \
+  bash-completion \
   build-essential \
   ca-certificates \
+  curl \
+  git \
+  gnupg \
+  inetutils-ping \
+  less \
+  locales \
+  lsb-release \
+  make \
+  nano \
+  openssh-client \
   passwd \
+  software-properties-common \
   sudo \
-  bash-completion && \
+  unzip \
+  vim \
+  wget && \
   # Generate locale
   locale-gen en_US.UTF-8 && \
   rm -rf /var/lib/apt/lists/* && \
@@ -132,6 +133,21 @@ RUN mkdir -p /etc/apt/keyrings && \
   rm -rf /var/lib/apt/lists/* && \
   # Enable Docker service
   systemctl enable docker
+
+# Install Go using longsleep PPA (keeps Go up to date)
+USER root
+RUN add-apt-repository ppa:longsleep/golang-backports && \
+  apt-get update && \
+  DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends golang-go && \
+  rm -rf /var/lib/apt/lists/* && \
+  # Add Go to PATH for all users
+  echo 'export PATH="/usr/lib/go/bin:$PATH"' > /etc/profile.d/golang.sh && \
+  echo 'export PATH="/usr/lib/go/bin:$PATH"' >> /home/coder/.bashrc && \
+  chmod 644 /etc/profile.d/golang.sh
+
+USER coder
+# Verify Go installation
+RUN go version
 
 # Install DDEV using official package installation method
 # https://docs.ddev.com/en/stable/users/install/ddev-installation/#ddev-installation-linux
