@@ -198,10 +198,9 @@ resource "coder_agent" "main" {
   arch = "amd64"
   os   = "linux"
 
-  # Ensure agent starts in the correct directory (Direct Mount Strategy)
-  # IMPORTANT: Must use workspace_home (which exists) not workspace_folder (repo) 
-  # because the repo might not exist yet when agent starts!
-  dir = local.workspace_home
+  # Start terminal in the Drupal core directory
+  # If the directory doesn't exist yet (first startup), agent will fall back gracefully
+  dir = "/home/coder/drupal-core"
 
   startup_script = <<-EOT
     #!/bin/bash
@@ -573,10 +572,10 @@ STATUS_HEADER
       # Step 8: Install custom DDEV launch command
       mkdir -p ~/.ddev/commands/host
       cat > ~/.ddev/commands/host/launch << 'LAUNCH_EOF'
-#!/bin/bash
+#!/usr/bin/env bash
 
-## Description: Launch project in browser (Coder-aware)
-## Usage: ddev launch
+## Description: Launch a browser with the current site
+## Usage: launch
 ## Example: "ddev launch"
 
 # Get the primary port (should be 80)
@@ -585,20 +584,35 @@ if [ -z "$PRIMARY_PORT" ]; then
   PRIMARY_PORT="80"
 fi
 
-# In Coder environment, display instructions instead of opening browser
+# In Coder environment, show access information
 if [ -n "$CODER_WORKSPACE_NAME" ]; then
   echo ""
   echo "╔═══════════════════════════════════════════════════╗"
   echo "║     Your Drupal Site is Running!                ║"
   echo "╚═══════════════════════════════════════════════════╝"
   echo ""
-  echo "🌐 Access via Coder Dashboard:"
-  echo "   1. Go to your workspace"
-  echo "   2. Click the 'DDEV Web' app"
-  echo ""
-  echo "🔗 Or use port forwarding:"
-  echo "   http://localhost:$${PRIMARY_PORT}"
-  echo ""
+
+  # Construct the Coder app proxy URL
+  # Coder apps with subdomain=true create URLs like: https://<port>--<workspace>--<owner>.<coder-domain>
+  # Extract Coder base domain from VSCODE_PROXY_URI if available
+  CODER_DOMAIN=""
+  if [ -n "$VSCODE_PROXY_URI" ]; then
+    # Extract domain from VS Code proxy URI (format: https://something--something--something.domain.com)
+    CODER_DOMAIN=$(echo "$VSCODE_PROXY_URI" | sed -E 's|https?://[^.]+\.(.+?)(/.*)?$|\1|')
+  fi
+
+  if [ -n "$CODER_DOMAIN" ] && [ -n "$CODER_WORKSPACE_OWNER_NAME" ]; then
+    # Construct the URL using Coder's subdomain pattern
+    APP_URL="https://$${PRIMARY_PORT}--$${CODER_WORKSPACE_NAME}--$${CODER_WORKSPACE_OWNER_NAME}.$${CODER_DOMAIN}"
+    echo "🌐 Your Drupal Site:"
+    echo "   $${APP_URL}"
+    echo ""
+  else
+    echo "🌐 Access Your Site:"
+    echo "   Click the 'DDEV Web' app button in your workspace"
+    echo ""
+  fi
+
   echo "🔐 Admin Login:"
   echo "   Username: admin"
   echo "   Password: admin"
