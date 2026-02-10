@@ -436,19 +436,19 @@ STATUS_HEADER
       log_setup "✓ Drupal core already cloned at $DRUPAL_DIR"
       update_status "✓ Git clone: Already present"
     else
-      log_setup "Cloning Drupal core repository main branch (this will take 2-3 minutes)..."
+      log_setup "Cloning Drupal core repository main branch (shallow clone, faster)..."
       update_status "⏳ Git clone: In progress..."
 
-      if git clone https://git.drupalcode.org/project/drupal.git "$DRUPAL_DIR" >> "$SETUP_LOG" 2>&1; then
-        log_setup "✓ Drupal core cloned successfully"
-        update_status "✓ Git clone: Success"
+      if git clone --depth=50 --single-branch https://git.drupalcode.org/project/drupal.git "$DRUPAL_DIR" >> "$SETUP_LOG" 2>&1; then
+        log_setup "✓ Drupal core cloned successfully (50 commits depth)"
+        update_status "✓ Git clone: Success (shallow clone)"
       else
         log_setup "✗ Failed to clone Drupal core"
         log_setup "Check $SETUP_LOG for details"
         update_status "✗ Git clone: Failed"
         update_status ""
         update_status "Manual recovery:"
-        update_status "  cd ~ && git clone https://git.drupalcode.org/project/drupal.git drupal-core"
+        update_status "  cd ~ && git clone --depth=50 --single-branch https://git.drupalcode.org/project/drupal.git drupal-core"
       fi
     fi
 
@@ -456,26 +456,21 @@ STATUS_HEADER
     if [ -d "$DRUPAL_DIR/.git" ]; then
       cd "$DRUPAL_DIR" || exit 1
 
-      # Step 2: Configure DDEV
-      if [ -f ".ddev/config.yaml" ]; then
-        log_setup "✓ DDEV already configured"
-        update_status "✓ DDEV config: Already present"
-      else
-        log_setup "Configuring DDEV for Drupal 12 with PHP 8.5..."
-        update_status "⏳ DDEV config: In progress..."
+      # Step 2: Configure DDEV (always run to ensure correct settings)
+      log_setup "Configuring DDEV for Drupal 12 with PHP 8.5..."
+      update_status "⏳ DDEV config: In progress..."
 
-        if ddev config --project-type=drupal12 --php-version=8.5 --host-webserver-port=80 >> "$SETUP_LOG" 2>&1; then
-          log_setup "✓ DDEV configured successfully"
-          update_status "✓ DDEV config: Success"
-        else
-          log_setup "✗ Failed to configure DDEV"
-          log_setup "Check $SETUP_LOG for details"
-          update_status "✗ DDEV config: Failed"
-          update_status ""
-          update_status "Manual recovery:"
-          update_status "  cd $DRUPAL_DIR"
-          update_status "  ddev config --project-type=drupal12 --php-version=8.5 --host-webserver-port=80"
-        fi
+      if ddev config --project-type=drupal12 --php-version=8.5 --host-webserver-port=80 >> "$SETUP_LOG" 2>&1; then
+        log_setup "✓ DDEV configured successfully"
+        update_status "✓ DDEV config: Success"
+      else
+        log_setup "✗ Failed to configure DDEV"
+        log_setup "Check $SETUP_LOG for details"
+        update_status "✗ DDEV config: Failed"
+        update_status ""
+        update_status "Manual recovery:"
+        update_status "  cd $DRUPAL_DIR"
+        update_status "  ddev config --project-type=drupal12 --php-version=8.5 --host-webserver-port=80"
       fi
 
       # Step 3: Configure DDEV global settings (omit router)
@@ -536,21 +531,16 @@ STATUS_HEADER
         fi
       fi
 
-      # Step 6: Install Drush
-      if [ -f "vendor/bin/drush" ] || ddev exec which drush > /dev/null 2>&1; then
-        log_setup "✓ Drush already installed"
-        update_status "✓ Drush install: Already present"
-      else
-        log_setup "Installing Drush..."
-        update_status "⏳ Drush install: In progress..."
+      # Step 6: Ensure Drush in composer require (not just require-dev)
+      log_setup "Ensuring Drush is in composer require section..."
+      update_status "⏳ Drush install: In progress..."
 
-        if ddev composer require drush/drush >> "$SETUP_LOG" 2>&1; then
-          log_setup "✓ Drush installed successfully"
-          update_status "✓ Drush install: Success"
-        else
-          log_setup "⚠ Warning: Failed to install Drush (non-critical, can install later)"
-          update_status "⚠ Drush install: Warning"
-        fi
+      if ddev composer require drush/drush >> "$SETUP_LOG" 2>&1; then
+        log_setup "✓ Drush configured successfully"
+        update_status "✓ Drush install: Success"
+      else
+        log_setup "⚠ Warning: Failed to configure Drush"
+        update_status "⚠ Drush install: Warning"
       fi
 
       # Step 7: Install Drupal (if not already installed)
@@ -830,40 +820,6 @@ resource "coder_app" "ddev-web" {
 
   healthcheck {
     url       = "http://localhost:80"
-    interval  = 10
-    threshold = 30
-  }
-}
-
-# DDEV HTTPS (443) - for SSL testing
-resource "coder_app" "ddev-https" {
-  agent_id     = coder_agent.main.id
-  slug         = "ddev-https"
-  display_name = "DDEV HTTPS"
-  url          = "https://localhost:443"
-  icon         = "/icon/lock.svg"
-  subdomain    = true
-  share        = "owner"
-
-  healthcheck {
-    url       = "https://localhost:443"
-    interval  = 10
-    threshold = 30
-  }
-}
-
-# Mailpit (8025) - email debugging
-resource "coder_app" "mailpit" {
-  agent_id     = coder_agent.main.id
-  slug         = "mailpit"
-  display_name = "Mailpit"
-  url          = "http://localhost:8025"
-  icon         = "/icon/email.svg"
-  subdomain    = true
-  share        = "owner"
-
-  healthcheck {
-    url       = "http://localhost:8025"
     interval  = 10
     threshold = 30
   }
