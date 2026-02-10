@@ -1,0 +1,7 @@
+# Vault token file (not committed to Git)
+vault-token.txt
+
+# Terraform lock file (managed by Coder)
+.terraform.lock.hcl
+
+.terraform/
