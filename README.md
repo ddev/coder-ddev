@@ -79,18 +79,73 @@ Templates are organized in directories where **the directory name is the templat
 
 ```
 coder-ddev/
-├── ddev-user/          # ddev-user template
-│   └── template.tf
-├── ddev-developer/     # Future: ddev-developer template (more tools)
-│   └── template.tf
+├── ddev-user/          # General-purpose DDEV template
+│   ├── template.tf
+│   └── README.md
+├── ddev-drupal-core/   # Drupal core development template
+│   ├── template.tf
+│   └── README.md
 ├── image/              # Shared Docker image
 └── Makefile           # Build and deploy automation
 ```
 
+## Available Templates
+
+### ddev-user (General Purpose)
+Basic DDEV development environment for any project type.
+
+- **Resources**: 4 cores, 8 GB RAM (default)
+- **Setup**: Manual (clone your own repository)
+- **Use Case**: Any DDEV-compatible project (Drupal, WordPress, Laravel, etc.)
+- **Start Time**: < 1 minute
+- **Template Directory**: `ddev-user/`
+
+**Create workspace:**
+```bash
+coder create --template ddev-user my-workspace
+```
+
+### ddev-drupal-core (Drupal Core Development)
+Fully automated Drupal core development environment.
+
+- **Resources**: 6 cores, 12 GB RAM (default)
+- **Setup**: Automatic (Drupal core cloned and installed)
+- **Use Case**: Drupal core development, contribution, testing
+- **Start Time**: 10-15 minutes (first start), < 1 minute (subsequent)
+- **Template Directory**: `ddev-drupal-core/`
+- **Includes**:
+  - Pre-cloned Drupal core main branch from git.drupalcode.org
+  - Configured DDEV (PHP 8.5, Drupal 12 config)
+  - Installed demo_umami site
+  - Admin account (admin/admin)
+
+**Create workspace:**
+```bash
+coder create --template ddev-drupal-core my-drupal-dev
+```
+
+### Choosing a Template
+
+- Use **ddev-user** for:
+  - Contrib module development
+  - Site building
+  - General Drupal/PHP projects
+  - Maximum flexibility
+
+- Use **ddev-drupal-core** for:
+  - Drupal core patches
+  - Core issue queue work
+  - Testing Drupal core changes
+  - Learning Drupal internals
+
 ## Usage
 
-Create a new workspace using the template:
+Create a new workspace using your chosen template:
 
 ```bash
+# General-purpose DDEV environment
 coder create --template ddev-user <workspace-name>
+
+# Drupal core development environment
+coder create --template ddev-drupal-core <workspace-name>
 ```

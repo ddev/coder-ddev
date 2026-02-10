@@ -7,6 +7,8 @@ DOCKERFILE_DIR := image
 DOCKERFILE := $(DOCKERFILE_DIR)/Dockerfile
 TEMPLATE_DIR := ddev-user
 TEMPLATE_NAME := ddev-user
+TEMPLATE_DIR_DRUPAL := ddev-drupal-core
+TEMPLATE_NAME_DRUPAL := ddev-drupal-core
 
 # Full image tag
 IMAGE_TAG := $(IMAGE_NAME):$(VERSION)
@@ -90,3 +92,17 @@ deploy: build-and-push push-template ## Build image, push image, and push templa
 .PHONY: deploy-no-cache
 deploy-no-cache: build-and-push-no-cache push-template ## Build image without cache, push image, and push template
 	@echo "Full deployment complete!"
+
+.PHONY: push-template-drupal
+push-template-drupal: ## Push Drupal Core template to Coder
+	@echo "Pushing Coder template $(TEMPLATE_NAME_DRUPAL)..."
+	coder templates push --directory $(TEMPLATE_DIR_DRUPAL) $(TEMPLATE_NAME_DRUPAL) --yes
+	@echo "Drupal template push complete"
+
+.PHONY: deploy-drupal
+deploy-drupal: push-template-drupal ## Deploy Drupal Core template (uses existing image)
+	@echo "Drupal template deployment complete!"
+
+.PHONY: deploy-all
+deploy-all: deploy push-template-drupal ## Deploy both ddev-user and ddev-drupal-core templates
+	@echo "All templates deployed!"
