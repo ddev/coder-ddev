@@ -153,7 +153,7 @@ resource "docker_image" "workspace_image" {
 variable "node_version" {
   description = "Node.js version to install"
   type        = string
-  default     = "20"
+  default     = "24"
 }
 
 variable "cpu" {
@@ -394,10 +394,9 @@ resource "coder_agent" "main" {
     fi
     export CODER_WORKSPACE_NAME
 
-    # Ensure ddev is in PATH
-    export PATH="$HOME/.ddev/bin:$PATH"
-    if ! echo "$PATH" | grep -q "$HOME/.ddev/bin"; then
-      echo 'export PATH="$HOME/.ddev/bin:$PATH"' >> ~/.bashrc
+    # Ensure linuxbrew/homebrew is in PATH
+    if ! echo "$PATH" | grep -q "/home/linuxbrew/.linuxbrew/bin"; then
+      echo 'export PATH="$PATH:/home/linuxbrew/.linuxbrew/bin"' >> ~/.bashrc
     fi
     
     # Remove any old welcome message entries from .bashrc (if they exist)

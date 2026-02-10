@@ -159,7 +159,11 @@ RUN curl -fsSL https://pkg.ddev.com/apt/gpg.key | gpg --dearmor -o /etc/apt/keyr
   DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ddev && \
   rm -rf /var/lib/apt/lists/*
 
+RUN mkdir -p /home/linuxbrew/.linuxbrew && chown -R coder:coder /home/linuxbrew/
+
 USER coder
-# Verify installation
+RUN /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+RUN /home/linuxbrew/.linuxbrew/bin/brew install golangci-lint
+
 RUN ddev --version && \
   docker --version
