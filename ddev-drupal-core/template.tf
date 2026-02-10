@@ -607,7 +607,7 @@ if [ -n "$CODER_WORKSPACE_NAME" ]; then
   echo "   2. Click the 'DDEV Web' app"
   echo ""
   echo "🔗 Or use port forwarding:"
-  echo "   http://localhost:${PRIMARY_PORT}"
+  echo "   http://localhost:$${PRIMARY_PORT}"
   echo ""
   echo "🔐 Admin Login:"
   echo "   Username: admin"
@@ -620,9 +620,9 @@ if [ -n "$CODER_WORKSPACE_NAME" ]; then
   echo ""
 else
   # Outside Coder, use standard browser launch
-  xdg-open "http://localhost:${PRIMARY_PORT}" 2>/dev/null || \
-  open "http://localhost:${PRIMARY_PORT}" 2>/dev/null || \
-  echo "Open http://localhost:${PRIMARY_PORT} in your browser"
+  xdg-open "http://localhost:$${PRIMARY_PORT}" 2>/dev/null || \
+  open "http://localhost:$${PRIMARY_PORT}" 2>/dev/null || \
+  echo "Open http://localhost:$${PRIMARY_PORT} in your browser"
 fi
 LAUNCH_EOF
 
