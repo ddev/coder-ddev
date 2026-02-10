@@ -111,11 +111,11 @@ Fully automated Drupal core development environment.
 - **Resources**: 6 cores, 12 GB RAM (default)
 - **Setup**: Automatic (Drupal core cloned and installed)
 - **Use Case**: Drupal core development, contribution, testing
-- **Start Time**: 10-15 minutes (first start), < 1 minute (subsequent)
+- **Start Time**: 8-12 minutes (first start), < 1 minute (subsequent)
 - **Template Directory**: `ddev-drupal-core/`
 - **Includes**:
-  - Pre-cloned Drupal core main branch from git.drupalcode.org
-  - Configured DDEV (PHP 8.5, Drupal 12 config)
+  - Pre-cloned Drupal core main branch (shallow clone, 50 commits depth)
+  - Configured DDEV (PHP 8.5, Drupal 12 config, port 80)
   - Installed demo_umami site
   - Admin account (admin/admin)
 

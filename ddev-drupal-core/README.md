@@ -8,13 +8,13 @@ Automated Coder workspace for Drupal core development. Clones Drupal core, confi
 - **Demo Site**: Umami demo profile pre-installed
 - **Full DDEV**: Complete DDEV environment with PHP 8.5, Drupal 12 config
 - **VS Code**: Opens directly to Drupal core directory
-- **Port Forwarding**: HTTP (80), HTTPS (443), Mailpit (8025)
+- **Port Forwarding**: HTTP (80)
 - **Custom Launch Command**: `ddev launch` shows Coder-specific instructions
 
 ## Initial Setup Time
 
-First workspace creation takes approximately 10-15 minutes:
-- Git clone: 2-3 minutes (Drupal core repository main branch)
+First workspace creation takes approximately 8-12 minutes:
+- Git clone: < 1 minute (shallow clone, 50 commits depth)
 - Composer install: 5-7 minutes (dependencies)
 - Drupal installation: 2-3 minutes (demo_umami profile)
 
