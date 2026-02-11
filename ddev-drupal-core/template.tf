@@ -280,7 +280,8 @@ resource "coder_agent" "main" {
 ║          Welcome to Drupal Core Development                 ║
 ╚═══════════════════════════════════════════════════════════════╝
 
-This workspace is pre-configured with Drupal core and DDEV.
+This workspace uses joachim-n/drupal-core-development-project
+for a professional Drupal core development setup.
 
 🌐 ACCESS YOUR SITE
    Click "DDEV Web" in the Coder dashboard
@@ -291,8 +292,10 @@ This workspace is pre-configured with Drupal core and DDEV.
    Password: admin
    One-time link: ddev drush uli
 
-📁 PROJECT LOCATION
-   /home/coder/drupal-core
+📁 PROJECT STRUCTURE
+   /home/coder/drupal-core       # Project root
+   /home/coder/drupal-core/repos/drupal  # Drupal core git clone
+   /home/coder/drupal-core/web   # Web docroot
 
 🛠️  USEFUL COMMANDS
    ddev drush status         # Check Drupal status
@@ -306,6 +309,7 @@ This workspace is pre-configured with Drupal core and DDEV.
    DDEV: https://docs.ddev.com/
    Drupal: https://www.drupal.org/docs
    Drupal API: https://api.drupal.org/
+   Project Template: https://github.com/joachim-n/drupal-core-development-project
 
 📋 SETUP STATUS
    ~/SETUP_STATUS.txt        # Setup completion status
@@ -430,37 +434,21 @@ STATUS_HEADER
     # Ensure we're starting from home directory
     cd /home/coder || exit 1
 
-    # Step 1: Clone Drupal core (if not already present)
-    if [ -d "$DRUPAL_DIR/.git" ]; then
-      log_setup "✓ Drupal core already cloned at $DRUPAL_DIR"
-      update_status "✓ Git clone: Already present"
-    else
-      log_setup "Cloning Drupal core repository main branch (shallow clone, faster)..."
-      update_status "⏳ Git clone: In progress..."
-
-      if git clone --depth=50 --single-branch https://git.drupalcode.org/project/drupal.git "$DRUPAL_DIR" >> "$SETUP_LOG" 2>&1; then
-        log_setup "✓ Drupal core cloned successfully (50 commits depth)"
-        update_status "✓ Git clone: Success (shallow clone)"
-      else
-        log_setup "✗ Failed to clone Drupal core"
-        log_setup "Check $SETUP_LOG for details"
-        update_status "✗ Git clone: Failed"
-        update_status ""
-        update_status "Manual recovery:"
-        update_status "  cd ~ && git clone --depth=50 --single-branch https://git.drupalcode.org/project/drupal.git drupal-core"
-      fi
+    # Step 1: Create project directory and configure DDEV
+    if [ ! -d "$DRUPAL_DIR" ]; then
+      log_setup "Creating project directory: $DRUPAL_DIR"
+      mkdir -p "$DRUPAL_DIR"
     fi
+    
+    cd "$DRUPAL_DIR" || exit 1
 
-    # Only proceed if clone succeeded
-    if [ -d "$DRUPAL_DIR/.git" ]; then
-      cd "$DRUPAL_DIR" || exit 1
-
-      # Step 2: Configure DDEV (always run to ensure correct settings)
-      log_setup "Configuring DDEV for Drupal 12 with PHP 8.5..."
+    # Step 2: Configure DDEV (must be done before composer create)
+    if [ ! -f ".ddev/config.yaml" ]; then
+      log_setup "Configuring DDEV for Drupal 12 with PHP 8.5 and docroot=web..."
       update_status "⏳ DDEV config: In progress..."
 
-      if ddev config --project-type=drupal12 --php-version=8.5 --host-webserver-port=80 >> "$SETUP_LOG" 2>&1; then
-        log_setup "✓ DDEV configured successfully"
+      if ddev config --project-type=drupal12 --php-version=8.5 --docroot=web --host-webserver-port=80 >> "$SETUP_LOG" 2>&1; then
+        log_setup "✓ DDEV configured successfully with web/ as docroot"
         update_status "✓ DDEV config: Success"
       else
         log_setup "✗ Failed to configure DDEV"
@@ -469,68 +457,76 @@ STATUS_HEADER
         update_status ""
         update_status "Manual recovery:"
         update_status "  cd $DRUPAL_DIR"
-        update_status "  ddev config --project-type=drupal12 --php-version=8.5 --host-webserver-port=80"
+        update_status "  ddev config --project-type=drupal12 --php-version=8.5 --docroot=web --host-webserver-port=80"
       fi
 
-      # Step 3: Configure DDEV global settings (omit router)
-      if [ -f ".ddev/config.yaml" ]; then
-        log_setup "Configuring DDEV global settings..."
-        update_status "⏳ DDEV global config: In progress..."
+      # Configure DDEV global settings (omit router)
+      log_setup "Configuring DDEV global settings..."
+      update_status "⏳ DDEV global config: In progress..."
 
-        if ddev config global --omit-containers=ddev-router >> "$SETUP_LOG" 2>&1; then
-          log_setup "✓ DDEV global config applied (router omitted)"
-          update_status "✓ DDEV global config: Success"
-        else
-          log_setup "⚠ Warning: Failed to set DDEV global config (non-critical)"
-          update_status "⚠ DDEV global config: Warning (non-critical)"
-        fi
-      fi
-
-      # Step 4: Start DDEV
-      if ddev describe 2>/dev/null | grep -q "OK"; then
-        log_setup "✓ DDEV already running"
-        update_status "✓ DDEV start: Already running"
+      if ddev config global --omit-containers=ddev-router >> "$SETUP_LOG" 2>&1; then
+        log_setup "✓ DDEV global config applied (router omitted)"
+        update_status "✓ DDEV global config: Success"
       else
-        log_setup "Starting DDEV environment (this will take 2-3 minutes)..."
-        update_status "⏳ DDEV start: In progress..."
-
-        if ddev start >> "$SETUP_LOG" 2>&1; then
-          log_setup "✓ DDEV started successfully"
-          update_status "✓ DDEV start: Success"
-        else
-          log_setup "✗ Failed to start DDEV"
-          log_setup "Check $SETUP_LOG and Docker logs for details"
-          update_status "✗ DDEV start: Failed"
-          update_status ""
-          update_status "Manual recovery:"
-          update_status "  cd $DRUPAL_DIR && ddev start"
-          update_status "  Check: docker ps, docker logs"
-        fi
+        log_setup "⚠ Warning: Failed to set DDEV global config (non-critical)"
+        update_status "⚠ DDEV global config: Warning (non-critical)"
       fi
+    else
+      log_setup "✓ DDEV already configured"
+      update_status "✓ DDEV config: Already present"
+    fi
 
-      # Step 5: Install Composer dependencies
-      if [ -d "vendor" ] && [ -f "vendor/autoload.php" ]; then
-        log_setup "✓ Composer dependencies already installed"
-        update_status "✓ Composer install: Already present"
+    # Step 3: Start DDEV
+    if ddev describe 2>/dev/null | grep -q "OK"; then
+      log_setup "✓ DDEV already running"
+      update_status "✓ DDEV start: Already running"
+    else
+      log_setup "Starting DDEV environment (this will take 2-3 minutes)..."
+      update_status "⏳ DDEV start: In progress..."
+
+      if ddev start >> "$SETUP_LOG" 2>&1; then
+        log_setup "✓ DDEV started successfully"
+        update_status "✓ DDEV start: Success"
       else
-        log_setup "Installing Composer dependencies (this will take 5-7 minutes)..."
-        update_status "⏳ Composer install: In progress (this is the longest step)..."
-
-        if ddev composer install >> "$SETUP_LOG" 2>&1; then
-          log_setup "✓ Composer dependencies installed successfully"
-          update_status "✓ Composer install: Success"
-        else
-          log_setup "✗ Failed to install Composer dependencies"
-          log_setup "Check $SETUP_LOG for details"
-          update_status "✗ Composer install: Failed"
-          update_status ""
-          update_status "Manual recovery:"
-          update_status "  cd $DRUPAL_DIR && ddev composer install"
-          update_status "Common issue: Insufficient memory (need 12GB+)"
-        fi
+        log_setup "✗ Failed to start DDEV"
+        log_setup "Check $SETUP_LOG and Docker logs for details"
+        update_status "✗ DDEV start: Failed"
+        update_status ""
+        update_status "Manual recovery:"
+        update_status "  cd $DRUPAL_DIR && ddev start"
+        update_status "  Check: docker ps, docker logs"
       fi
+    fi
 
-      # Step 6: Ensure Drush in composer require (not just require-dev)
+    # Step 4: Set up Drupal core development project with ddev composer create
+    if [ -f "composer.json" ] && [ -d "repos/drupal/.git" ]; then
+      log_setup "✓ Drupal core development project already set up"
+      update_status "✓ DDEV composer create: Already present"
+    else
+      log_setup "Setting up Drupal core development project with DDEV Composer..."
+      log_setup "This creates a proper dev environment with:"
+      log_setup "  - Drupal core git clone at repos/drupal/"
+      log_setup "  - Web root at web/"
+      log_setup "  - Composer dependency management"
+      update_status "⏳ DDEV composer create: In progress (this takes 3-5 minutes)..."
+
+      if ddev composer create joachim-n/drupal-core-development-project --no-interaction >> "$SETUP_LOG" 2>&1; then
+        log_setup "✓ Drupal core development project created successfully"
+        update_status "✓ DDEV composer create: Success"
+      else
+        log_setup "✗ Failed to create Drupal core development project"
+        log_setup "Check $SETUP_LOG for details"
+        update_status "✗ DDEV composer create: Failed"
+        update_status ""
+        update_status "Manual recovery:"
+        update_status "  cd $DRUPAL_DIR && ddev composer create joachim-n/drupal-core-development-project"
+      fi
+    fi
+
+    # Only proceed if project was created successfully
+    if [ -f "composer.json" ] && [ -d "repos/drupal" ]; then
+      # Step 5: Ensure Drush in composer require (not just require-dev)
+      # Step 5: Ensure Drush in composer require (not just require-dev)
       log_setup "Ensuring Drush is in composer require section..."
       update_status "⏳ Drush install: In progress..."
 
@@ -542,7 +538,7 @@ STATUS_HEADER
         update_status "⚠ Drush install: Warning"
       fi
 
-      # Step 7: Install Drupal (if not already installed)
+      # Step 6: Install Drupal (if not already installed)
       if ddev drush status 2>/dev/null | grep -q "Drupal bootstrap.*Successful"; then
         log_setup "✓ Drupal already installed"
         update_status "✓ Drupal install: Already present"
@@ -569,7 +565,7 @@ STATUS_HEADER
         fi
       fi
 
-      # Step 8: Install custom DDEV launch command
+      # Step 7: Install custom DDEV launch command
       mkdir -p ~/.ddev/commands/host
       cat > ~/.ddev/commands/host/launch << 'LAUNCH_EOF'
 #!/usr/bin/env bash
@@ -634,7 +630,7 @@ LAUNCH_EOF
       log_setup "✓ Custom DDEV launch command installed"
       update_status "✓ DDEV launch command: Installed"
 
-    fi # End of "if drupal clone succeeded"
+    fi # End of "if project creation succeeded"
 
     # Final status and summary
     update_status ""

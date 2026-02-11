@@ -1,21 +1,23 @@
 # DDEV Drupal Core Development Template
 
-Automated Coder workspace for Drupal core development. Clones Drupal core, configures DDEV, and installs a demo site automatically.
+Automated Coder workspace for Drupal core development using [joachim-n/drupal-core-development-project](https://github.com/joachim-n/drupal-core-development-project). Sets up a professional development environment with Drupal core, DDEV, and a demo site.
 
 ## Features
 
-- **Automatic Setup**: Drupal core cloned and configured on first start
+- **Professional Setup**: Uses the drupal-core-development-project template
+- **Clean Git Clone**: Drupal core in `repos/drupal/` directory
+- **Proper Structure**: Web root at `web/` with Composer management
 - **Demo Site**: Umami demo profile pre-installed
 - **Full DDEV**: Complete DDEV environment with PHP 8.5, Drupal 12 config
-- **VS Code**: Opens directly to Drupal core directory
+- **VS Code**: Opens directly to Drupal core project root
 - **Port Forwarding**: HTTP (80)
 - **Custom Launch Command**: `ddev launch` shows Coder-specific instructions
 
 ## Initial Setup Time
 
-First workspace creation takes approximately 8-12 minutes:
-- Git clone: < 1 minute (shallow clone, 50 commits depth)
-- Composer install: 5-7 minutes (dependencies)
+First workspace creation takes approximately 10-15 minutes:
+- DDEV configuration and start: 2-3 minutes
+- DDEV composer create: 3-5 minutes (clones Drupal, sets up structure, installs dependencies)
 - Drupal installation: 2-3 minutes (demo_umami profile)
 
 Subsequent starts are fast (< 1 minute) as everything is cached.
@@ -40,15 +42,20 @@ coder create --template ddev-drupal-core my-drupal-dev
 
 ```
 /home/coder/
-├── drupal-core/          # Drupal core repository (VS Code opens here)
-│   ├── .ddev/            # DDEV configuration
-│   ├── core/             # Drupal core
-│   ├── vendor/           # Composer dependencies
-│   ├── composer.json     # Drupal dependencies
+├── drupal-core/              # Project root (VS Code opens here)
+│   ├── repos/
+│   │   └── drupal/          # Drupal core git clone (clean)
+│   ├── web/                 # Web docroot
+│   │   ├── core/            # Symlinked from repos/drupal/core
+│   │   ├── index.php        # Patched for correct app root
+│   │   └── ...
+│   ├── .ddev/               # DDEV configuration
+│   ├── vendor/              # Composer dependencies
+│   ├── composer.json        # Project dependencies
 │   └── ...
-├── WELCOME.txt           # Welcome message
-├── SETUP_STATUS.txt      # Setup completion status
-└── projects/             # Additional projects (if needed)
+├── WELCOME.txt              # Welcome message
+├── SETUP_STATUS.txt         # Setup completion status
+└── projects/                # Additional projects (if needed)
 ```
 
 ## Common Commands
@@ -89,8 +96,9 @@ tail -f /tmp/drupal-setup.log  # View setup logs
 - **Recommended**: 8 CPU cores, 16 GB RAM, 100 GB disk
 
 ### Network Access
-- Git: https://git.drupalcode.org
-- Composer: https://packagist.org
+- Packagist: https://packagist.org (for Composer)
+- GitHub: https://github.com (for drupal-core-development-project)
+- Git: https://git.drupalcode.org (for Drupal core clone)
 - Docker Hub: https://hub.docker.com
 
 ## Troubleshooting
@@ -103,17 +111,19 @@ tail -50 /tmp/drupal-setup.log
 ```
 
 Common issues:
-- **Git clone failed**: Network connectivity, try manual clone
-- **Composer install failed**: Insufficient memory (need 12GB+)
+- **DDEV config failed**: Check DDEV installation and Docker daemon
 - **DDEV start failed**: Docker daemon issue, check `docker ps`
+- **DDEV composer create failed**: Network connectivity or memory issue
 - **Drupal install failed**: Database connection, check DDEV logs
 
 ### Manual Recovery
 If automatic setup fails, you can complete steps manually:
 ```bash
-cd ~/drupal-core
+cd ~
+mkdir -p drupal-core && cd drupal-core
+ddev config --project-type=drupal12 --docroot=web --php-version=8.5
 ddev start
-ddev composer install
+ddev composer create joachim-n/drupal-core-development-project
 ddev composer require drush/drush
 ddev drush si -y demo_umami --account-pass=admin
 ```
@@ -141,7 +151,7 @@ To use `minimal`, `standard`, or other profiles.
 ### Change PHP Version
 Edit DDEV config command in `template.tf`:
 ```bash
-ddev config --project-type=drupal12 --php-version=8.4
+ddev config --project-type=drupal12 --docroot=web --php-version=8.4
 ```
 
 ### Add Custom Commands
@@ -151,18 +161,22 @@ Create scripts in `~/.ddev/commands/host/` or `.ddev/commands/web/`
 
 - **Base Image**: `randyfay/coder-ddev:v0.4` (Ubuntu 24.04, DDEV, Docker, Node.js)
 - **Runtime**: Sysbox (secure Docker-in-Docker)
+- **Project Template**: [joachim-n/drupal-core-development-project](https://github.com/joachim-n/drupal-core-development-project)
 - **Volumes**:
   - `/home/coder` - Persistent workspace data
   - `/var/lib/docker` - Docker images and containers
-- **Drupal**: Latest main branch from https://git.drupalcode.org/project/drupal
+- **Drupal**: Main branch from https://git.drupalcode.org/project/drupal (cloned via template)
 
 ## Development Workflow
 
 1. Make changes in VS Code (automatically opens to `/home/coder/drupal-core`)
-2. Test changes via DDEV Web app
-3. Run tests: `ddev exec phpunit ...`
-4. Commit changes: `git add . && git commit -m "..."`
-5. Push to fork: `git remote add fork <url> && git push fork`
+2. Edit Drupal core files in `repos/drupal/` directory
+3. Test changes via DDEV Web app (web root is at `web/`)
+4. Run tests: `ddev exec phpunit ...`
+5. Commit changes in `repos/drupal/`: `cd repos/drupal && git add . && git commit -m "..."`
+6. Push to fork: `git remote add fork <url> && git push fork`
+
+**Note**: The `repos/drupal/` directory contains the clean Drupal core git repository. Changes here are reflected in the `web/` directory via symlinks.
 
 ## Support
 
