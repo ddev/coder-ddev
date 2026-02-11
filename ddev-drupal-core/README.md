@@ -16,8 +16,8 @@ Automated Coder workspace for Drupal core development using [joachim-n/drupal-co
 ## Initial Setup Time
 
 First workspace creation takes approximately 10-15 minutes:
-- Composer create-project: 3-5 minutes (clones Drupal, sets up structure)
-- Composer install: 5-7 minutes (dependencies)
+- DDEV configuration and start: 2-3 minutes
+- DDEV composer create: 3-5 minutes (clones Drupal, sets up structure, installs dependencies)
 - Drupal installation: 2-3 minutes (demo_umami profile)
 
 Subsequent starts are fast (< 1 minute) as everything is cached.
@@ -111,19 +111,19 @@ tail -50 /tmp/drupal-setup.log
 ```
 
 Common issues:
-- **Composer create-project failed**: Network connectivity or memory issue
-- **Composer install failed**: Insufficient memory (need 12GB+)
+- **DDEV config failed**: Check DDEV installation and Docker daemon
 - **DDEV start failed**: Docker daemon issue, check `docker ps`
+- **DDEV composer create failed**: Network connectivity or memory issue
 - **Drupal install failed**: Database connection, check DDEV logs
 
 ### Manual Recovery
 If automatic setup fails, you can complete steps manually:
 ```bash
 cd ~
-composer create-project joachim-n/drupal-core-development-project drupal-core
-cd drupal-core
+mkdir -p drupal-core && cd drupal-core
 ddev config --project-type=drupal12 --docroot=web --php-version=8.5
 ddev start
+ddev composer create joachim-n/drupal-core-development-project
 ddev composer require drush/drush
 ddev drush si -y demo_umami --account-pass=admin
 ```
