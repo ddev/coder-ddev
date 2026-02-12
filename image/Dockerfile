@@ -11,8 +11,10 @@ RUN apt-get update && \
   build-essential \
   ca-certificates \
   curl \
+  direnv \
   git \
   gnupg \
+  httpie \
   inetutils-ping \
   less \
   locales \
@@ -54,7 +56,8 @@ COPY --chown=coder:coder scripts /home/coder-files
 
 
 # Set correct permissions for scripts in init-scripts
-RUN chmod 644 /home/coder-files/WELCOME.txt
+RUN chmod 644 /home/coder-files/WELCOME.txt && \
+  chmod 644 /home/coder-files/.vscode/settings.json
 
 # Install Python3, pip, and pipx (required for Goose CLI installation)
 RUN apt-get update && \
@@ -134,21 +137,6 @@ RUN mkdir -p /etc/apt/keyrings && \
   # Enable Docker service
   systemctl enable docker
 
-# Install Go using longsleep PPA (keeps Go up to date)
-USER root
-RUN add-apt-repository ppa:longsleep/golang-backports && \
-  apt-get update && \
-  DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends golang-go && \
-  rm -rf /var/lib/apt/lists/* && \
-  # Add Go to PATH for all users
-  echo 'export PATH="/usr/lib/go/bin:$PATH"' > /etc/profile.d/golang.sh && \
-  echo 'export PATH="/usr/lib/go/bin:$PATH"' >> /home/coder/.bashrc && \
-  chmod 644 /etc/profile.d/golang.sh
-
-USER coder
-# Verify Go installation
-RUN go version
-
 # Install DDEV using official package installation method
 # https://docs.ddev.com/en/stable/users/install/ddev-installation/#ddev-installation-linux
 USER root
@@ -163,7 +151,15 @@ RUN mkdir -p /home/linuxbrew/.linuxbrew && chown -R coder:coder /home/linuxbrew/
 
 USER coder
 RUN /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-RUN /home/linuxbrew/.linuxbrew/bin/brew install golangci-lint
+RUN /home/linuxbrew/.linuxbrew/bin/brew tap bats-core/bats-core && \
+  /home/linuxbrew/.linuxbrew/bin/brew install \
+  bats-core \
+  bats-support \
+  bats-file \
+  bats-assert \
+  go \
+  golangci-lint
 
 RUN ddev --version && \
-  docker --version
+  docker --version && \
+  go version

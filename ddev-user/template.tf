@@ -280,6 +280,16 @@ resource "coder_agent" "main" {
         chown coder:coder ~/WELCOME.txt 2>/dev/null || true
         echo "✓ Copied WELCOME.txt from /home/coder-files"
       fi
+      
+      # Copy VS Code settings to enable login shell
+      if [ -d /home/coder-files/.vscode ]; then
+        mkdir -p ~/.vscode
+        if [ -f /home/coder-files/.vscode/settings.json ]; then
+          cp /home/coder-files/.vscode/settings.json ~/.vscode/settings.json
+          chown coder:coder ~/.vscode/settings.json 2>/dev/null || true
+          echo "✓ Copied VS Code settings for login shell"
+        fi
+      fi
     else
       echo "Warning: /home/coder-files not found in image"
     fi
@@ -517,7 +527,7 @@ resource "coder_app" "ddev-web" {
   slug         = "ddev-web"
   display_name = "DDEV Web"
   url          = "http://localhost:80"
-  icon         = "/icon/globe.svg"
+  icon         = "🌐"
   subdomain    = true
   share        = "owner"
 
