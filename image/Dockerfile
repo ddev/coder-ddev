@@ -11,8 +11,10 @@ RUN apt-get update && \
   build-essential \
   ca-certificates \
   curl \
+  direnv \
   git \
   gnupg \
+  httpie \
   inetutils-ping \
   less \
   locales \
@@ -54,7 +56,8 @@ COPY --chown=coder:coder scripts /home/coder-files
 
 
 # Set correct permissions for scripts in init-scripts
-RUN chmod 644 /home/coder-files/WELCOME.txt
+RUN chmod 644 /home/coder-files/WELCOME.txt && \
+  chmod 644 /home/coder-files/.vscode/settings.json
 
 # Install Python3, pip, and pipx (required for Goose CLI installation)
 RUN apt-get update && \
@@ -163,7 +166,13 @@ RUN mkdir -p /home/linuxbrew/.linuxbrew && chown -R coder:coder /home/linuxbrew/
 
 USER coder
 RUN /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-RUN /home/linuxbrew/.linuxbrew/bin/brew install golangci-lint
+RUN /home/linuxbrew/.linuxbrew/bin/brew tap bats-core/bats-core && \
+  /home/linuxbrew/.linuxbrew/bin/brew install \
+  bats-core \
+  bats-support \
+  bats-file \
+  bats-assert \
+  golangci-lint
 
 RUN ddev --version && \
   docker --version
