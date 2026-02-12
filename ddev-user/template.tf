@@ -527,7 +527,7 @@ resource "coder_app" "ddev-web" {
   slug         = "ddev-web"
   display_name = "DDEV Web"
   url          = "http://localhost:80"
-  icon         = "https://raw.githubusercontent.com/coder/coder/main/site/static/icon/globe.svg"
+  icon         = "🌐"
   subdomain    = true
   share        = "owner"
 
