@@ -72,10 +72,9 @@ RUN apt-get update && \
   rm -rf /var/lib/apt/lists/*
 
 # Install Node.js (required for task-master-ai and cursor-agent)
-# Install Node.js 22.x LTS via NodeSource (supports --use-system-ca option)
+# Install Node.js 24.x LTS via NodeSource (supports --use-system-ca option)
 # The --use-system-ca option requires Node.js 18.19.0+ or 20.0.0+
-# Node.js 22.x is the latest LTS and fully supports this option
-RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
+RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash - && \
   DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends nodejs && \
   rm -rf /var/lib/apt/lists/* && \
   # Verify Node.js installation
@@ -162,4 +161,4 @@ RUN /home/linuxbrew/.linuxbrew/bin/brew tap bats-core/bats-core && \
 
 RUN ddev --version && \
   docker --version && \
-  go version
+  /home/linuxbrew/.linuxbrew/bin/go version
