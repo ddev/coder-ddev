@@ -21,11 +21,11 @@ This Docker image is the base image for Coder DDEV workspaces. It provides a com
 - Configured for Sysbox runtime (systemd enabled)
 
 **DDEV:**
-- DDEV v1.24.10 (from official apt repository)
+- DDEV (from official apt repository)
 - Supports 20+ project types (PHP, Node.js, Python, static sites)
 
 **Development Tools:**
-- Node.js 22.x LTS (via NodeSource)
+- Node.js 24.x LTS (via NodeSource)
 - npm with global package support
 - Python 3 with pip
 

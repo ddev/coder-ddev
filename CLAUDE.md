@@ -9,7 +9,7 @@ This project provides a Coder v2+ template for DDEV-based development environmen
 **Key Technologies:**
 - **Terraform (HCL)** - Infrastructure as Code for Coder templates
 - **Docker + Sysbox** - Nested containerization without privileged mode
-- **DDEV v1.24.10** - PHP/Node/Python development environment tool (supports 20+ project types)
+- **DDEV** - PHP/Node/Python development environment tool (supports 20+ project types)
 - **VS Code for Web** - Browser-based IDE via official Coder module
 - **Ubuntu 24.04** - Base container OS
 
@@ -198,7 +198,7 @@ The `image/Dockerfile` builds the base workspace image:
 4. **Python/Node** - Install Python 3, Node.js 22.x LTS
 5. **Global npm tools** - OpenSpec, TypeScript (in image, re-attempted in startup)
 6. **Docker daemon** - `docker-ce`, `docker-ce-cli`, `containerd`, systemd for Sysbox
-7. **DDEV** - v1.24.10 from official apt package (pkg.ddev.com)
+7. **DDEV** - from official apt package (pkg.ddev.com)
 
 ### Important Build Notes
 - User `coder` gets passwordless sudo: `coder ALL=(ALL) NOPASSWD:ALL`

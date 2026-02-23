@@ -7,7 +7,7 @@ Coder workspace template for DDEV-based development with Docker-in-Docker suppor
 - **Custom Base Image**: Ubuntu 24.04 LTS with essential development tools
 - **Docker-in-Docker**: Full Docker support for DDEV (using Sysbox runtime)
 - **Node.js/npm**: LTS version (configurable)
-- **DDEV v1.24.10**: Pre-installed and ready to use
+- **DDEV**: Pre-installed and ready to use
 - **VS Code for Web**: Browser-based IDE with full extension support
 - **PHP/Python/Node Projects**: Support for 20+ project types via DDEV
 
