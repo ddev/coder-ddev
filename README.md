@@ -1,14 +1,15 @@
 # DDEV Coder Template
 
-Coder workspace template for Drupal development with ddev, Docker-in-Docker support, Node.js, and Git.
+Coder workspace template for DDEV-based development with Docker-in-Docker support, Node.js, and Git.
 
 ## Features
 
-- **Custom Base Image**: Ubuntu LTS with curl/wget/sudo pre-installed
-- **Docker-in-Docker**: Full Docker support for ddev (using Sysbox runtime)
-- **Node.js/npm**: LTS version
-- **ddev**: Latest version pre-installed
-- **PHP/Composer**: Via ddev containers
+- **Custom Base Image**: Ubuntu 24.04 LTS with essential development tools
+- **Docker-in-Docker**: Full Docker support for DDEV (using Sysbox runtime)
+- **Node.js/npm**: LTS version (configurable)
+- **DDEV**: Pre-installed and ready to use
+- **VS Code for Web**: Browser-based IDE with full extension support
+- **PHP/Python/Node Projects**: Support for 20+ project types via DDEV
 
 ## Configuration
 
@@ -73,9 +74,38 @@ make deploy-no-cache     # Clean build and deploy
 
 **Note:** Keep the VERSION file and template.tf `image_version` in sync manually when releasing new versions.
 
-## Template Structure
+## Supported Project Types
 
-Templates are organized in directories where **the directory name is the template name**:
+DDEV supports 20+ project types out of the box. All work identically in Coder workspaces.
+
+**Static Sites:**
+- HTML, Jekyll, Hugo, any static site generator
+
+**Generic:**
+- Custom PHP, Go, Rust, or any web application
+
+See [DDEV Documentation](https://docs.ddev.com/) for full list and configuration.
+
+## Documentation
+
+**New to Coder?**
+- 📘 [Getting Started Guide](./docs/user/getting-started.md) - Create your first workspace
+- 📗 [Using Workspaces](./docs/user/using-workspaces.md) - Daily workflows and tips
+
+**Administrators:**
+- 📕 [Operations Guide](./docs/admin/operations-guide.md) - Deploy and manage template
+- 📙 [User Management](./docs/admin/user-management.md) - Users, roles, permissions
+- 📔 [Troubleshooting](./docs/admin/troubleshooting.md) - Debug common issues
+
+**DDEV Experts:**
+- 🔍 [Comparison to Local DDEV](./docs/architecture/comparison-to-local.md) - Architecture, tradeoffs, migration
+
+**Developers/Contributors:**
+- 🤖 [CLAUDE.md](./CLAUDE.md) - AI-assisted development guide
+
+📚 **[Full Documentation Index](./docs/README.md)**
+
+## Template Structure
 
 ```
 coder-ddev/
@@ -149,3 +179,29 @@ coder create --template ddev-user <workspace-name>
 # Drupal core development environment
 coder create --template ddev-drupal-core <workspace-name>
 ```
+
+**Access your project:**
+- Open Coder dashboard
+- Find your workspace
+- Click on port **80** or **443** under "Apps"
+
+**📖 [Full Getting Started Guide](./docs/user/getting-started.md)**
+
+### For Administrators
+
+Deploy template and manage infrastructure:
+
+```bash
+# Build and push Docker image
+cd image
+docker build -t randyfay/coder-ddev:v0.1 .
+docker push randyfay/coder-ddev:v0.1
+
+# Deploy template to Coder
+coder templates push --directory ddev-user ddev-user --yes
+
+# Or use Makefile
+make deploy  # Build + push image + push template
+```
+
+**📖 [Full Operations Guide](./docs/admin/operations-guide.md)**
