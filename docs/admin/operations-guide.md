@@ -110,7 +110,7 @@ variable "memory" {
 }
 
 variable "node_version" {
-  default = "20"  # Node.js LTS version
+  default = "24"  # Node.js LTS version (informational only; Node is pre-installed in image)
 }
 
 variable "docker_gid" {

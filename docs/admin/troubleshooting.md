@@ -118,15 +118,17 @@ coder ssh my-workspace -- journalctl -u coder-agent -f
 ```
 
 **Common causes:**
-1. **Startup script failure** - Check `/tmp/startup.log` in workspace
+1. **Startup script failure** - Check Coder agent logs: `coder logs my-workspace`
 2. **Docker daemon not starting** - Check `/tmp/dockerd.log`
 3. **Sysbox runtime missing** - Verify host has Sysbox installed
 4. **Resource exhaustion** - Check host has available CPU/RAM
 
 **Solution:**
 ```bash
-# Check startup script logs
-coder ssh my-workspace -- cat /tmp/startup.log
+# Check startup logs (output goes to Coder agent logs)
+coder logs my-workspace
+
+# Check Docker daemon logs
 coder ssh my-workspace -- cat /tmp/dockerd.log
 
 # Check Sysbox on host
@@ -297,8 +299,10 @@ cat /tmp/dockerd.log
 
 **Solution:**
 ```bash
-# Increase workspace memory
-coder update my-workspace --parameter memory=16
+# To increase resources, delete and recreate workspace with higher memory
+# (Back up data first: coder ssh my-workspace -- tar -czf ~/backup.tar.gz ~/projects)
+coder delete my-workspace --yes
+coder create --template ddev-user my-workspace --parameter memory=16 --yes
 
 # Clean up Docker resources
 docker system prune -a --volumes -f
@@ -414,8 +418,10 @@ df -h
 
 **Solution:**
 ```bash
-# Increase memory
-coder update my-workspace --parameter memory=16
+# To increase memory, delete and recreate workspace with higher memory
+# (Back up data first: ddev export-db --file=dump.sql.gz)
+coder delete my-workspace --yes
+coder create --template ddev-user my-workspace --parameter memory=16 --yes
 
 # Split large imports
 gunzip < dump.sql.gz | split -l 50000 - split_
@@ -708,8 +714,10 @@ docker stats $(docker ps -q --filter name=ddev)
 
 **Solution:**
 ```bash
-# Increase workspace resources
-coder update my-workspace --parameter memory=16
+# To increase resources, delete and recreate workspace
+# (Back up data first: coder ssh my-workspace -- tar -czf ~/backup.tar.gz ~/projects)
+coder delete my-workspace --yes
+coder create --template ddev-user my-workspace --parameter memory=16 --yes
 
 # Use NFS for file sharing (if Mutagen is slow)
 # Edit .ddev/config.yaml:
@@ -735,9 +743,9 @@ docker logs coder-<workspace-id>
 journalctl -u coder-agent -f
 ```
 
-**Startup script logs:**
+**Startup script logs** (output goes to Coder agent logs):
 ```bash
-coder ssh my-workspace -- cat /tmp/startup.log
+coder logs my-workspace
 ```
 
 **Docker daemon logs:**
@@ -763,8 +771,8 @@ coder ssh my-workspace
 # Run command
 coder ssh my-workspace -- docker ps
 
-# View file
-coder ssh my-workspace -- cat /tmp/startup.log
+# View startup logs (written to Coder agent logs)
+coder logs my-workspace
 ```
 
 **Check workspace state:**

@@ -84,7 +84,7 @@ DDEV supports 20+ project types out of the box. All work identically in Coder wo
 **Generic:**
 - Custom PHP, Go, Rust, or any web application
 
-See [DDEV Documentation](https://ddev.readthedocs.io/) for full list and configuration.
+See [DDEV Documentation](https://docs.ddev.com/) for full list and configuration.
 
 ## Documentation
 

@@ -250,7 +250,7 @@ Coder does not support workspace sharing out-of-the-box.
 - Create workspace for shared access
 - Share credentials with team (not recommended for production)
 
-**Option 3: Project handoff**
+**Option 4: Project handoff**
 - Commit code to Git repository
 - Other user creates their own workspace
 - Clone the shared repository

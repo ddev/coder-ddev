@@ -20,19 +20,19 @@ This project provides a Coder v2+ template for DDEV-based development environmen
 ### Template Management
 ```bash
 # Deploy or update template
-coder templates push --directory coder-ddev coder-ddev --yes
+coder templates push --directory ddev-user ddev-user --yes
 
 # List all templates
 coder templates list
 
 # Delete template (must delete workspaces first)
-coder templates delete coder-ddev --yes
+coder templates delete ddev-user --yes
 ```
 
 ### Workspace Management
 ```bash
 # Create workspace
-coder create --template coder-ddev <workspace-name> --yes
+coder create --template ddev-user <workspace-name> --yes
 
 # List workspaces
 coder list
@@ -58,7 +58,7 @@ docker build -t randyfay/coder-ddev:v0.1 .
 docker push randyfay/coder-ddev:v0.1
 
 # Update version for new releases
-echo "v0.2" > ../coder-ddev/VERSION
+echo "v0.2" > ../VERSION
 docker build -t randyfay/coder-ddev:v0.2 .
 docker push randyfay/coder-ddev:v0.2
 ```
@@ -134,7 +134,7 @@ The template uses **Sysbox-runc** instead of privileged Docker containers:
 **Critical:** The `/home/coder` volume mount hides image contents, so files must be copied from `/home/coder-files/` during startup script execution.
 
 ### Startup Script Flow
-The startup script in `coder-ddev/scripts/startup.sh` performs:
+The startup script is inline in `ddev-user/template.tf` (inside the `coder_agent` resource's `startup_script` field). It performs:
 1. **Permissions** - Fix ownership of `/home/coder` volume
 2. **Home initialization** - Copy skeleton files if first run
 3. **Git SSH setup** - Configure Coder's GitSSH wrapper
@@ -152,11 +152,11 @@ The startup script in `coder-ddev/scripts/startup.sh` performs:
 - **Isolation**: Each workspace gets separate host directory and Docker volume
 
 ### Terraform Variables
-Key template variables in `coder-ddev/template.tf`:
+Key template variables in `ddev-user/template.tf`:
 - `workspace_image_registry` - Docker registry URL (default: `index.docker.io/randyfay/coder-ddev`)
 - `image_version` - Image tag (default: read from `VERSION` file or `v0.1`)
 - `cpu` / `memory` - Resource limits (defaults: 4 cores, 8GB RAM)
-- `node_version` - Node.js version (default: `20`)
+- `node_version` - Node.js version (default: `24`, informational only — Node is pre-installed in image)
 - `docker_gid` - Docker group GID (default: `988`)
 - `registry_username` / `registry_password` - Registry authentication (optional)
 
@@ -195,10 +195,11 @@ The `image/Dockerfile` builds the base workspace image:
 1. **Base packages** - curl, wget, git, vim, sudo, build tools, bash-completion
 2. **User setup** - Rename ubuntu user → coder (UID 1000)
 3. **Scripts copy** - `COPY scripts /home/coder-files` (outside volume mount)
-4. **Python/Node** - Install Python 3, Node.js 22.x LTS
+4. **Python/Node** - Install Python 3, Node.js 24.x LTS
 5. **Global npm tools** - OpenSpec, TypeScript (in image, re-attempted in startup)
 6. **Docker daemon** - `docker-ce`, `docker-ce-cli`, `containerd`, systemd for Sysbox
 7. **DDEV** - from official apt package (pkg.ddev.com)
+8. **Homebrew (Linuxbrew)** - `bats-core`, `bats-support`, `bats-assert`, `go`, `golangci-lint`
 
 ### Important Build Notes
 - User `coder` gets passwordless sudo: `coder ALL=(ALL) NOPASSWD:ALL`
@@ -258,12 +259,11 @@ Additional logs in workspace:
 
 ## Important Code Locations
 
-- `coder-ddev/template.tf` - Main Terraform template definition
-- `coder-ddev/scripts/startup.sh` - Workspace startup script with Docker/DDEV initialization
-- `coder-ddev/template.tf:183-239` - Coder agent configuration
-- `coder-ddev/template.tf:242-248` - VS Code for Web module (official Coder module)
-- `coder-ddev/template.tf:250-263` - Graceful DDEV shutdown script
-- `coder-ddev/template.tf:268-332` - Docker container resource
+- `ddev-user/template.tf` - Main Terraform template definition (startup script is inline in coder_agent)
+- `ddev-user/template.tf` - Coder agent configuration with inline startup script
+- `ddev-user/template.tf` - VS Code for Web module (official Coder module)
+- `ddev-user/template.tf` - Graceful DDEV shutdown script (coder_script resource)
+- `ddev-user/template.tf` - Docker container resource
 - `image/Dockerfile` - Base image build instructions
 - `image/scripts/.ddev/global_config.yaml` - DDEV defaults
 - `VERSION` - Image version used by template (read automatically)

@@ -274,7 +274,7 @@ mkdir ~/projects/my-wordpress
 cd ~/projects/my-wordpress
 ddev config --project-type=wordpress --docroot=web
 ddev start
-ddev composer create drupal/recommended-project
+ddev composer create roots/bedrock
 ```
 
 **Drupal:**
@@ -605,18 +605,17 @@ https://my-site.ddev.site  ← Doesn't work in Coder
 
 **Coder DDEV:**
 ```
-https://8080--workspace-name--owner.coder.example.com/  ← Use forwarded URLs
+https://ddev-web--workspace-name--owner.coder.example.com/  ← Use DDEV Web app URL
 ```
 
 ### Accessing DDEV Projects
 
 **Via Coder UI (Recommended):**
 1. Go to workspace in Coder dashboard
-2. Find the **Ports** section
-3. Click on the URL for port **80** (HTTP) or **443** (HTTPS)
-4. Your DDEV project loads in a new tab
+2. Under **Apps**, click **DDEV Web**
+3. Your DDEV project loads in a new tab
 
-The forwarded URLs follow the pattern: `https://PORT--workspace--owner.domain/`
+The URL follows the pattern: `https://ddev-web--workspace-name--owner.domain/`
 
 **Common DDEV ports:**
 - **80**: HTTP web server
@@ -798,8 +797,7 @@ journalctl -u coder-agent -f
 # Docker daemon logs
 journalctl -u docker -f
 
-# Startup script logs
-cat /tmp/startup.log
+# Docker daemon logs (written by startup script)
 cat /tmp/dockerd.log
 ```
 

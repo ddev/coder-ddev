@@ -306,4 +306,4 @@ docker history randyfay/coder-ddev:v0.1
 - **[Troubleshooting Guide](../docs/admin/troubleshooting.md)** - Debugging workspace issues
 - **[Dockerfile Best Practices](https://docs.docker.com/develop/develop-images/dockerfile_best-practices/)** - Official Docker docs
 - **[Sysbox Documentation](https://github.com/nestybox/sysbox)** - Sysbox runtime details
-- **[DDEV Documentation](https://ddev.readthedocs.io/)** - DDEV reference
+- **[DDEV Documentation](https://docs.ddev.com/)** - DDEV reference

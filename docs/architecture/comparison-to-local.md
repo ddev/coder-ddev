@@ -113,7 +113,7 @@ This guide is for teams and developers familiar with local DDEV who are evaluati
 **Coder DDEV:**
 - No ddev-router (not needed)
 - Port forwarding via Coder proxy
-- Access via forwarded URLs: `https://8080--workspace--owner.coder.example.com/`
+- Access via DDEV Web app URL: `https://ddev-web--workspace--owner.coder.example.com/`
 - *.ddev.site URLs don't work
 
 **Migration:**

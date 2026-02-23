@@ -112,7 +112,7 @@ coder list
 4. (Optional) Configure parameters:
    - **CPU**: Number of cores (default: 4)
    - **Memory**: RAM in GB (default: 8)
-   - **Node.js version**: Node version (default: 20)
+   - **Node.js version**: Node version (default: 24)
 5. Click **Create Workspace**
 
 **Wait for workspace to start** (1-3 minutes):
@@ -129,7 +129,6 @@ coder create --template ddev-user my-first-workspace --yes
 coder create --template ddev-user my-first-workspace \
   --parameter cpu=8 \
   --parameter memory=16 \
-  --parameter node_version=22 \
   --yes
 ```
 
@@ -304,11 +303,10 @@ DDEV normally uses URLs like `https://my-site.ddev.site`, but in Coder, you acce
 **Via Coder Web UI (Recommended):**
 1. Go to Coder dashboard
 2. Find your workspace
-3. Look for the **Ports** section
-4. Click on the URL for port **80** (HTTP) or **443** (HTTPS)
-5. Your DDEV project loads in a new tab
+3. Under **Apps**, click **DDEV Web**
+4. Your DDEV project loads in a new tab
 
-The forwarded URLs look like: `https://8080--workspace-name--owner.coder.example.com/`
+The URL follows the pattern: `https://ddev-web--workspace-name--owner.coder.example.com/`
 
 **Via CLI Port Forward:**
 ```bash
@@ -647,9 +645,9 @@ docker stats  # Check Docker container resources
 
 ### Learn More About DDEV
 
-- **[DDEV Documentation](https://ddev.readthedocs.io/)** - Full DDEV docs
-- **[DDEV Quickstart](https://ddev.readthedocs.io/en/stable/users/quickstart/)** - DDEV basics
-- **[DDEV Commands](https://ddev.readthedocs.io/en/stable/users/usage/commands/)** - Command reference
+- **[DDEV Documentation](https://docs.ddev.com/)** - Full DDEV docs
+- **[DDEV Quickstart](https://docs.ddev.com/en/stable/users/quickstart/)** - DDEV basics
+- **[DDEV Commands](https://docs.ddev.com/en/stable/users/usage/commands/)** - Command reference
 
 ### Learn More About Coder
 
@@ -662,7 +660,7 @@ docker stats  # Check Docker container resources
 ```bash
 # WordPress
 ddev config --project-type=wordpress --docroot=web
-ddev composer create drupal/recommended-project
+ddev composer create roots/bedrock
 
 # Drupal
 ddev config --project-type=drupal --docroot=web
@@ -737,7 +735,7 @@ source ~/.bashrc
 
 - [Using Workspaces](./using-workspaces.md) - Advanced workflows
 - [Troubleshooting Guide](../admin/troubleshooting.md) - Detailed debugging
-- [DDEV Docs](https://ddev.readthedocs.io/) - DDEV reference
+- [DDEV Docs](https://docs.ddev.com/) - DDEV reference
 
 ### Support
 

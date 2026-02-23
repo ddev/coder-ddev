@@ -116,7 +116,7 @@ The DDEV Coder template provides cloud-based development environments with full 
 
 ✅ **Docker and Docker Compose** - Full Docker CLI and daemon
 ✅ **DDEV** - Latest stable version with all features
-✅ **Node.js LTS** - Configurable version (default: 20)
+✅ **Node.js LTS** - Version 24.x pre-installed
 ✅ **VS Code for Web** - Official Coder module with extension support
 ✅ **Git with SSH** - GitSSH integration for seamless cloning
 ✅ **System tools** - curl, wget, vim, build-essential, bash-completion
