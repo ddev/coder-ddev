@@ -278,6 +278,45 @@ On the machine where you'll manage templates (can be your local machine):
 coder login https://coder.ddev.com
 ```
 
+### Configure GitHub OAuth (recommended)
+
+The initial admin account must be created with username/password via the web UI (above). Once that's done, configure GitHub OAuth so all subsequent logins — including `coder login` from the CLI — can use GitHub instead.
+
+**1. Create a GitHub OAuth App**
+
+Go to [GitHub Developer Settings → OAuth Apps → New OAuth App](https://github.com/settings/developers) and fill in:
+
+- **Application name**: `Coder (coder.ddev.com)` (or similar)
+- **Homepage URL**: `https://coder.ddev.com`
+- **Authorization callback URL**: `https://coder.ddev.com/api/v2/users/oauth2/github/callback`
+
+After creating the app, generate a client secret. Note the **Client ID** and **Client Secret**.
+
+**2. Add to `/etc/coder.d/coder.env`**
+
+```bash
+# GitHub OAuth
+CODER_OAUTH2_GITHUB_CLIENT_ID=your-client-id
+CODER_OAUTH2_GITHUB_CLIENT_SECRET=your-client-secret
+
+# Allow sign-ups via GitHub (new users are created automatically on first login)
+CODER_OAUTH2_GITHUB_ALLOW_SIGNUPS=true
+
+# Restrict to members of a specific GitHub org (recommended):
+CODER_OAUTH2_GITHUB_ALLOWED_ORGS=ddev
+
+# Or allow any GitHub user (not recommended for a shared server):
+# CODER_OAUTH2_GITHUB_ALLOW_EVERYONE=true
+```
+
+**3. Restart Coder**
+
+```bash
+sudo systemctl restart coder
+```
+
+GitHub will now appear as a login option in the web UI and `coder login` will open a browser for GitHub authentication.
+
 ---
 
 ## Step 6: Deploy the DDEV Template
