@@ -83,7 +83,8 @@ push-template-ddev-user: ## Push ddev-user template to Coder
 	@echo "Syncing VERSION to $(DDEV_USER_DIR)..."
 	cp VERSION $(DDEV_USER_DIR)/VERSION
 	@echo "Pushing Coder template $(DDEV_USER_DIR)..."
-	coder templates push --directory $(DDEV_USER_DIR) $(DDEV_USER_DIR) --yes
+	coder templates push --directory $(DDEV_USER_DIR) $(DDEV_USER_DIR) --yes \
+		--variable workspace_image_registry=index.docker.io/$(IMAGE_NAME)
 	@echo "Template push complete"
 
 .PHONY: push-template-ddev-drupal-core
@@ -91,7 +92,8 @@ push-template-ddev-drupal-core: ## Push ddev-drupal-core template to Coder
 	@echo "Syncing VERSION to $(DDEV_DRUPAL_CORE_DIR)..."
 	cp VERSION $(DDEV_DRUPAL_CORE_DIR)/VERSION
 	@echo "Pushing Coder template $(DDEV_DRUPAL_CORE_DIR)..."
-	coder templates push --directory $(DDEV_DRUPAL_CORE_DIR) $(DDEV_DRUPAL_CORE_DIR) --yes
+	coder templates push --directory $(DDEV_DRUPAL_CORE_DIR) $(DDEV_DRUPAL_CORE_DIR) --yes \
+		--variable workspace_image_registry=index.docker.io/$(IMAGE_NAME)
 	@echo "Template push complete"
 
 .PHONY: deploy-ddev-user
