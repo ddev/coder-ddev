@@ -317,6 +317,17 @@ sudo systemctl restart coder
 
 GitHub will now appear as a login option in the web UI and `coder login` will open a browser for GitHub authentication.
 
+**If you see "Signups are disabled":**
+
+This means `CODER_OAUTH2_GITHUB_ALLOW_SIGNUPS` is not set or Coder wasn't restarted after it was added. Verify the env var is present and restart:
+
+```bash
+grep ALLOW_SIGNUPS /etc/coder.d/coder.env
+sudo systemctl restart coder
+```
+
+There is also a toggle in the Coder admin UI at **Admin → Security** that can override the env var. Check that user sign-ups are not disabled there.
+
 ---
 
 ## Step 6: Deploy the DDEV Template
