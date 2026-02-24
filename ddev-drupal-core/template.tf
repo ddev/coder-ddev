@@ -8,12 +8,7 @@ terraform {
       source  = "kreuzwerker/docker"
       version = "~> 3.0"
     }
-    null = {
-      source  = "hashicorp/null"
-      version = "~> 3.0"
-    }
-
-  }
+}
 }
 
 provider "docker" {
@@ -40,12 +35,6 @@ variable "docker_host" {
   default     = "unix:///var/run/docker.sock"
 }
 
-variable "image" {
-  description = "Base image for the workspace"
-  type        = string
-  default     = "ubuntu:24.04"
-}
-
 variable "registry_username" {
   description = "Username for GitLab Container Registry authentication"
   type        = string
@@ -63,7 +52,7 @@ variable "registry_password" {
 variable "image_version" {
   description = "The version of the Docker image to use"
   type        = string
-  default     = "v0.5"
+  default     = "v0.6"
 }
 
 variable "docker_gid" {
@@ -80,11 +69,6 @@ data "coder_workspace" "me" {}
 # Workspace owner data source (Coder v2+)
 # Note: For Coder v0.12, this may not be available - will need fallback
 data "coder_workspace_owner" "me" {}
-
-# Task metadata - makes this template task-capable
-data "coder_task" "me" {}
-
-
 
 
 
@@ -150,12 +134,6 @@ resource "docker_image" "workspace_image" {
 # Note: Old image cleanup removed - we now use version tags exclusively
 # Old images with :latest tag are no longer used and will be cleaned up automatically by Docker
 
-variable "node_version" {
-  description = "Node.js version to install"
-  type        = string
-  default     = "24"
-}
-
 variable "cpu" {
   description = "CPU cores"
   type        = number
@@ -176,15 +154,6 @@ variable "memory" {
   }
 }
 
-variable "disk_size" {
-  description = "Disk size in GB"
-  type        = number
-  default     = 50
-  validation {
-    condition     = var.disk_size >= 10 && var.disk_size <= 500
-    error_message = "Disk size must be between 10 and 500 GB"
-  }
-}
 
 
 
@@ -344,7 +313,6 @@ WELCOME_EOF
     export LC_ALL=en_US.UTF-8
     if ! grep -q "LC_ALL=en_US.UTF-8" ~/.bashrc; then
       echo "export LANG=en_US.UTF-8" >> ~/.bashrc
-      echo "export LC_ALL=en_US.UTF-8" >> ~/.bashrc
       echo "export LC_ALL=en_US.UTF-8" >> ~/.bashrc
     fi
     
@@ -778,8 +746,6 @@ BASHPROFILE_WELCOME
     
     
     # Explicitly exit with success to prevent "Unhealthy" status
-    echo "DEBUG: Script finishing..."
-    set +x
     exit 0
   EOT
 
@@ -811,7 +777,7 @@ resource "docker_volume" "coder_dind_cache" {
 module "vscode-web" {
   count          = data.coder_workspace.me.start_count
   source         = "registry.coder.com/coder/vscode-web/coder"
-  version        = "1.0.20"
+  version        = "~> 1.0"
   agent_id       = coder_agent.main.id
   folder         = "/home/coder/drupal-core"
   accept_license = true
@@ -858,7 +824,7 @@ resource "coder_script" "ddev_shutdown" {
 module "coder-login" {
   count    = data.coder_workspace.me.start_count
   source   = "registry.coder.com/coder/coder-login/coder"
-  version  = "1.0.31"
+  version  = "~> 1.0"
   agent_id = coder_agent.main.id
 }
 
@@ -976,20 +942,12 @@ resource "coder_metadata" "workspace_info" {
     value = "8.5"
   }
   item {
-    key   = "node_version"
-    value = var.node_version
-  }
-  item {
     key   = "cpu"
-    value = "${var.cpu} cores"
+    value = "${var.cpu} vCPU (soft limit)"
   }
   item {
     key   = "memory"
     value = "${var.memory} GB"
-  }
-  item {
-    key   = "disk_size"
-    value = "${var.disk_size} GB"
   }
   item {
     key   = "setup_logs"

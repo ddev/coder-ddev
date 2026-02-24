@@ -32,7 +32,6 @@ RUN apt-get update && \
   locale-gen en_US.UTF-8 && \
   rm -rf /var/lib/apt/lists/* && \
   # Configure sudo for coder user (passwordless sudo for all commands)
-  # Configure sudo for coder user (passwordless sudo for all commands)
   # Allow DEBIAN_FRONTEND environment variable
   echo "Defaults env_keep += \"DEBIAN_FRONTEND\"" >> /etc/sudoers.d/coder && \
   echo "coder ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/coder && \
@@ -59,21 +58,15 @@ COPY --chown=coder:coder scripts /home/coder-files
 RUN chmod 644 /home/coder-files/WELCOME.txt && \
   chmod 644 /home/coder-files/.vscode/settings.json
 
-# Install Python3, pip, and pipx (required for Goose CLI installation)
+# Install additional utilities
 RUN apt-get update && \
   DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
   python3 \
-  python3-pip \
-  python3-venv \
   jq \
-  bzip2 \
-  libxcb1 \
-  pipx && \
+  bzip2 && \
   rm -rf /var/lib/apt/lists/*
 
-# Install Node.js (required for task-master-ai and cursor-agent)
-# Install Node.js 24.x LTS via NodeSource (supports --use-system-ca option)
-# The --use-system-ca option requires Node.js 18.19.0+ or 20.0.0+
+# Install Node.js 24.x LTS via NodeSource
 RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash - && \
   DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends nodejs && \
   rm -rf /var/lib/apt/lists/* && \
@@ -81,18 +74,6 @@ RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash - && \
   node --version && \
   npm --version
 
-# Install task-master-ai and cursor-agent as coder user
-# Configure npm to install global packages in user directory to avoid permission issues
-USER coder
-RUN mkdir -p /home/coder/.npm-global && \
-  npm config set prefix '/home/coder/.npm-global' && \
-  echo 'export PATH="/home/coder/.npm-global/bin:$PATH"' >> /home/coder/.bashrc && \
-  echo 'export PATH="/home/coder/.npm-global/bin:$PATH"' >> /home/coder/.profile && \
-  echo 'export PATH="/home/coder/.npm-global/bin:$PATH"' >> /home/coder/.bash_profile && \
-  # Add local bin directory to PATH for Goose
-  echo 'export PATH="$HOME/.local/bin:$PATH"' >> /home/coder/.bashrc && \
-  echo 'export PATH="$HOME/.local/bin:$PATH"' >> /home/coder/.profile && \
-  echo 'export PATH="$HOME/.local/bin:$PATH"' >> /home/coder/.bash_profile
 
 # Create system-wide PATH configuration for non-interactive shells
 # This ensures ~/.local/bin is in PATH even for scripts and non-interactive shells
@@ -107,8 +88,6 @@ RUN echo 'export PATH="/home/coder/.local/bin:$PATH"' > /etc/profile.d/coder-pat
   echo 'export PATH="/home/coder/.local/bin:$PATH"' >> /etc/bash.bashrc
 USER coder
 
-
-# We do NOT pre-install the old Python version here anymore
 
 RUN npm install -g @fission-ai/openspec@latest typescript 2>/dev/null || \
   echo "Warning: npm global installation failed, will be retried in startup script"
