@@ -187,8 +187,8 @@ Deploy template and manage infrastructure:
 ```bash
 # Build and push Docker image
 cd image
-docker build -t randyfay/coder-ddev:v0.1 .
-docker push randyfay/coder-ddev:v0.1
+docker build -t ddev/coder-ddev:v0.1 .
+docker push ddev/coder-ddev:v0.1
 
 # Deploy template to Coder
 coder templates push --directory ddev-user ddev-user --yes

@@ -1,7 +1,7 @@
 # Makefile for building and pushing coder-ddev Docker image and templates
 
 # Configuration
-IMAGE_NAME := randyfay/coder-ddev
+IMAGE_NAME := ddev/coder-ddev
 VERSION := $(shell cat VERSION 2>/dev/null || echo "1.0.0-beta1")
 DOCKERFILE_DIR := image
 DOCKERFILE := $(DOCKERFILE_DIR)/Dockerfile

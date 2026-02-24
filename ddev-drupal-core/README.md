@@ -159,7 +159,7 @@ Create scripts in `~/.ddev/commands/host/` or `.ddev/commands/web/`
 
 ## Architecture
 
-- **Base Image**: `randyfay/coder-ddev:v0.4` (Ubuntu 24.04, DDEV, Docker, Node.js)
+- **Base Image**: `ddev/coder-ddev` (Ubuntu 24.04, DDEV, Docker, Node.js)
 - **Runtime**: Sysbox (secure Docker-in-Docker)
 - **Project Template**: [joachim-n/drupal-core-development-project](https://github.com/joachim-n/drupal-core-development-project)
 - **Volumes**:

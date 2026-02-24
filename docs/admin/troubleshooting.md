@@ -79,7 +79,7 @@ coder users show <username> --json | grep organization
 **Check:**
 ```bash
 # Test image pull locally
-docker pull randyfay/coder-ddev:v0.1
+docker pull ddev/coder-ddev:v0.1
 
 # Check registry authentication
 docker login
@@ -176,8 +176,8 @@ security_opt = ["apparmor:unconfined", "seccomp:unconfined"]
 **Solution:** Rebuild Docker image with DDEV installed:
 ```bash
 cd image
-docker build --no-cache -t randyfay/coder-ddev:v0.1 .
-docker push randyfay/coder-ddev:v0.1
+docker build --no-cache -t ddev/coder-ddev:v0.1 .
+docker push ddev/coder-ddev:v0.1
 ```
 
 ### Workspace Won't Start After Stop

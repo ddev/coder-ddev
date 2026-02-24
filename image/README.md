@@ -68,19 +68,19 @@ From this directory:
 VERSION=$(cat ../VERSION)
 
 # Build image
-docker build -t randyfay/coder-ddev:$VERSION .
+docker build -t ddev/coder-ddev:$VERSION .
 
 # Tag as latest
-docker tag randyfay/coder-ddev:$VERSION randyfay/coder-ddev:latest
+docker tag ddev/coder-ddev:$VERSION ddev/coder-ddev:latest
 
 # Test image
-docker run --rm randyfay/coder-ddev:$VERSION ddev --version
-docker run --rm randyfay/coder-ddev:$VERSION docker --version
-docker run --rm randyfay/coder-ddev:$VERSION node --version
+docker run --rm ddev/coder-ddev:$VERSION ddev --version
+docker run --rm ddev/coder-ddev:$VERSION docker --version
+docker run --rm ddev/coder-ddev:$VERSION node --version
 
 # Push to registry
-docker push randyfay/coder-ddev:$VERSION
-docker push randyfay/coder-ddev:latest
+docker push ddev/coder-ddev:$VERSION
+docker push ddev/coder-ddev:latest
 ```
 
 ## Customization
@@ -172,16 +172,16 @@ image/
 
 ```bash
 # Test DDEV
-docker run --rm randyfay/coder-ddev:v0.1 ddev version
+docker run --rm ddev/coder-ddev:v0.1 ddev version
 
 # Test Docker CLI
-docker run --rm randyfay/coder-ddev:v0.1 docker --version
+docker run --rm ddev/coder-ddev:v0.1 docker --version
 
 # Test Node.js
-docker run --rm randyfay/coder-ddev:v0.1 node --version
+docker run --rm ddev/coder-ddev:v0.1 node --version
 
 # Test user configuration
-docker run --rm randyfay/coder-ddev:v0.1 id
+docker run --rm ddev/coder-ddev:v0.1 id
 # Should show: uid=1000(coder) gid=1000(coder) groups=1000(coder),988(docker)
 ```
 
@@ -192,7 +192,7 @@ Requires Sysbox installed on host:
 ```bash
 # Run container with Sysbox runtime
 docker run --runtime=sysbox-runc -d --name test-ddev \
-  randyfay/coder-ddev:v0.1 sleep infinity
+  ddev/coder-ddev:v0.1 sleep infinity
 
 # Exec into container
 docker exec -it test-ddev bash
@@ -264,10 +264,10 @@ docker build --no-cache -t test-image .
 
 ```bash
 # Check image size
-docker images randyfay/coder-ddev
+docker images ddev/coder-ddev
 
 # Analyze layers
-docker history randyfay/coder-ddev:v0.1
+docker history ddev/coder-ddev:v0.1
 
 # Common causes:
 # - Package manager caches not cleaned

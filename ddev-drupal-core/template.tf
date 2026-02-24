@@ -52,7 +52,7 @@ variable "registry_password" {
 variable "image_version" {
   description = "The version of the Docker image to use"
   type        = string
-  default     = "v0.6"
+  default     = "v0.1"
 }
 
 variable "docker_gid" {
@@ -101,7 +101,7 @@ variable "workspace_image_registry" {
   # The version tag is appended automatically using the image_version variable or VERSION file
   # DO NOT include :latest or any version tag here - version comes from image_version variable
   # To use a specific version, override the image_version variable when deploying
-  default = "index.docker.io/randyfay/coder-ddev"
+  default = "index.docker.io/ddev/coder-ddev"
 }
 
 

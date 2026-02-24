@@ -50,17 +50,15 @@ coder delete <workspace-name> --yes
 
 ### Docker Image Management
 ```bash
-# Build the base image (from image/ directory)
-cd image
-docker build -t randyfay/coder-ddev:v0.1 .
+# Build image
+make build
 
-# Push to Docker Hub
-docker push randyfay/coder-ddev:v0.1
+# Build and push to registry
+make build-and-push
 
 # Update version for new releases
-echo "v0.2" > ../VERSION
-docker build -t randyfay/coder-ddev:v0.2 .
-docker push randyfay/coder-ddev:v0.2
+echo "v0.2" > VERSION
+make deploy-ddev-user
 ```
 
 ### DDEV Commands (within workspace)
@@ -153,7 +151,7 @@ The startup script is inline in `ddev-user/template.tf` (inside the `coder_agent
 
 ### Terraform Variables
 Key template variables in `ddev-user/template.tf`:
-- `workspace_image_registry` - Docker registry URL (default: `index.docker.io/randyfay/coder-ddev`)
+- `workspace_image_registry` - Docker registry URL (default: `index.docker.io/ddev/coder-ddev`)
 - `image_version` - Image tag (default: read from `VERSION` file or `v0.1`)
 - `cpu` / `memory` - Resource limits (defaults: 4 cores, 8GB RAM)
 - `node_version` - Node.js version (default: `24`, informational only — Node is pre-installed in image)

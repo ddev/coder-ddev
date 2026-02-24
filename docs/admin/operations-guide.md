@@ -104,11 +104,11 @@ The template is defined in `ddev-user/template.tf`. Key configuration parameters
 
 ```hcl
 variable "workspace_image_registry" {
-  default = "index.docker.io/randyfay/coder-ddev"
+  default = "index.docker.io/ddev/coder-ddev"
 }
 
 variable "image_version" {
-  default = "v0.6"  # Update this when releasing new image versions
+  default = "v0.1"  # Update this when releasing new image versions
 }
 
 variable "cpu" {
