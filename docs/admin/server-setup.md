@@ -270,6 +270,8 @@ journalctl -u coder -f
 
 Navigate to `https://coder.ddev.com` and create the initial admin user.
 
+> **Important:** Use your GitHub username as the Coder username (e.g. `rfay`). When you later log in via GitHub OAuth, Coder matches on username — if the name is already taken it creates a second account with a random suffix (e.g. `rfay-wanderingortiz8`) which will not have admin permissions. Getting the username right here avoids that entirely.
+
 ### Authenticate the CLI
 
 On the machine where you'll manage templates (can be your local machine):
@@ -281,6 +283,13 @@ coder login https://coder.ddev.com
 ### Configure GitHub OAuth (recommended)
 
 The initial admin account must be created with username/password via the web UI (above). Once that's done, configure GitHub OAuth so all subsequent logins — including `coder login` from the CLI — can use GitHub instead.
+
+> **If you already have a duplicate account** (e.g. `rfay` password account and `rfay-wanderingortiz8` GitHub account): Coder does not support renaming users in the UI or reliably via the API. Fix it directly in PostgreSQL:
+> ```bash
+> sudo -u postgres psql coder -c "UPDATE users SET username='rfay' WHERE username='rfay-wanderingortiz8';"
+> sudo systemctl restart coder
+> ```
+> You will also need to delete the original password account (`rfay`) first if it still exists, or rename it out of the way the same way.
 
 **1. Create a GitHub OAuth App**
 
