@@ -896,4 +896,4 @@ When reporting issues, provide:
 - [Coder Troubleshooting](https://coder.com/docs/guides/troubleshooting) - Official docs
 - [Sysbox Troubleshooting](https://github.com/nestybox/sysbox/blob/master/docs/user-guide/troubleshoot.md) - Sysbox-specific issues
 - [DDEV Troubleshooting](https://docs.ddev.com/users/usage/troubleshooting/) - DDEV-specific issues
-- [GitHub Issues](https://github.com/rfay/coder-ddev/issues) - Report bugs or ask questions
+- [GitHub Issues](https://github.com/ddev/coder-ddev/issues) - Report bugs or ask questions

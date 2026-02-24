@@ -740,7 +740,7 @@ source ~/.bashrc
 ### Support
 
 - **Ask your administrator** for Coder-specific issues
-- **GitHub Issues**: [Report bugs](https://github.com/rfay/coder-ddev/issues)
+- **GitHub Issues**: [Report bugs](https://github.com/ddev/coder-ddev/issues)
 - **DDEV Community**: [DDEV Discord](https://discord.gg/hCZFfAMc5k)
 - **Coder Community**: [Coder Discord](https://discord.gg/coder)
 

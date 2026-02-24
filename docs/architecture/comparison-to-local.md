@@ -723,4 +723,4 @@ A: Yes, easily. Clone Git repo, use same .ddev/config.yaml, run `ddev start`.
 - [Coder Documentation](https://coder.com/docs) - Official Coder docs
 - [Getting Started Guide](../user/getting-started.md) - New to Coder DDEV
 - [Operations Guide](../admin/operations-guide.md) - Deployment and management
-- [GitHub Issues](https://github.com/rfay/coder-ddev/issues) - Ask questions, report issues
+- [GitHub Issues](https://github.com/ddev/coder-ddev/issues) - Ask questions, report issues

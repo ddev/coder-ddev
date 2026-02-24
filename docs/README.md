@@ -170,7 +170,7 @@ ddev start
 
 ### Community Resources
 
-- **GitHub Issues**: [Report bugs or request features](https://github.com/rfay/coder-ddev/issues)
+- **GitHub Issues**: [Report bugs or request features](https://github.com/ddev/coder-ddev/issues)
 - **DDEV Documentation**: [Official DDEV docs](https://docs.ddev.com/)
 - **Coder Documentation**: [Official Coder docs](https://coder.com/docs)
 - **Coder Discord**: [Community chat](https://discord.gg/coder)
@@ -178,7 +178,7 @@ ddev start
 ### Before Asking for Help
 
 1. Check the [Troubleshooting Guide](./admin/troubleshooting.md)
-2. Search [existing GitHub issues](https://github.com/rfay/coder-ddev/issues)
+2. Search [existing GitHub issues](https://github.com/ddev/coder-ddev/issues)
 3. Review [DDEV troubleshooting docs](https://docs.ddev.com/users/usage/troubleshooting/)
 
 ### Reporting Issues
@@ -194,7 +194,7 @@ Include:
 
 This is an open-source project. Contributions welcome!
 
-- **Report bugs**: [GitHub Issues](https://github.com/rfay/coder-ddev/issues)
+- **Report bugs**: [GitHub Issues](https://github.com/ddev/coder-ddev/issues)
 - **Contribute code**: Fork, branch, submit PR
 - **Documentation**: Suggest improvements or add examples
 - **AI-assisted development**: See [CLAUDE.md](../CLAUDE.md) for AI workflow

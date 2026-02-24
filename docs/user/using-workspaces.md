@@ -997,7 +997,7 @@ git sparse-checkout set path/to/needed/directory
 
 ### Community
 
-- [GitHub Issues](https://github.com/rfay/coder-ddev/issues) - Report bugs
+- [GitHub Issues](https://github.com/ddev/coder-ddev/issues) - Report bugs
 - [DDEV Discord](https://discord.gg/hCZFfAMc5k) - DDEV community
 - [Coder Discord](https://discord.gg/coder) - Coder community
 

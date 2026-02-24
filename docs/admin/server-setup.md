@@ -288,7 +288,7 @@ Quick summary:
 
 ```bash
 # Clone this repository
-git clone https://github.com/rfay/coder-ddev
+git clone https://github.com/ddev/coder-ddev
 cd coder-ddev
 
 # Build and deploy
