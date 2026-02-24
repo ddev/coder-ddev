@@ -813,10 +813,15 @@ resource "coder_script" "ddev_shutdown" {
   run_on_stop  = true
   script       = <<-EOT
     #!/bin/bash
+    # Ensure ddev is in PATH (installed via Homebrew)
+    export PATH="$PATH:/home/linuxbrew/.linuxbrew/bin:/usr/local/bin"
     echo "Stopping all DDEV projects gracefully..."
     if command -v ddev > /dev/null 2>&1; then
       ddev poweroff || true
       echo "DDEV projects stopped"
+    else
+      echo "ddev not found in PATH, trying direct path..."
+      /home/linuxbrew/.linuxbrew/bin/ddev poweroff 2>/dev/null || true
     fi
   EOT
 }
