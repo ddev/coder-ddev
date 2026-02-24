@@ -12,6 +12,8 @@ Before deploying this template, ensure the following are in place:
 - Administrative access to Coder
 - Coder CLI installed and authenticated (`coder login <url>`)
 
+> **Setting up a new server?** See the [Server Setup Guide](./server-setup.md) for step-by-step installation of Docker, Sysbox, and Coder.
+
 ### Docker Host Infrastructure
 
 - **Sysbox runtime installed** on all Coder agent nodes:
@@ -430,6 +432,7 @@ Monitor resource usage and adjust template defaults accordingly.
 
 ## Additional Resources
 
+- [Server Setup Guide](./server-setup.md) - Fresh server installation (Docker, Sysbox, Coder)
 - [User Management Guide](./user-management.md) - Managing users and permissions
 - [Troubleshooting Guide](./troubleshooting.md) - Debugging workspace issues
 - [Coder Documentation](https://coder.com/docs) - Official Coder docs

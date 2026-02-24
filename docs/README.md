@@ -14,11 +14,13 @@ Welcome to the DDEV Coder template documentation. This guide helps you deploy, m
 
 System administrators and DevOps teams managing Coder infrastructure and the DDEV template.
 
+- **[Server Setup Guide](./admin/server-setup.md)** - Fresh server installation: Docker, Sysbox, Coder server, adding capacity
 - **[Operations Guide](./admin/operations-guide.md)** - Template deployment, Docker image builds, version management, workspace lifecycle
 - **[User Management Guide](./admin/user-management.md)** - User accounts, roles, permissions, SSH keys, API tokens, resource quotas
 - **[Troubleshooting Guide](./admin/troubleshooting.md)** - Common issues, debugging tools, error messages, emergency recovery
 
-**Start here:** [Operations Guide](./admin/operations-guide.md)
+**New installation:** [Server Setup Guide](./admin/server-setup.md)
+**Ongoing operations:** [Operations Guide](./admin/operations-guide.md)
 
 ### For Users
 
@@ -208,9 +210,9 @@ Current version: See [VERSION](../VERSION) file.
 ## Next Steps
 
 ### For Administrators
-1. Read [Operations Guide](./admin/operations-guide.md)
-2. Build Docker image
-3. Deploy template to Coder
+1. Read [Server Setup Guide](./admin/server-setup.md) (new installations)
+2. Read [Operations Guide](./admin/operations-guide.md)
+3. Build Docker image and deploy template
 4. Create test workspace
 
 ### For Users
