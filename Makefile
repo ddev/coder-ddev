@@ -7,8 +7,9 @@ DOCKERFILE_DIR := image
 DOCKERFILE := $(DOCKERFILE_DIR)/Dockerfile
 
 # Template directories (name == directory)
-DDEV_USER_DIR          := ddev-user
-DDEV_DRUPAL_CORE_DIR   := ddev-drupal-core
+DDEV_USER_DIR             := ddev-user
+DDEV_DRUPAL_CORE_DIR      := ddev-drupal-core
+DDEV_SINGLE_PROJECT_DIR   := ddev-single-project
 
 # Full image tag
 IMAGE_TAG := $(IMAGE_NAME):$(VERSION)
@@ -76,7 +77,7 @@ info: ## Show image and template information
 	@echo "Image Tag:      $(IMAGE_TAG)"
 	@echo "Latest Tag:     $(IMAGE_LATEST)"
 	@echo "Dockerfile:     $(DOCKERFILE)"
-	@echo "Templates:      $(DDEV_USER_DIR) $(DDEV_DRUPAL_CORE_DIR)"
+	@echo "Templates:      $(DDEV_USER_DIR) $(DDEV_DRUPAL_CORE_DIR) $(DDEV_SINGLE_PROJECT_DIR)"
 
 .PHONY: push-template-ddev-user
 push-template-ddev-user: ## Push ddev-user template to Coder
@@ -108,6 +109,17 @@ deploy-ddev-user-no-cache: build-and-push-no-cache push-template-ddev-user ## Bu
 deploy-ddev-drupal-core: push-template-ddev-drupal-core ## Push ddev-drupal-core template (uses existing image)
 	@echo "Deployment of ddev-drupal-core complete!"
 
+.PHONY: push-template-ddev-single-project
+push-template-ddev-single-project: ## Push ddev-single-project template to Coder
+	@echo "Pushing Coder template $(DDEV_SINGLE_PROJECT_DIR)..."
+	coder templates push --directory $(DDEV_SINGLE_PROJECT_DIR) $(DDEV_SINGLE_PROJECT_DIR) --yes \
+		--variable workspace_image_registry=index.docker.io/$(IMAGE_NAME)
+	@echo "Template push complete"
+
+.PHONY: deploy-ddev-single-project
+deploy-ddev-single-project: push-template-ddev-single-project ## Push ddev-single-project template (uses existing image)
+	@echo "Deployment of ddev-single-project complete!"
+
 .PHONY: deploy-all
-deploy-all: deploy-ddev-user push-template-ddev-drupal-core ## Deploy image and all templates
+deploy-all: deploy-ddev-user push-template-ddev-drupal-core push-template-ddev-single-project ## Deploy image and all templates
 	@echo "All templates deployed!"

@@ -56,7 +56,8 @@ COPY --chown=coder:coder scripts /home/coder-files
 
 # Set correct permissions for scripts in init-scripts
 RUN chmod 644 /home/coder-files/WELCOME.txt && \
-  chmod 644 /home/coder-files/.vscode/settings.json
+  chmod 644 /home/coder-files/.vscode/settings.json && \
+  chmod 644 /home/coder-files/.ddev/global_config.yaml
 
 # Install additional utilities
 RUN apt-get update && \
@@ -136,8 +137,16 @@ RUN /home/linuxbrew/.linuxbrew/bin/brew tap bats-core/bats-core && \
   bats-file \
   bats-assert \
   go \
-  golangci-lint
+  golangci-lint \
+  yq
 
+USER root
+# Symlink brew-installed tools to /usr/local/bin so they're available system-wide
+# (brew installs to /home/linuxbrew which is only in PATH for interactive shells)
+RUN ln -sf /home/linuxbrew/.linuxbrew/bin/yq /usr/local/bin/yq
+
+USER coder
 RUN ddev --version && \
   docker --version && \
-  /home/linuxbrew/.linuxbrew/bin/go version
+  /home/linuxbrew/.linuxbrew/bin/go version && \
+  yq --version
