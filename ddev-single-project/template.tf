@@ -179,11 +179,12 @@ resource "coder_agent" "main" {
     # Persist Coder-provided variables to ~/.bashrc so they are available in
     # DDEV post-start hooks and interactive shells (DDEV exec-host inherits the
     # shell environment, which sources ~/.bashrc for login shells).
+    # Use printenv to avoid $${!var} indirect expansion which Terraform parses.
     for _var in VSCODE_PROXY_URI CODER_WORKSPACE_NAME CODER_WORKSPACE_OWNER_NAME; do
-      _val="${!_var:-}"
+      _val=$(printenv "$_var" 2>/dev/null || true)
       if [ -n "$_val" ]; then
-        sed -i "/^export ${_var}=/d" ~/.bashrc || true
-        echo "export ${_var}=${_val}" >> ~/.bashrc
+        sed -i "/^export $_var=/d" ~/.bashrc || true
+        echo "export $_var=$_val" >> ~/.bashrc
       fi
     done
 
