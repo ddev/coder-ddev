@@ -12,20 +12,15 @@ if [ -z "${CODER_WORKSPACE_NAME:-}" ] || [ -z "${VSCODE_PROXY_URI:-}" ]; then
   exit 0
 fi
 
+WORKSPACE="${CODER_WORKSPACE_NAME}"
 OWNER="${CODER_WORKSPACE_OWNER_NAME}"
 DOMAIN=$(echo "${VSCODE_PROXY_URI}" | sed -E 's|https?://[^.]+\.(.+?)(/.*)?$|\1|')
 
-# DDEV_SITENAME is the actual project name set by DDEV when running this command.
-# In ddev-single-project it equals CODER_WORKSPACE_NAME (= coder_app slug), so
-# the Coder subdomain URL is valid.  In other templates the project name may
-# differ, which means there is no matching coder_app proxy — warn instead.
+# DDEV_SITENAME is the DDEV project name (may differ from the Coder workspace name).
+# Coder URLs always use WORKSPACE (= CODER_WORKSPACE_NAME); PROJECT is only used
+# to look up router keys in coder-routes.yaml (which coder-routes prefixes with DDEV_PROJECT).
 PROJECT="${DDEV_SITENAME}"
-if [ "${PROJECT}" != "${CODER_WORKSPACE_NAME}" ]; then
-  echo "Note: DDEV project '${PROJECT}' does not match workspace '${CODER_WORKSPACE_NAME}'."
-  echo "Coder subdomain routing requires the DDEV project name to equal the workspace name."
-  echo "Approximate URL (may not be proxied): https://${PROJECT}--${CODER_WORKSPACE_NAME}--${OWNER}.${DOMAIN}"
-  exit 0
-fi
+AGENT="${CODER_AGENT_NAME:-main}"
 
 MAILPIT=false
 PATH_SUFFIX=""
@@ -47,33 +42,41 @@ if [ -n "${1:-}" ]; then
 fi
 
 if [ "${MAILPIT}" = "true" ]; then
-  echo "https://mailpit--${PROJECT}--${OWNER}.${DOMAIN}"
+  echo "https://mailpit--${WORKSPACE}--${OWNER}.${DOMAIN}"
   exit 0
 fi
 
 echo ""
 echo "Coder URLs for project '${PROJECT}':"
-echo "  Web:     https://${PROJECT}--${PROJECT}--${OWNER}.${DOMAIN}${PATH_SUFFIX}"
-echo "  Mailpit: https://mailpit--${PROJECT}--${OWNER}.${DOMAIN}"
+echo "  Web:     https://${WORKSPACE}--${WORKSPACE}--${OWNER}.${DOMAIN}${PATH_SUFFIX}"
+echo "  Mailpit: https://mailpit--${WORKSPACE}--${OWNER}.${DOMAIN}"
 
 # Show addon services from the generated coder-routes.yaml.
-# Addon routers use PathPrefix("/") rules (not Host()), so we derive the URL
-# from the entrypoint name (http-9100 → port 9100) and Coder's port-forwarding
-# URL scheme: https://{port}--{agent}--{workspace}--{owner}.{domain}
+# Routers with a Host() rule have a known Coder app (slug subdomain URL).
+# Routers with PathPrefix("/") are dynamic add-ons accessible via port-forwarding:
+# https://{port}--{agent}--{workspace}--{owner}.{domain}
 CODER_ROUTES="$HOME/.ddev/traefik/custom-global-config/coder-routes.yaml"
 if [ -f "$CODER_ROUTES" ]; then
-  AGENT="${CODER_AGENT_NAME:-main}"
   while IFS= read -r router; do
-    # Skip web and mailpit — already printed above
-    [ "$router" = "${PROJECT}-coder-${PROJECT}" ] && continue
+    # Skip web and mailpit — already printed above.
+    # Web router key: {project}-coder-{workspace} (slug = workspace name).
+    [ "$router" = "${PROJECT}-coder-${WORKSPACE}" ] && continue
     [ "$router" = "${PROJECT}-coder-mailpit" ] && continue
     # Get first entrypoint and extract port number (http-9100 → 9100)
     entrypoint=$(yq e ".http.routers.\"${router}\".entrypoints[0] // \"\"" "$CODER_ROUTES" 2>/dev/null)
     [ -z "$entrypoint" ] || [ "$entrypoint" = "null" ] && continue
-    port="${entrypoint#http-}"
+    ext_port="${entrypoint#http-}"
     # Slug is the router name with "{project}-coder-" prefix stripped
     slug="${router#${PROJECT}-coder-}"
-    echo "  ${slug}: https://${port}--${AGENT}--${PROJECT}--${OWNER}.${DOMAIN}"
+    # Determine URL format from the rule type
+    rule=$(yq e ".http.routers.\"${router}\".rule // \"\"" "$CODER_ROUTES" 2>/dev/null)
+    if echo "$rule" | grep -q "^Host"; then
+      # Known Coder app (Host rule): use slug subdomain URL
+      echo "  ${slug}: https://${slug}--${WORKSPACE}--${OWNER}.${DOMAIN}"
+    else
+      # Dynamic add-on (PathPrefix rule): use Coder port-forwarding URL
+      echo "  ${slug}: https://${ext_port}--${AGENT}--${WORKSPACE}--${OWNER}.${DOMAIN}"
+    fi
   done < <(yq e '.http.routers | keys | .[]' "$CODER_ROUTES" 2>/dev/null)
 fi
 

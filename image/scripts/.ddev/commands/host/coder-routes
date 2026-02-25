@@ -73,7 +73,13 @@ while IFS= read -r router; do
   # Build entrypoints YAML list for yq
   ENTRY_LIST=$(printf '"%s",' "${entrypoints[@]}" | sed 's/,$//')
 
-  if [ "$port" = "80" ]; then
+  # Determine external port from the entrypoint name (e.g. http-8143 → 8143).
+  # Use this — NOT the service-name port — to decide routing strategy.
+  # Service names encode the container-internal port (e.g. d11-xhgui-80 → 80),
+  # which can differ from the ddev-router entrypoint (e.g. http-8143).
+  ext_port="${entrypoints[0]#http-}"
+
+  if [ "$ext_port" = "80" ]; then
     # Primary web service: Host() rule so Coder's coder_app subdomain proxy works.
     # slug=WORKSPACE and host uses WORKSPACE so the URL matches the Coder app subdomain.
     CODER_HOST="${slug}--${WORKSPACE}--${OWNER}.${DOMAIN}"
@@ -86,11 +92,23 @@ while IFS= read -r router; do
          .http.routers.\"${ROUTER_NAME}\".tls = false" \
       /tmp/coder-routes-raw.yaml
     echo "  + ${slug}: ${entrypoints[*]} → ${service}  (https://${CODER_HOST})"
+  elif [ "$slug" = "mailpit" ] || [ "$slug" = "adminer" ]; then
+    # Known Coder app slugs (defined as coder_app resources in the Terraform template):
+    # use Host() rule so the Coder subdomain proxy URL routes correctly.
+    CODER_HOST="${slug}--${WORKSPACE}--${OWNER}.${DOMAIN}"
+    RULE='Host(`'"${CODER_HOST}"'`)'
+    RULE="$RULE" SVC="$service" \
+      yq e -i \
+        ".http.routers.\"${ROUTER_NAME}\".entrypoints = [${ENTRY_LIST}] |
+         .http.routers.\"${ROUTER_NAME}\".rule = env(RULE) |
+         .http.routers.\"${ROUTER_NAME}\".service = env(SVC) |
+         .http.routers.\"${ROUTER_NAME}\".tls = false" \
+      /tmp/coder-routes-raw.yaml
+    echo "  + ${slug}: ${entrypoints[*]} → ${service}  (https://${CODER_HOST})"
   else
-    # Non-port-80 services: PathPrefix("/") with low priority so any traffic
-    # arriving on this dedicated entrypoint is routed to the correct backend.
-    # This makes Coder port-forwarding URLs (e.g. 9100--agent--workspace--owner.domain)
-    # work without needing to predict the Host header in advance.
+    # Dynamic add-on services (no dedicated coder_app): PathPrefix("/") catches any
+    # traffic arriving on this entrypoint, enabling Coder port-forwarding URLs:
+    # https://{ext_port}--{agent}--{workspace}--{owner}.{domain}
     RULE='PathPrefix(`/`)'
     RULE="$RULE" SVC="$service" \
       yq e -i \
@@ -100,7 +118,7 @@ while IFS= read -r router; do
          .http.routers.\"${ROUTER_NAME}\".tls = false |
          .http.routers.\"${ROUTER_NAME}\".priority = 1" \
       /tmp/coder-routes-raw.yaml
-    echo "  + ${slug}: ${entrypoints[*]} → ${service}  (port-forward: ${port})"
+    echo "  + ${slug}: ${entrypoints[*]} → ${service}  (https://${ext_port}--main--${WORKSPACE}--${OWNER}.${DOMAIN})"
   fi
 
 done < <(yq e '.http.routers | keys | .[]' "$MERGED" 2>/dev/null)
