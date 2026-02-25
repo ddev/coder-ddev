@@ -227,89 +227,6 @@ resource "coder_agent" "main" {
     # Ensure yq and linuxbrew are in PATH for this session
     export PATH="$PATH:/home/linuxbrew/.linuxbrew/bin"
 
-    # Generate Coder-compatible DDEV Traefik routing rules.
-    #
-    # The workspace name is used as the DDEV project name, so the Coder app slug
-    # (= workspace name) matches the DDEV-generated service names:
-    #   {project}-web-80    (web server, HTTP_EXPOSE port 80)
-    #   {project}-web-8025  (mailpit, HTTP_EXPOSE port 8025, runs in web container)
-    #
-    # These routers reference DDEV's own generated services — no services section
-    # needed here since both configs land in the same Traefik config directory.
-    #
-    # After ddev start, the post-start hook re-runs this to add any addon services
-    # discovered in .ddev/docker-compose.*.yaml.
-    #
-    # Domain is extracted from VSCODE_PROXY_URI which Coder sets before startup.
-    PROJECT="$CODER_WORKSPACE_NAME"
-    OWNER="$CODER_WORKSPACE_OWNER_NAME"
-    DOMAIN=""
-    if [ -n "$VSCODE_PROXY_URI" ]; then
-      DOMAIN=$(echo "$VSCODE_PROXY_URI" | sed -E 's|https?://[^.]+\.(.+?)(/.*)?$|\1|')
-    fi
-
-    if [ -n "$PROJECT" ] && [ -n "$OWNER" ] && [ -n "$DOMAIN" ]; then
-      mkdir -p ~/.ddev/traefik/custom-global-config
-      WEB_HOST="$PROJECT--$PROJECT--$OWNER.$DOMAIN"
-      MAILPIT_HOST="mailpit--$PROJECT--$OWNER.$DOMAIN"
-
-      # Use a bash heredoc for the YAML template (yq validates and normalises output)
-      cat > /tmp/coder-routes-raw.yaml << YAML_EOF
-http:
-  routers:
-    $PROJECT-coder-web:
-      entrypoints:
-        - http-80
-      rule: "Host(\`$WEB_HOST\`)"
-      service: "$PROJECT-web-80"
-      tls: false
-    $PROJECT-coder-mailpit:
-      entrypoints:
-        - http-8025
-      rule: "Host(\`$MAILPIT_HOST\`)"
-      service: "$PROJECT-web-8025"
-      tls: false
-YAML_EOF
-      yq e '.' /tmp/coder-routes-raw.yaml \
-        > ~/.ddev/traefik/custom-global-config/coder-routes.yaml
-      echo "✓ Coder Traefik routing configured for project '$PROJECT' on $DOMAIN"
-      echo "  Web:     https://$WEB_HOST"
-      echo "  Mailpit: https://$MAILPIT_HOST"
-    else
-      echo "Note: Skipping Traefik routing config (PROJECT=$PROJECT OWNER=$OWNER DOMAIN=$DOMAIN)"
-    fi
-
-    # Create project directory (named same as workspace/DDEV project name)
-    mkdir -p ~/$PROJECT
-    if [ ! -f ~/$PROJECT/.ddev/config.yaml ]; then
-      echo "Initializing DDEV project in ~/$PROJECT..."
-      cd ~/$PROJECT && ddev config --auto --project-name=$PROJECT
-      cd ~
-    else
-      echo "✓ DDEV project already configured in ~/$PROJECT"
-    fi
-
-    # Wire coder-routes as a post-start hook so Traefik routes are updated
-    # after each ddev start (picks up addon services from docker-compose files).
-    # Uses config.coder.yaml alongside config.yaml; DDEV merges both.
-    if [ ! -f ~/$PROJECT/.ddev/config.coder.yaml ]; then
-      cat > ~/$PROJECT/.ddev/config.coder.yaml << 'HOOK_EOF'
-# Coder-specific DDEV hooks (auto-generated, do not edit)
-hooks:
-  post-start:
-    - exec-host: ~/.ddev/commands/host/coder-routes
-HOOK_EOF
-      echo "✓ post-start hook configured (~/$PROJECT/.ddev/config.coder.yaml)"
-    fi
-
-    # Keep config.coder.yaml out of git — use ~/.config/git/ignore (XDG standard,
-    # checked automatically by git without any core.excludesFile config needed).
-    mkdir -p ~/.config/git
-    if ! grep -qF ".ddev/config.coder.yaml" ~/.config/git/ignore 2>/dev/null; then
-      echo ".ddev/config.coder.yaml" >> ~/.config/git/ignore
-      echo "✓ Added .ddev/config.coder.yaml to ~/.config/git/ignore"
-    fi
-
     # Display welcome message
     if [ -f ~/WELCOME.txt ]; then
       cat ~/WELCOME.txt
@@ -345,13 +262,16 @@ BASHPROFILE
     echo ""
     echo "=== Setup Complete ==="
     echo ""
-    echo "DDEV project directory: ~/$CODER_WORKSPACE_NAME"
-    echo ""
     echo "Next steps:"
-    echo "  cd ~/$CODER_WORKSPACE_NAME"
-    echo "  # Copy or clone your project files into this directory"
-    echo "  ddev config --project-type=<type>   # refine project type if needed"
-    echo "  ddev start"
+    echo "  1. Clone or create your project:"
+    echo "       git clone <repo-url> ~/myproject"
+    echo "       cd ~/myproject"
+    echo "  2. Configure DDEV:"
+    echo "       ddev config --project-type=<type>"
+    echo "  3. Install Coder routing hook (once per project):"
+    echo "       ddev coder-setup"
+    echo "  4. Start DDEV:"
+    echo "       ddev start"
     echo ""
     exit 0
   EOT
