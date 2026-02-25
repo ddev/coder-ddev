@@ -47,20 +47,6 @@ RUN if id -u ubuntu > /dev/null 2>&1; then \
   useradd -m -u 1000 -s /bin/bash coder; \
   fi
 
-# Copy scripts and configuration files to /home/coder-files (outside volume mount)
-# The volume mount at /home/coder overrides image contents, so we copy to coder-files
-# Files will be copied to ~/.ddev after ddev installation to prevent ddev from overwriting them
-# This ensures ddev doesn't overwrite our custom configuration during installation
-COPY --chown=coder:coder scripts /home/coder-files
-
-
-# Set correct permissions for scripts in init-scripts
-RUN chmod 644 /home/coder-files/WELCOME.txt && \
-  chmod 644 /home/coder-files/.vscode/settings.json && \
-  chmod 644 /home/coder-files/.ddev/global_config.yaml && \
-  chmod 755 /home/coder-files/.ddev/commands/host/launch && \
-  chmod 755 /home/coder-files/.ddev/commands/host/coder-routes
-
 # Install additional utilities
 RUN apt-get update && \
   DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
@@ -146,6 +132,16 @@ USER root
 # Symlink brew-installed tools to /usr/local/bin so they're available system-wide
 # (brew installs to /home/linuxbrew which is only in PATH for interactive shells)
 RUN ln -sf /home/linuxbrew/.linuxbrew/bin/yq /usr/local/bin/yq
+
+# Copy scripts last — changes here are frequent and should not bust the
+# expensive layers above (Node, Docker, DDEV, Homebrew).
+USER root
+COPY --chown=coder:coder scripts /home/coder-files
+RUN chmod 644 /home/coder-files/WELCOME.txt && \
+  chmod 644 /home/coder-files/.vscode/settings.json && \
+  chmod 644 /home/coder-files/.ddev/global_config.yaml && \
+  chmod 755 /home/coder-files/.ddev/commands/host/launch && \
+  chmod 755 /home/coder-files/.ddev/commands/host/coder-routes
 
 USER coder
 RUN ddev --version && \
