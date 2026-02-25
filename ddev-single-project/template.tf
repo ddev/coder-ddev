@@ -109,7 +109,7 @@ variable "memory" {
 resource "coder_agent" "main" {
   arch = "amd64"
   os   = "linux"
-  dir  = local.workspace_home
+  dir  = "${local.workspace_home}/${data.coder_workspace.me.name}"
 
   startup_script = <<-EOT
     #!/bin/bash
@@ -256,8 +256,15 @@ YAML_EOF
       echo "Note: Skipping Traefik routing config (PROJECT=$PROJECT OWNER=$OWNER DOMAIN=$DOMAIN)"
     fi
 
-    # Create projects directory
-    mkdir -p ~/projects
+    # Create project directory (named same as workspace/DDEV project name)
+    mkdir -p ~/$PROJECT
+    if [ ! -f ~/$PROJECT/.ddev/config.yaml ]; then
+      echo "Initializing DDEV project in ~/$PROJECT..."
+      cd ~/$PROJECT && ddev config --auto --project-name=$PROJECT
+      cd ~
+    else
+      echo "✓ DDEV project already configured in ~/$PROJECT"
+    fi
 
     # Display welcome message
     if [ -f ~/WELCOME.txt ]; then
@@ -294,13 +301,12 @@ BASHPROFILE
     echo ""
     echo "=== Setup Complete ==="
     echo ""
-    echo "DDEV project name: $CODER_WORKSPACE_NAME"
+    echo "DDEV project directory: ~/$CODER_WORKSPACE_NAME"
     echo ""
     echo "Next steps:"
-    echo "  cd ~/projects"
-    echo "  git clone <repo-url> $CODER_WORKSPACE_NAME"
-    echo "  cd $CODER_WORKSPACE_NAME"
-    echo "  ddev config --project-name=$CODER_WORKSPACE_NAME --project-type=<type>"
+    echo "  cd ~/$CODER_WORKSPACE_NAME"
+    echo "  # Copy or clone your project files into this directory"
+    echo "  ddev config --project-type=<type>   # refine project type if needed"
     echo "  ddev start"
     echo ""
     exit 0
@@ -332,7 +338,7 @@ module "vscode-web" {
   source         = "registry.coder.com/coder/vscode-web/coder"
   version        = "~> 1.0"
   agent_id       = coder_agent.main.id
-  folder         = "/home/coder"
+  folder         = "/home/coder/${data.coder_workspace.me.name}"
   accept_license = true
 }
 
