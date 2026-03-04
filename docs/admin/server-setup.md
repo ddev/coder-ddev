@@ -6,11 +6,12 @@ This guide covers setting up a new Coder server with the DDEV template from scra
 
 The full stack requires:
 1. Docker (non-snap) — for running workspace containers
-2. Sysbox — for safe nested Docker inside workspaces
-3. PostgreSQL — for Coder's database (required for multi-server HA)
-4. TLS certificate — via Let's Encrypt DNS challenge
-5. Coder server — the control plane
-6. This template — deployed to Coder
+2. Registry mirror — pull-through cache to speed up workspace starts and avoid Docker Hub rate limits
+3. Sysbox — for safe nested Docker inside workspaces
+4. PostgreSQL — for Coder's database (required for multi-server HA)
+5. TLS certificate — via Let's Encrypt DNS challenge
+6. Coder server — the control plane
+7. This template — deployed to Coder
 
 ---
 
@@ -43,7 +44,86 @@ sudo systemctl enable --now docker
 
 ---
 
-## Step 2: Install Sysbox
+## Step 2: Set Up the Registry Mirror
+
+A pull-through registry mirror caches Docker Hub images locally, so workspace startups pull images from the host rather than Docker Hub. This dramatically speeds up first-start time and avoids Docker Hub rate limits.
+
+The workspace image already includes `/etc/docker/daemon.json` pointing to `coder.ddev.com:5000`, so no template changes are needed — just run the mirror on the host.
+
+### Create directories and config
+
+```bash
+sudo mkdir -p /opt/registry/data
+
+sudo tee /opt/registry/config.yml > /dev/null <<'EOF'
+version: 0.1
+log:
+  level: info
+storage:
+  filesystem:
+    rootdirectory: /var/lib/registry
+http:
+  addr: :5000
+proxy:
+  remoteurl: https://registry-1.docker.io
+EOF
+```
+
+### Open the firewall port
+
+```bash
+sudo ufw allow 5000/tcp
+```
+
+### Create a systemd unit
+
+```bash
+sudo tee /etc/systemd/system/registry-mirror.service > /dev/null <<'EOF'
+[Unit]
+Description=Docker Registry Pull-Through Cache (registry:3)
+After=network-online.target docker.service
+Wants=network-online.target docker.service
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=5
+
+# Clean up any previous instance
+ExecStartPre=-/usr/bin/docker rm -f registry-mirror
+
+ExecStart=/usr/bin/docker run --rm \
+  --name registry-mirror \
+  -p 0.0.0.0:5000:5000 \
+  -v /opt/registry/config.yml:/etc/distribution/config.yml:ro \
+  -v /opt/registry/data:/var/lib/registry \
+  registry:3
+
+ExecStop=/usr/bin/docker stop registry-mirror
+
+[Install]
+WantedBy=multi-user.target
+EOF
+```
+
+### Enable and start
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now registry-mirror
+sudo systemctl status registry-mirror
+```
+
+### Verify
+
+```bash
+# Should return an empty repository list (not a connection error)
+curl http://localhost:5000/v2/_catalog
+```
+
+---
+
+## Step 3: Install Sysbox
 
 Sysbox provides secure Docker-in-Docker without `--privileged`. It has no apt repository — install via `.deb` package.
 
@@ -67,7 +147,7 @@ See [Sysbox install docs](https://github.com/nestybox/sysbox/blob/master/docs/us
 
 ---
 
-## Step 3: Install PostgreSQL
+## Step 4: Install PostgreSQL
 
 Coder ships with a built-in SQLite database that works fine for a single server. PostgreSQL is needed if you ever want to run multiple Coder server replicas (for redundancy or handling larger user load) — and migrating later is painful, so it's worth setting up now.
 
@@ -102,7 +182,7 @@ If this fails with a peer authentication error, confirm `/etc/postgresql/*/main/
 
 ---
 
-## Step 4: Get a TLS Certificate
+## Step 5: Get a TLS Certificate
 
 Coder has no built-in Let's Encrypt support — it reads certificate files directly. Obtain the certificate before configuring Coder. The DNS-01 challenge is the recommended approach because it works without opening port 80, supports wildcard certificates, and works even if your server isn't yet reachable on its final DNS name.
 
@@ -220,7 +300,7 @@ If you're migrating an existing DNS name (e.g., `coder.ddev.com`) from another s
 
 ---
 
-## Step 5: Install Coder
+## Step 6: Install Coder
 
 ### Install the binary
 
@@ -359,7 +439,7 @@ There is also a toggle in the Coder admin UI at **Admin → Security** that can 
 
 ---
 
-## Step 6: Deploy the DDEV Template
+## Step 7: Deploy the DDEV Template
 
 With Coder running and the CLI authenticated, follow the [Operations Guide](./operations-guide.md) to build the Docker image and push the template.
 
@@ -404,7 +484,7 @@ coder provisioner keys create my-provisioner-key --org default
 **On each additional provisioner node:**
 
 ```bash
-# Install Docker and Sysbox (same as Steps 1-2 above)
+# Install Docker and Sysbox (same as Steps 1 and 3 above)
 
 # Install the Coder binary (provisioner daemon only — no server needed)
 curl -L https://coder.com/install.sh | sh
