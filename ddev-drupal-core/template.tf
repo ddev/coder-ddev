@@ -161,6 +161,11 @@ resource "coder_agent" "main" {
   arch = "amd64"
   os   = "linux"
 
+  shutdown_script = <<EOT
+    echo "Stopping DDEV"
+    ddev poweroff || true
+  EOT
+
   # Start terminal in the Drupal core directory
   # If the directory doesn't exist yet (first startup), agent will fall back gracefully
   dir = "/home/coder/drupal-core"
@@ -848,7 +853,8 @@ resource "docker_container" "workspace" {
   # Increase stop_timeout to allow shutdown_script and ddev stop to run
   # Default is usually 10s, which is not enough for ddev shutdown
   stop_timeout = 180
-  stop_signal  = "SIGTERM"
+  stop_signal  = "SIGINT"
+  destroy_grace_seconds = 180
 
   # Direct Mount Strategy: Set Working Directory to path matching Host
   working_dir = local.workspace_home
