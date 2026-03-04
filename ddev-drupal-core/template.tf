@@ -368,6 +368,9 @@ WELCOME_EOF
       echo "Warning: /home/coder-files/.ddev not found, skipping ddev config copy"
     fi
 
+    # Pre-pull DDEV images (uses registry mirror if configured)
+    ddev utility download-images || true
+
     # ==========================================
     # DRUPAL CORE AUTOMATIC SETUP
     # ==========================================

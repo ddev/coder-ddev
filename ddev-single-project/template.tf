@@ -229,6 +229,9 @@ resource "coder_agent" "main" {
       echo "✓ DDEV host commands installed"
     fi
 
+    # Pre-pull DDEV images (uses registry mirror if configured)
+    ddev utility download-images || true
+
     # Ensure yq and linuxbrew are in PATH for this session
     export PATH="$PATH:/home/linuxbrew/.linuxbrew/bin"
 
