@@ -133,6 +133,10 @@ USER root
 # (brew installs to /home/linuxbrew which is only in PATH for interactive shells)
 RUN ln -sf /home/linuxbrew/.linuxbrew/bin/yq /usr/local/bin/yq
 
+# Configure Docker daemon with registry mirror
+RUN mkdir -p /etc/docker && \
+  printf '{\n  "registry-mirrors": ["http://coder.ddev.com:5000"],\n  "insecure-registries": ["coder.ddev.com:5000"]\n}\n' > /etc/docker/daemon.json
+
 # Copy scripts last — changes here are frequent and should not bust the
 # expensive layers above (Node, Docker, DDEV, Homebrew).
 USER root
