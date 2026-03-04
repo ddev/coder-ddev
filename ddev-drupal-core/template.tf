@@ -929,10 +929,6 @@ resource "coder_metadata" "workspace_info" {
     value = "/home/coder/drupal-core"
   }
   item {
-    key   = "drupal_profile"
-    value = "demo_umami"
-  }
-  item {
     key   = "admin_credentials"
     value = "admin / admin"
   }
@@ -940,27 +936,6 @@ resource "coder_metadata" "workspace_info" {
     key   = "image"
     value = "${docker_image.workspace_image.name} (version: ${local.image_version})"
   }
-  item {
-    key   = "php_version"
-    value = "8.5"
-  }
-  item {
-    key   = "cpu"
-    value = "${var.cpu} vCPU (soft limit)"
-  }
-  item {
-    key   = "memory"
-    value = "${var.memory} GB"
-  }
-  item {
-    key   = "setup_logs"
-    value = "/tmp/drupal-setup.log"
-  }
-  item {
-    key   = "setup_status"
-    value = "~/SETUP_STATUS.txt"
-  }
-
 }
 
 # Output for Vault integration status (visible in Terraform logs)
