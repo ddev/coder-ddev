@@ -67,7 +67,6 @@ variable "docker_gid" {
 data "coder_workspace" "me" {}
 
 # Workspace owner data source (Coder v2+)
-# Note: For Coder v0.12, this may not be available - will need fallback
 data "coder_workspace_owner" "me" {}
 
 

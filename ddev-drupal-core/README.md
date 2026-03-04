@@ -91,10 +91,6 @@ tail -f /tmp/drupal-setup.log  # View setup logs
 - Coder v2.13+
 - Sysbox runtime enabled
 
-### Resources
-- **Minimum**: 6 CPU cores, 12 GB RAM, 50 GB disk
-- **Recommended**: 8 CPU cores, 16 GB RAM, 100 GB disk
-
 ### Network Access
 - Packagist: https://packagist.org (for Composer)
 - GitHub: https://github.com (for drupal-core-development-project)
@@ -126,17 +122,6 @@ ddev start
 ddev composer create joachim-n/drupal-core-development-project
 ddev composer require drush/drush
 ddev drush si -y demo_umami --account-pass=admin
-```
-
-### Workspace Won't Start
-- Check Coder server has Sysbox runtime enabled
-- Verify resource allocation (6+ cores, 12+ GB RAM)
-- Check Docker daemon is running: `docker ps`
-
-### Port Conflicts
-If port 80 is unavailable, DDEV will use alternative ports. Check with:
-```bash
-ddev describe
 ```
 
 ## Customization

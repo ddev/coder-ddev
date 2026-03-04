@@ -64,7 +64,6 @@ variable "docker_gid" {
 data "coder_workspace" "me" {}
 
 # Workspace owner data source (Coder v2+)
-# Note: For Coder v0.12, this may not be available - will need fallback
 data "coder_workspace_owner" "me" {}
 
 
@@ -407,7 +406,7 @@ STATUS_HEADER
 
     # Step 2: Configure DDEV (must be done before composer create)
     if [ ! -f ".ddev/config.yaml" ]; then
-      log_setup "Configuring DDEV for Drupal 12 with PHP 8.5 and docroot=web..."
+      log_setup "Configuring DDEV for Drupal HEAD with PHP 8.5 and docroot=web..."
       update_status "⏳ DDEV config: In progress..."
 
       if ddev config --project-type=drupal12 --php-version=8.5 --docroot=web --host-webserver-port=80 >> "$SETUP_LOG" 2>&1; then
