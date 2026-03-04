@@ -111,6 +111,8 @@ deploy-ddev-drupal-core: push-template-ddev-drupal-core ## Push ddev-drupal-core
 
 .PHONY: push-template-ddev-single-project
 push-template-ddev-single-project: ## Push ddev-single-project template to Coder
+	@echo "Syncing VERSION to $(DDEV_SINGLE_PROJECT_DIR)..."
+	cp VERSION $(DDEV_SINGLE_PROJECT_DIR)/VERSION
 	@echo "Pushing Coder template $(DDEV_SINGLE_PROJECT_DIR)..."
 	coder templates push --directory $(DDEV_SINGLE_PROJECT_DIR) $(DDEV_SINGLE_PROJECT_DIR) --yes \
 		--variable workspace_image_registry=index.docker.io/$(IMAGE_NAME)
