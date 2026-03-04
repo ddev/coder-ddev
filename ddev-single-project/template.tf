@@ -117,6 +117,11 @@ resource "coder_agent" "main" {
   os   = "linux"
   dir  = "${local.workspace_home}/${data.coder_workspace.me.name}"
 
+  shutdown_script = <<EOT
+    echo "Stopping DDEV"
+    ddev poweroff || true
+  EOT
+
   startup_script = <<-EOT
     #!/bin/bash
     set +e
@@ -401,7 +406,8 @@ resource "docker_container" "workspace" {
   user         = "coder"
   group_add    = [tostring(var.docker_gid)]
   stop_timeout = 180
-  stop_signal  = "SIGTERM"
+  stop_signal  = "SIGINT"
+  destroy_grace_seconds = 60
   working_dir  = local.workspace_home
   cpu_shares   = var.cpu * 1024
   memory       = var.memory * 1024 * 1024 * 1024

@@ -171,6 +171,11 @@ resource "coder_agent" "main" {
   # because the repo might not exist yet when agent starts!
   dir = local.workspace_home
 
+  shutdown_script = <<EOT
+    echo "Stopping DDEV"
+    ddev poweroff || true
+  EOT
+
   startup_script = <<-EOT
     #!/bin/bash
     # Don't exit on error - let installation continue even if some steps fail
@@ -551,7 +556,9 @@ resource "docker_container" "workspace" {
   # Increase stop_timeout to allow shutdown_script and ddev stop to run
   # Default is usually 10s, which is not enough for ddev shutdown
   stop_timeout = 180
-  stop_signal  = "SIGTERM"
+  stop_signal  = "SIGINT"
+  destroy_grace_seconds = 60
+
 
   # Direct Mount Strategy: Set Working Directory to path matching Host
   working_dir = local.workspace_home
