@@ -26,9 +26,6 @@ provider "docker" {
   }
 }
 
-
-
-
 variable "docker_host" {
   description = "Docker host socket path"
   type        = string
@@ -104,8 +101,6 @@ variable "workspace_image_registry" {
   default = "index.docker.io/ddev/coder-ddev"
 }
 
-
-
 # Use pre-built image from Docker Hub
 # The image is built and pushed using the Makefile (see root Makefile and VERSION file)
 # This avoids prevent_destroy issues since the image is not managed by Terraform
@@ -147,7 +142,7 @@ variable "cpu" {
 variable "memory" {
   description = "Memory in GB"
   type        = number
-  default     = 12
+  default     = 8
   validation {
     condition     = var.memory >= 2 && var.memory <= 128
     error_message = "Memory must be between 2 and 128 GB"

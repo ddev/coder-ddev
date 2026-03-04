@@ -1,4 +1,4 @@
-# DDEV Coder Template
+# DDEV Coder Templates
 
 Coder workspace template for DDEV-based development with Docker-in-Docker support, Node.js, and Git.
 
@@ -6,10 +6,8 @@ Coder workspace template for DDEV-based development with Docker-in-Docker suppor
 
 - **Custom Base Image**: Ubuntu 24.04 LTS with essential development tools
 - **Docker-in-Docker**: Full Docker support for DDEV (using Sysbox runtime)
-- **Node.js/npm**: LTS version (configurable)
 - **DDEV**: Pre-installed and ready to use
 - **VS Code for Web**: Browser-based IDE with full extension support
-- **PHP/Python/Node Projects**: Support for 20+ project types via DDEV
 
 ## Configuration
 
@@ -20,8 +18,7 @@ Coder workspace template for DDEV-based development with Docker-in-Docker suppor
 
 **Installed Tools:**
 - Docker CLI and daemon (latest stable)
-- ddev (latest)
-- Node.js LTS (pre-installed in image)
+- ddev (latest stable)
 - Git, vim, build tools
 
 ## Docker Image and Template Management
@@ -66,18 +63,6 @@ make deploy-ddev-user        # Build with cache and deploy
 # or
 make deploy-ddev-user-no-cache  # Clean build and deploy
 ```
-
-## Supported Project Types
-
-DDEV supports 20+ project types out of the box. All work identically in Coder workspaces.
-
-**Static Sites:**
-- HTML, Jekyll, Hugo, any static site generator
-
-**Generic:**
-- Custom PHP, Go, Rust, or any web application
-
-See [DDEV Documentation](https://docs.ddev.com/) for full list and configuration.
 
 ## Documentation
 
