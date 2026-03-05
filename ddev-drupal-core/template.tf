@@ -891,6 +891,7 @@ resource "coder_app" "ddev-web" {
   slug         = "ddev-web"
   display_name = "DDEV Web"
   url          = "http://localhost:80"
+  icon         = "https://avatars.githubusercontent.com/u/47573844?s=128"
   subdomain    = true
   share        = "owner"
 
