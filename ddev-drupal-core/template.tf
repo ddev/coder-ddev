@@ -465,7 +465,9 @@ STATUS_HEADER
       log_setup "Starting DDEV environment (this will take 2-3 minutes)..."
       update_status "⏳ DDEV start: In progress..."
 
-      if ddev start >> "$SETUP_LOG" 2>&1; then
+      ddev start 2>&1 | tee -a "$SETUP_LOG"
+      DDEV_START_RC=$${PIPESTATUS[0]}
+      if [ $DDEV_START_RC -eq 0 ]; then
         log_setup "✓ DDEV started successfully"
         update_status "✓ DDEV start: Success"
       else
