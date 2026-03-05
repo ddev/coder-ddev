@@ -361,7 +361,7 @@ WELCOME_EOF
     # Always omit ddev-router — this template uses direct port binding, not the router.
     # Must run every startup because the shared global_config.yaml defaults to omit_containers: []
     echo "Configuring DDEV to omit ddev-router..."
-    ddev config global --omit-containers=ddev-router --instrumentation-opt-in=false || true
+    ddev config global --omit-containers=ddev-router --instrumentation-opt-in=false > /dev/null 2>&1 || true
 
     # Install mkcert CA to suppress DDEV's "mkcert may not be properly installed" warning
     # DDEV ships its own mkcert binary; this sets up the local CA trust
