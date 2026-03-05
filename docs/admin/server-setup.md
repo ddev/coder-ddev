@@ -514,7 +514,7 @@ The update script runs `composer update`, a fresh `drush si` (site install), and
 REPO=~/workspace/coder-ddev   # adjust if your repo is elsewhere
 
 # Install the update script to a standard system path
-sudo install -m 755 $REPO/ddev-drupal-core/scripts/update-drupal-cache.sh \
+sudo install -m 755 $REPO/ddev-drupal-core/scripts/update-drupal-cache \
   /usr/local/bin/update-drupal-cache
 
 # Install the systemd units

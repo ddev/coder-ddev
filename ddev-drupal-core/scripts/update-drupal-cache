@@ -1,5 +1,5 @@
 #!/bin/bash
-# update-drupal-cache.sh
+# update-drupal-cache
 #
 # Refreshes the drupal-core seed cache used by the ddev-drupal-core Coder template.
 # Run this script on the Coder host server as the user who owns the seed directory.
@@ -13,7 +13,7 @@
 # instead of running a full composer create + site install, saving ~8-12 minutes.
 #
 # Usage:
-#   ./update-drupal-cache.sh [--seed-dir PATH]
+#   ./update-drupal-cache [--seed-dir PATH]
 #
 # Options:
 #   --seed-dir PATH   Absolute path to the seed directory.
