@@ -468,9 +468,11 @@ DDEV must be installed on the Coder server itself (not just inside workspaces). 
 
 Follow the [DDEV Linux installation instructions](https://docs.ddev.com/en/stable/users/install/ddev-installation/#ddev-installation-linux) to install DDEV on the host.
 
+> **User note:** The seed cache must be owned and operated by a normal (non-root) user. DDEV refuses to run as root. All the commands below, and the systemd service, must run as that user — not with `sudo`. On this server the user is `rfay`; adjust for your own setup.
+
 ### One-time initial setup
 
-Run these commands as the host-side user:
+Run these commands as your normal (non-root) user — **not** as root:
 
 ```bash
 mkdir -p ~/cache/drupal-core-seed
@@ -551,22 +553,25 @@ journalctl -u drupal-cache-updater.service -f
 
 ### Template variable
 
-The template uses a `cache_path` variable (default: `/home/coder/cache/drupal-core-seed`) for the host-side seed directory. Since this path depends on which user owns the cache, it must be set at deploy time — not hardcoded in the template.
+The template uses a `cache_path` variable for the host-side seed directory. The default in both `ddev-drupal-core/template.tf` and the `Makefile` is currently hardcoded to the path on this server (`/home/rfay/cache/drupal-core-seed`), so `make push-template-ddev-drupal-core` works without any override on this server.
 
-Set it via the `DRUPAL_CACHE_PATH` Makefile variable when pushing the template:
-
-```bash
-make deploy-ddev-drupal-core DRUPAL_CACHE_PATH=/home/youruser/cache/drupal-core-seed
-```
-
-Or pass it directly to `coder templates push`:
+**On a different server or with a different user**, update the defaults before deploying:
 
 ```bash
-coder templates push --directory ddev-drupal-core ddev-drupal-core --yes \
-  --variable cache_path=/home/youruser/cache/drupal-core-seed
+# In Makefile, change:
+DRUPAL_CACHE_PATH ?= /home/youruser/cache/drupal-core-seed
+
+# In ddev-drupal-core/template.tf, change:
+variable "cache_path" {
+  default = "/home/youruser/cache/drupal-core-seed"
+}
 ```
 
-If you always use the same non-default path, add `DRUPAL_CACHE_PATH` to your shell environment or a `.envrc` file so you don't need to specify it on every deploy.
+Or override at deploy time without changing files:
+
+```bash
+make push-template-ddev-drupal-core DRUPAL_CACHE_PATH=/home/youruser/cache/drupal-core-seed
+```
 
 ### How new workspaces use the cache
 
