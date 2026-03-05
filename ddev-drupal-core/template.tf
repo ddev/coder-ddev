@@ -379,6 +379,11 @@ WELCOME_EOF
       echo "Warning: /home/coder-files/.ddev not found, skipping ddev config copy"
     fi
 
+    # Always omit ddev-router — this template uses direct port binding, not the router.
+    # Must run every startup because the shared global_config.yaml defaults to omit_containers: []
+    echo "Configuring DDEV to omit ddev-router..."
+    ddev config global --omit-containers=ddev-router || true
+
     # Install mkcert CA to suppress DDEV's "mkcert may not be properly installed" warning
     # DDEV ships its own mkcert binary; this sets up the local CA trust
     mkcert -install 2>/dev/null || true
@@ -466,9 +471,17 @@ STATUS_HEADER
     fi
 
     # Step 3: Start DDEV
-    # Stop any lingering containers first — Docker may auto-restart DDEV containers
-    # from the persistent /var/lib/docker volume on dockerd startup, causing port conflicts
-    ddev stop 2>/dev/null || true
+    # Run poweroff first — ddev-router can persist across workspace stop/start because
+    # dockerd recovers containers from the persistent /var/lib/docker volume.
+    # `ddev stop` only stops project containers; only `ddev poweroff` stops ddev-router too.
+    log_setup "Running ddev poweroff to clear any lingering containers (including ddev-router)..."
+    log_setup "  docker ps before poweroff:"
+    docker ps --format "  {{.Names}} ({{.Status}})" 2>&1 | tee -a "$SETUP_LOG" || true
+    log_setup "  ss port 80 before poweroff:"
+    ss -tlnp 'sport = :80' 2>&1 | tee -a "$SETUP_LOG" || true
+    ddev poweroff 2>&1 | tee -a "$SETUP_LOG" || true
+    log_setup "  docker ps after poweroff:"
+    docker ps --format "  {{.Names}} ({{.Status}})" 2>&1 | tee -a "$SETUP_LOG" || true
 
     log_setup "Starting DDEV environment..."
     update_status "⏳ DDEV start: In progress..."
@@ -480,6 +493,10 @@ STATUS_HEADER
       update_status "✓ DDEV start: Success"
     else
       log_setup "✗ Failed to start DDEV"
+      log_setup "  docker ps at failure:"
+      docker ps --format "  {{.Names}} ({{.Status}})" 2>&1 | tee -a "$SETUP_LOG" || true
+      log_setup "  ss port 80 at failure:"
+      ss -tlnp 'sport = :80' 2>&1 | tee -a "$SETUP_LOG" || true
       log_setup "Check $SETUP_LOG and Docker logs for details"
       update_status "✗ DDEV start: Failed"
       update_status ""

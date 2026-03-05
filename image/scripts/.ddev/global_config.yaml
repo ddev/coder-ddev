@@ -1,3 +1,5 @@
 # DDEV global configuration for Coder workspaces
-# ddev-router is enabled (not omitted) to support Coder Traefik routing
+# ddev-router default: enabled (omit_containers: []).
+# Templates that don't use the router (e.g. ddev-drupal-core) override this
+# at startup with: ddev config global --omit-containers=ddev-router
 omit_containers: []
