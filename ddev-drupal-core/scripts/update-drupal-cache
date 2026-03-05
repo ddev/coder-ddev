@@ -17,18 +17,16 @@
 #
 # Options:
 #   --seed-dir PATH   Absolute path to the seed directory.
-#                     Default: /home/coder/cache/drupal-core-seed
-#                     Override this if the cache lives under a different user's home,
-#                     e.g.: --seed-dir /home/rfay/cache/drupal-core-seed
-#                     The Coder template's cache_path variable must be set to the same path.
+#                     Default: /home/rfay/cache/drupal-core-seed
+#                     Must match the cache_path variable set in the Coder template.
 #
-# Note: when run via the systemd timer, the seed directory is taken from the default
-# or from the ExecStart line in drupal-cache-updater.service — edit that file to pass
-# --seed-dir if your seed directory differs from the default.
+# Note: This script must run as the user who owns the seed directory (not root).
+# DDEV refuses to run as root. The systemd service (drupal-cache-updater.service)
+# must set User= to the cache owner — see that file and docs/admin/server-setup.md.
 
 set -euo pipefail
 
-SEED_DIR="/home/coder/cache/drupal-core-seed"
+SEED_DIR="/home/rfay/cache/drupal-core-seed"
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do

@@ -61,7 +61,7 @@ variable "docker_gid" {
 variable "cache_path" {
   description = "Host path to the drupal-core seed cache directory (mounted read-only into workspaces)"
   type        = string
-  default     = "/home/coder/cache/drupal-core-seed"
+  default     = "/home/rfay/cache/drupal-core-seed"
 }
 
 
@@ -182,6 +182,7 @@ resource "coder_agent" "main" {
     set +e
 
     echo "Startup script started..."
+    SCRIPT_START=$SECONDS
 
     # Define Sudo Command
     if command -v sudo > /dev/null 2>&1; then
@@ -375,7 +376,11 @@ WELCOME_EOF
     fi
 
     # Pre-pull DDEV images (uses registry mirror if configured)
+    _t_images=$SECONDS
+    echo "Pre-pulling DDEV images..."
     ddev utility download-images || true
+    IMAGES_TIME=$((SECONDS - _t_images))
+    echo "  ddev utility download-images complete ($${IMAGES_TIME}s)"
 
     # ==========================================
     # DRUPAL CORE AUTOMATIC SETUP
@@ -687,9 +692,18 @@ LAUNCH_EOF
 
     fi # End of "if project creation succeeded"
 
+    # Timing summary
+    TOTAL_TIME=$((SECONDS - SCRIPT_START))
+    INSTALL_TIME=$((SECONDS - SETUP_START))
+
     # Final status and summary
     update_status ""
     update_status "Completed: $(date)"
+    update_status ""
+    update_status "--- Timing ---"
+    update_status "  ddev utility download-images: $${IMAGES_TIME}s"
+    update_status "  Install/seed phase:           $${INSTALL_TIME}s"
+    update_status "  Total workspace startup:      $${TOTAL_TIME}s"
     update_status ""
     update_status "View full logs: $SETUP_LOG"
 
@@ -697,6 +711,11 @@ LAUNCH_EOF
     log_setup "=========================================="
     log_setup "✨ Setup Complete!"
     log_setup "=========================================="
+    log_setup ""
+    log_setup "⏱  Timing Summary:"
+    log_setup "   ddev utility download-images: $${IMAGES_TIME}s"
+    log_setup "   Install/seed phase:           $${INSTALL_TIME}s"
+    log_setup "   Total workspace startup:      $${TOTAL_TIME}s"
     log_setup ""
     log_setup "📁 Project Location:"
     log_setup "   $DRUPAL_DIR"
@@ -820,6 +839,8 @@ BASHPROFILE_WELCOME
     
     
     echo "=== Setup Complete ==="
+    echo ""
+    echo "⏱  Timing: images=$${IMAGES_TIME}s  install=$${INSTALL_TIME}s  total=$${TOTAL_TIME}s"
     echo ""
     echo "📁 Drupal core ready at ~/drupal-core"
     echo "📄 Welcome message saved to ~/WELCOME.txt"

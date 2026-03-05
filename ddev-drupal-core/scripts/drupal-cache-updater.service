@@ -5,15 +5,14 @@ Requires=docker.service
 
 [Service]
 Type=oneshot
-# Set User to the owner of the seed cache directory.
-# If the cache lives under a different user account, change User (and WorkingDirectory) to match.
-User=coder
-WorkingDirectory=/home/coder
+# Must run as the user who owns the seed cache directory — NOT root.
+# DDEV refuses to run as root; this service must run as a normal user.
+# Change User and WorkingDirectory to match the account that owns the cache.
+User=rfay
+WorkingDirectory=/home/rfay
 # The script is installed to /usr/local/bin/ (see docs/admin/server-setup.md).
-# If your seed directory differs from the default (/home/coder/cache/drupal-core-seed),
-# add --seed-dir here, e.g.:
-#   ExecStart=/usr/local/bin/update-drupal-cache --seed-dir /home/rfay/cache/drupal-core-seed
-ExecStart=/usr/local/bin/update-drupal-cache
+# Pass --seed-dir if your seed directory differs from the default.
+ExecStart=/usr/local/bin/update-drupal-cache --seed-dir /home/rfay/cache/drupal-core-seed
 StandardOutput=journal
 StandardError=journal
 # Allow up to 30 minutes for composer update + site install

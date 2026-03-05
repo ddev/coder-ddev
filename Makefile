@@ -12,8 +12,9 @@ DDEV_DRUPAL_CORE_DIR      := ddev-drupal-core
 DDEV_SINGLE_PROJECT_DIR   := ddev-single-project
 
 # Host path to the drupal-core seed cache (bind-mounted read-only into workspaces).
-# Override with: make deploy-ddev-drupal-core DRUPAL_CACHE_PATH=/home/youruser/cache/drupal-core-seed
-DRUPAL_CACHE_PATH ?= /home/coder/cache/drupal-core-seed
+# This path is specific to the server where the template is deployed.
+# Override with: make deploy-ddev-drupal-core DRUPAL_CACHE_PATH=/other/path/drupal-core-seed
+DRUPAL_CACHE_PATH ?= /home/rfay/cache/drupal-core-seed
 
 # Full image tag
 IMAGE_TAG := $(IMAGE_NAME):$(VERSION)
