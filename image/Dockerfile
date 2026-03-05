@@ -144,7 +144,6 @@ USER root
 COPY --chown=coder:coder scripts /home/coder-files
 RUN chmod 644 /home/coder-files/WELCOME.txt && \
   chmod 644 /home/coder-files/.vscode/settings.json && \
-  chmod 644 /home/coder-files/.ddev/global_config.yaml && \
   chmod 755 /home/coder-files/.ddev/commands/host/launch && \
   chmod 755 /home/coder-files/.ddev/commands/host/coder-routes
 

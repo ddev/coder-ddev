@@ -1,3 +1,0 @@
-# DDEV global configuration for Coder workspaces
-# ddev-router is enabled (not omitted) to support Coder Traefik routing
-omit_containers: []

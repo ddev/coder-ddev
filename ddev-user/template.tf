@@ -319,25 +319,8 @@ resource "coder_agent" "main" {
       echo "Docker Daemon already running."
     fi
 
-    # Create .ddev directory for ddev config
+    # Create .ddev directory for ddev config (DDEV creates global_config.yaml on first use)
     mkdir -p ~/.ddev
-    
-    # Copy ddev configuration and commands from init-scripts after ddev installation
-    # This ensures ddev doesn't overwrite our custom configuration
-    if [ -d /home/coder-files/.ddev ]; then
-      echo "Copying ddev configuration and commands from init-scripts..."
-      
-      # Copy global_config.yaml if it doesn't exist or overwrite to ensure latest version
-      if [ -f /home/coder-files/.ddev/global_config.yaml ]; then
-        cp -f /home/coder-files/.ddev/global_config.yaml ~/.ddev/global_config.yaml
-        chmod 644 ~/.ddev/global_config.yaml
-        echo "✓ ddev global_config.yaml copied"
-      else
-        echo "Warning: /home/coder-files/.ddev/global_config.yaml not found"
-      fi
-    else
-      echo "Warning: /home/coder-files/.ddev not found, skipping ddev config copy"
-    fi
 
     # Pre-pull DDEV images in background (uses registry mirror if configured)
     ddev utility download-images || true
@@ -495,7 +478,7 @@ resource "coder_app" "ddev-web" {
   slug         = "ddev-web"
   display_name = "DDEV Web"
   url          = "http://localhost:80"
-  icon         = "🌐"
+  icon         = "https://avatars.githubusercontent.com/u/47573844?s=128"
   subdomain    = true
   share        = "owner"
 

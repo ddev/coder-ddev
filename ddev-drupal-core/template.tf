@@ -355,25 +355,17 @@ WELCOME_EOF
       echo "Docker Daemon already running."
     fi
 
-    # Create .ddev directory for ddev config
+    # Create .ddev directory for ddev config (DDEV creates global_config.yaml on first use)
     mkdir -p ~/.ddev
-    
-    # Copy ddev configuration and commands from init-scripts after ddev installation
-    # This ensures ddev doesn't overwrite our custom configuration
-    if [ -d /home/coder-files/.ddev ]; then
-      echo "Copying ddev configuration and commands from init-scripts..."
-      
-      # Copy global_config.yaml if it doesn't exist or overwrite to ensure latest version
-      if [ -f /home/coder-files/.ddev/global_config.yaml ]; then
-        cp -f /home/coder-files/.ddev/global_config.yaml ~/.ddev/global_config.yaml
-        chmod 644 ~/.ddev/global_config.yaml
-        echo "✓ ddev global_config.yaml copied"
-      else
-        echo "Warning: /home/coder-files/.ddev/global_config.yaml not found"
-      fi
-    else
-      echo "Warning: /home/coder-files/.ddev not found, skipping ddev config copy"
-    fi
+
+    # Always omit ddev-router — this template uses direct port binding, not the router.
+    # Must run every startup because the shared global_config.yaml defaults to omit_containers: []
+    echo "Configuring DDEV to omit ddev-router..."
+    ddev config global --omit-containers=ddev-router --instrumentation-opt-in=false > /dev/null 2>&1 || true
+
+    # Install mkcert CA to suppress DDEV's "mkcert may not be properly installed" warning
+    # DDEV ships its own mkcert binary; this sets up the local CA trust
+    mkcert -install 2>/dev/null || true
 
     # Pre-pull DDEV images (uses registry mirror if configured)
     _t_images=$SECONDS
@@ -458,27 +450,26 @@ STATUS_HEADER
     fi
 
     # Step 3: Start DDEV
-    if ddev describe 2>/dev/null | grep -q "OK"; then
-      log_setup "✓ DDEV already running"
-      update_status "✓ DDEV start: Already running"
-    else
-      log_setup "Starting DDEV environment (this will take 2-3 minutes)..."
-      update_status "⏳ DDEV start: In progress..."
+    # poweroff first — ddev-router can persist in Docker's state across workspace
+    # stop/start; `ddev stop` only stops project containers, not ddev-router.
+    ddev poweroff 2>&1 | tee -a "$SETUP_LOG" || true
 
-      ddev start 2>&1 | tee -a "$SETUP_LOG"
-      DDEV_START_RC=$${PIPESTATUS[0]}
-      if [ $DDEV_START_RC -eq 0 ]; then
-        log_setup "✓ DDEV started successfully"
-        update_status "✓ DDEV start: Success"
-      else
-        log_setup "✗ Failed to start DDEV"
-        log_setup "Check $SETUP_LOG and Docker logs for details"
-        update_status "✗ DDEV start: Failed"
-        update_status ""
-        update_status "Manual recovery:"
-        update_status "  cd $DRUPAL_DIR && ddev start"
-        update_status "  Check: docker ps, docker logs"
-      fi
+    log_setup "Starting DDEV environment..."
+    update_status "⏳ DDEV start: In progress..."
+
+    ddev start 2>&1 | tee -a "$SETUP_LOG"
+    DDEV_START_RC=$${PIPESTATUS[0]}
+    if [ $DDEV_START_RC -eq 0 ]; then
+      log_setup "✓ DDEV started successfully"
+      update_status "✓ DDEV start: Success"
+    else
+      log_setup "✗ Failed to start DDEV"
+      log_setup "Check $SETUP_LOG and Docker logs for details"
+      update_status "✗ DDEV start: Failed"
+      update_status ""
+      update_status "Manual recovery:"
+      update_status "  cd $DRUPAL_DIR && ddev start"
+      update_status "  Check: docker ps, docker logs"
     fi
 
     CACHE_SEED="/home/coder-cache-seed"
@@ -900,7 +891,7 @@ resource "coder_app" "ddev-web" {
   slug         = "ddev-web"
   display_name = "DDEV Web"
   url          = "http://localhost:80"
-  icon         = "/icon/globe.svg"
+  icon         = "https://avatars.githubusercontent.com/u/47573844?s=128"
   subdomain    = true
   share        = "owner"
 
