@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DDEV Coder Workspaces</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0e0e10;
+      color: #e8e8e8;
+      line-height: 1.6;
+    }
+
+    /* ── Above the fold ─────────────────────────────── */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 2rem;
+      position: relative;
+    }
+
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.75rem;
+    }
+
+    .hero .tagline {
+      font-size: 1.15rem;
+      color: #999;
+      max-width: 480px;
+      margin-bottom: 2.5rem;
+    }
+
+    .auth-note {
+      font-size: 0.95rem;
+      color: #666;
+      margin-bottom: 1.25rem;
+    }
+
+    .auth-note a {
+      color: #a78bfa;
+      text-decoration: none;
+    }
+
+    .auth-note a:hover { text-decoration: underline; }
+
+    .open-btn img {
+      height: 52px;
+      display: block;
+    }
+
+    .scroll-hint {
+      position: absolute;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #444;
+      font-size: 0.8rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.4rem;
+      animation: bob 2s ease-in-out infinite;
+    }
+
+    .scroll-hint::after {
+      content: '↓';
+      font-size: 1.1rem;
+    }
+
+    @keyframes bob {
+      0%, 100% { transform: translateX(-50%) translateY(0); }
+      50%       { transform: translateX(-50%) translateY(6px); }
+    }
+
+    /* ── Below the fold ─────────────────────────────── */
+    .details {
+      max-width: 660px;
+      margin: 0 auto;
+      padding: 5rem 2rem 6rem;
+    }
+
+    .details section { margin-bottom: 3.5rem; }
+
+    .details h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #777;
+      margin-bottom: 1.25rem;
+    }
+
+    .steps {
+      list-style: none;
+      counter-reset: step;
+    }
+
+    .steps li {
+      counter-increment: step;
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+      padding: 0.9rem 0;
+      border-bottom: 1px solid #1c1c1e;
+      color: #ccc;
+    }
+
+    .steps li::before {
+      content: counter(step);
+      flex-shrink: 0;
+      width: 1.75rem;
+      height: 1.75rem;
+      background: #3b2f6e;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #c4b5fd;
+      margin-top: 0.1rem;
+    }
+
+    code {
+      background: #1a1a1f;
+      border: 1px solid #2a2a30;
+      padding: 0.1em 0.4em;
+      border-radius: 4px;
+      font-family: 'SF Mono', Consolas, monospace;
+      font-size: 0.88em;
+      color: #c4b5fd;
+    }
+
+    .links {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .links a {
+      color: #a78bfa;
+      text-decoration: none;
+      font-size: 0.95rem;
+    }
+
+    .links a:hover { text-decoration: underline; }
+
+    .divider {
+      border: none;
+      border-top: 1px solid #1c1c1e;
+      margin-bottom: 3.5rem;
+    }
+  </style>
+</head>
+<body>
+
+  <section class="hero">
+    <h1>DDEV Coder Workspaces</h1>
+    <p class="tagline">Cloud-hosted Drupal core development environments. Full DDEV stack, ready in ~30 seconds — no local setup required.</p>
+    <p class="auth-note">Sign in with your GitHub account at <a href="https://coder.ddev.com">coder.ddev.com</a>, then click:</p>
+    <a class="open-btn" href="https://coder.ddev.com/templates/coder/drupal-core/workspace?mode=manual">
+      <img src="https://coder.ddev.com/open-in-coder.svg" alt="Open in Coder">
+    </a>
+    <span class="scroll-hint">more</span>
+  </section>
+
+  <hr class="divider">
+
+  <div class="details">
+
+    <section>
+      <h2>How it works</h2>
+      <ol class="steps">
+        <li>Sign in with GitHub at <a href="https://coder.ddev.com" style="color:#a78bfa">coder.ddev.com</a></li>
+        <li>Click <strong>Create Workspace</strong> — Drupal core sets up automatically</li>
+        <li>Click <strong>DDEV Web</strong> to open the running site, or <strong>VS Code</strong> to edit code</li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>What you get</h2>
+      <ol class="steps">
+        <li>Drupal core git clone at <code>~/drupal-core/repos/drupal/</code> — clean, ready for patches</li>
+        <li>Running Drupal site with Umami demo profile — login <code>admin</code> / <code>admin</code>, or <code>ddev drush uli</code></li>
+        <li>PHP 8.5, DDEV, Composer, drush, VS Code for Web — all pre-installed</li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>Resources</h2>
+      <div class="links">
+        <a href="user/quickstart">Quickstart guide</a>
+        <a href="https://docs.ddev.com/">DDEV documentation</a>
+        <a href="https://www.drupal.org/contribute/development">Drupal core contribution guide</a>
+        <a href="https://github.com/ddev/coder-ddev">Source code (GitHub)</a>
+      </div>
+    </section>
+
+  </div>
+
+</body>
+</html>
