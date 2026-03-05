@@ -1,7 +1,7 @@
 #!/bin/bash
 # update-drupal-cache
 #
-# Refreshes the drupal-core seed cache used by the ddev-drupal-core Coder template.
+# Refreshes the drupal-core seed cache used by the drupal-core Coder template.
 # Run this script on the Coder host server as the user who owns the seed directory.
 #
 # The seed cache is a pre-built drupal-core project containing:

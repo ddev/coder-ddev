@@ -238,7 +238,7 @@ Image versions are managed via the `VERSION` file in the repository root.
 2. Build, push image, and push template (VERSION is synced automatically):
    ```bash
    cd ..  # Back to repository root
-   make deploy-ddev-user
+   make deploy-user-defined-web
    ```
 
 ## Troubleshooting

@@ -157,7 +157,7 @@ ddev start
 
 - **Host paths**: `/home/coder/workspaces/<owner>-<workspace>`
 - **Workspace paths**: `/home/coder` (inside container)
-- **Template paths**: `ddev-user/template.tf` (in this repository)
+- **Template paths**: `user-defined-web/template.tf` (in this repository)
 
 ### Variables
 

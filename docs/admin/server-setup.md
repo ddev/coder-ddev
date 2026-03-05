@@ -451,14 +451,14 @@ git clone https://github.com/ddev/coder-ddev
 cd coder-ddev
 
 # Build and deploy
-make deploy-ddev-user
+make deploy-user-defined-web
 ```
 
 ---
 
 ## Step 8: Set Up the Drupal Core Seed Cache (optional, highly recommended)
 
-The `ddev-drupal-core` template can provision a fully configured Drupal core development environment on new workspaces using a **seed cache** on the host. Without the cache, first-time workspace setup downloads a full git clone and all composer dependencies (~10-13 minutes). With the cache, that drops to ~15 seconds.
+The `drupal-core` template can provision a fully configured Drupal core development environment on new workspaces using a **seed cache** on the host. Without the cache, first-time workspace setup downloads a full git clone and all composer dependencies (~10-13 minutes). With the cache, that drops to ~15 seconds.
 
 The cache is a standing DDEV project on the host that is periodically refreshed. New workspaces copy the git checkout, vendor directory, and a pre-built database snapshot from it.
 
@@ -516,13 +516,13 @@ The update script runs `composer update`, a fresh `drush si` (site install), and
 REPO=~/workspace/coder-ddev   # adjust if your repo is elsewhere
 
 # Install the update script to a standard system path
-sudo install -m 755 $REPO/ddev-drupal-core/scripts/update-drupal-cache \
+sudo install -m 755 $REPO/drupal-core/scripts/update-drupal-cache \
   /usr/local/bin/update-drupal-cache
 
 # Install the systemd units
-sudo install -m 644 $REPO/ddev-drupal-core/scripts/drupal-cache-updater.service \
+sudo install -m 644 $REPO/drupal-core/scripts/drupal-cache-updater.service \
   /etc/systemd/system/
-sudo install -m 644 $REPO/ddev-drupal-core/scripts/drupal-cache-updater.timer \
+sudo install -m 644 $REPO/drupal-core/scripts/drupal-cache-updater.timer \
   /etc/systemd/system/
 
 # If your seed directory or cache user differs from the defaults, edit the service:
@@ -553,7 +553,7 @@ journalctl -u drupal-cache-updater.service -f
 
 ### Template variable
 
-The template uses a `cache_path` variable for the host-side seed directory. The default in both `ddev-drupal-core/template.tf` and the `Makefile` is currently hardcoded to the path on this server (`/home/rfay/cache/drupal-core-seed`), so `make push-template-ddev-drupal-core` works without any override on this server.
+The template uses a `cache_path` variable for the host-side seed directory. The default in both `drupal-core/template.tf` and the `Makefile` is currently hardcoded to the path on this server (`/home/rfay/cache/drupal-core-seed`), so `make push-template-drupal-core` works without any override on this server.
 
 **On a different server or with a different user**, update the defaults before deploying:
 
@@ -561,7 +561,7 @@ The template uses a `cache_path` variable for the host-side seed directory. The 
 # In Makefile, change:
 DRUPAL_CACHE_PATH ?= /home/youruser/cache/drupal-core-seed
 
-# In ddev-drupal-core/template.tf, change:
+# In drupal-core/template.tf, change:
 variable "cache_path" {
   default = "/home/youruser/cache/drupal-core-seed"
 }
@@ -570,7 +570,7 @@ variable "cache_path" {
 Or override at deploy time without changing files:
 
 ```bash
-make push-template-ddev-drupal-core DRUPAL_CACHE_PATH=/home/youruser/cache/drupal-core-seed
+make push-template-drupal-core DRUPAL_CACHE_PATH=/home/youruser/cache/drupal-core-seed
 ```
 
 ### How new workspaces use the cache
@@ -587,7 +587,7 @@ Check workspace startup logs in the Coder dashboard or at `/tmp/drupal-setup.log
 
 **Cache not being used:**
 - Verify the seed directory exists and is populated: `ls $SEED_DIR/composer.json $SEED_DIR/.tarballs/db.sql.gz`
-- Confirm `cache_path` in the deployed template matches your actual seed directory (check with `coder templates show ddev-drupal-core`)
+- Confirm `cache_path` in the deployed template matches your actual seed directory (check with `coder templates show drupal-core`)
 - Check the workspace startup log for the "Cache mount check" diagnostic block — it shows exactly which files were found or missing at the bind mount path
 - Look for "Cache hit" in the log; "No cache available" means the path is absent or the seed was never initialized
 

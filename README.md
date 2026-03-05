@@ -29,10 +29,10 @@ The base Docker image is built from the `image/Dockerfile` and the Coder templat
 
 ```bash
 # Full deployment (build, push image, push template)
-make deploy-ddev-user
+make deploy-user-defined-web
 
 # Full deployment without cache
-make deploy-ddev-user-no-cache
+make deploy-user-defined-web-no-cache
 
 # Image operations
 make build              # Build the image with cache
@@ -41,7 +41,7 @@ make push               # Push to Docker Hub
 make build-and-push     # Build and push in one command
 
 # Template operations
-make push-template-ddev-user      # Push ddev-user template to Coder
+make push-template-user-defined-web      # Push user-defined-web template to Coder
 
 # Utility commands
 make test               # Test the built image
@@ -55,13 +55,13 @@ The `VERSION` file in the root directory controls the image tag. The Makefile au
 
 **To release a new version:**
 1. Update the `VERSION` file (e.g., `v0.7`)
-2. Run `make deploy-ddev-user` to build image, push image, and push template
+2. Run `make deploy-user-defined-web` to build image, push image, and push template
 
 **Quick deployment:**
 ```bash
-make deploy-ddev-user        # Build with cache and deploy
+make deploy-user-defined-web        # Build with cache and deploy
 # or
-make deploy-ddev-user-no-cache  # Clean build and deploy
+make deploy-user-defined-web-no-cache  # Clean build and deploy
 ```
 
 ## Documentation
@@ -87,10 +87,10 @@ make deploy-ddev-user-no-cache  # Clean build and deploy
 
 ```
 coder-ddev/
-├── ddev-user/          # General-purpose DDEV template
+├── user-defined-web/          # General-purpose DDEV template
 │   ├── template.tf
 │   └── README.md
-├── ddev-drupal-core/   # Drupal core development template
+├── drupal-core/   # Drupal core development template
 │   ├── template.tf
 │   └── README.md
 ├── image/              # Shared Docker image
@@ -99,26 +99,26 @@ coder-ddev/
 
 ## Available Templates
 
-### ddev-user (General Purpose)
+### user-defined-web (General Purpose)
 Basic DDEV development environment for any project type.
 
 - **Resources**: 4 cores, 8 GB RAM (default)
 - **Setup**: Manual (clone your own repository)
 - **Use Case**: Any DDEV-compatible project (Drupal, WordPress, Laravel, etc.)
 - **Start Time**: < 1 minute
-- **Template Directory**: `ddev-user/`
+- **Template Directory**: `user-defined-web/`
 
 **Create workspace:**
 ```bash
-coder create --template ddev-user my-workspace
+coder create --template user-defined-web my-workspace
 ```
 
-### ddev-drupal-core (Drupal Core Development)
+### drupal-core (Drupal Core Development)
 Fully automated Drupal core development environment.
 
 - **Setup**: Automatic (Drupal core cloned and installed)
 - **Use Case**: Drupal core development, contribution, testing
-- **Template Directory**: `ddev-drupal-core/`
+- **Template Directory**: `drupal-core/`
 - **Includes**:
   - Pre-cloned Drupal core main branch (shallow clone, 50 commits depth)
   - Configured DDEV (PHP 8.5, Drupal HEAD/main config, port 80)
@@ -127,18 +127,18 @@ Fully automated Drupal core development environment.
 
 **Create workspace:**
 ```bash
-coder create --template ddev-drupal-core my-drupal-dev
+coder create --template drupal-core my-drupal-dev
 ```
 
 ### Choosing a Template
 
-- Use **ddev-user** for:
+- Use **user-defined-web** for:
   - Contrib module development
   - Site building
   - General Drupal/PHP projects
   - Maximum flexibility
 
-- Use **ddev-drupal-core** for:
+- Use **drupal-core** for:
   - Drupal core patches
   - Core issue queue work
   - Testing Drupal core changes
@@ -150,10 +150,10 @@ Create a new workspace using your chosen template:
 
 ```bash
 # General-purpose DDEV environment
-coder create --template ddev-user <workspace-name>
+coder create --template user-defined-web <workspace-name>
 
 # Drupal core development environment
-coder create --template ddev-drupal-core <workspace-name>
+coder create --template drupal-core <workspace-name>
 ```
 
 **Access your project:**
@@ -174,10 +174,10 @@ docker build -t ddev/coder-ddev:v0.1 .
 docker push ddev/coder-ddev:v0.1
 
 # Deploy template to Coder
-coder templates push --directory ddev-user ddev-user --yes
+coder templates push --directory user-defined-web user-defined-web --yes
 
 # Or use Makefile
-make deploy-ddev-user  # Build + push image + push template
+make deploy-user-defined-web  # Build + push image + push template
 ```
 
 **📖 [Full Operations Guide](./docs/admin/operations-guide.md)**

@@ -336,7 +336,7 @@ ddev start
 **Coder DDEV onboarding:**
 ```bash
 # Developer's first day
-coder create --template ddev-user my-workspace --yes
+coder create --template user-defined-web my-workspace --yes
 # Done!
 ```
 
@@ -476,7 +476,7 @@ coder create --template ddev-user my-workspace --yes
 - Choose cloud provider (AWS, GCP, Azure, on-prem)
 - Install Coder server
 - Install Sysbox on agent nodes
-- Build and deploy ddev-user template
+- Build and deploy user-defined-web template
 
 **3. Pilot:**
 - Onboard 5-10 developers
@@ -546,7 +546,7 @@ ddev start
 Access: https://project.ddev.site
 
 ## Coder DDEV
-1. Create workspace: `coder create --template ddev-user my-workspace`
+1. Create workspace: `coder create --template user-defined-web my-workspace`
 2. Clone project: `git clone ...`
 3. Start DDEV: `ddev start`
 4. Access via Coder UI port forwarding (port 80/443)

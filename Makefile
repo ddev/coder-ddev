@@ -6,19 +6,32 @@ VERSION := $(shell cat VERSION 2>/dev/null || echo "1.0.0-beta1")
 DOCKERFILE_DIR := image
 DOCKERFILE := $(DOCKERFILE_DIR)/Dockerfile
 
-# Template directories (name == directory)
-DDEV_USER_DIR             := ddev-user
-DDEV_DRUPAL_CORE_DIR      := ddev-drupal-core
-DDEV_SINGLE_PROJECT_DIR   := ddev-single-project
+# Template directories (name == directory name == Coder template name)
+TEMPLATES := user-defined-web drupal-core freeform
 
 # Host path to the drupal-core seed cache (bind-mounted read-only into workspaces).
 # This path is specific to the server where the template is deployed.
-# Override with: make deploy-ddev-drupal-core DRUPAL_CACHE_PATH=/other/path/drupal-core-seed
+# Override with: make push-template-drupal-core DRUPAL_CACHE_PATH=/other/path/drupal-core-seed
 DRUPAL_CACHE_PATH ?= /home/rfay/cache/drupal-core-seed
 
 # Full image tag
 IMAGE_TAG := $(IMAGE_NAME):$(VERSION)
 IMAGE_LATEST := $(IMAGE_NAME):latest
+
+# Per-template extra variables passed to `coder templates push`
+TEMPLATE_VARS_user-defined-web := --variable workspace_image_registry=index.docker.io/$(IMAGE_NAME)
+TEMPLATE_VARS_drupal-core      := --variable workspace_image_registry=index.docker.io/$(IMAGE_NAME) \
+                                   --variable cache_path=$(DRUPAL_CACHE_PATH)
+TEMPLATE_VARS_freeform         := --variable workspace_image_registry=index.docker.io/$(IMAGE_NAME)
+
+# Shared recipe for pushing any template (call with template name as argument)
+define push_template
+	@echo "Syncing VERSION to $(1)..."
+	cp VERSION $(1)/VERSION
+	@echo "Pushing Coder template $(1)..."
+	coder templates push --directory $(1) $(1) --yes $(TEMPLATE_VARS_$(1))
+	@echo "Template $(1) push complete"
+endef
 
 # Default target
 .DEFAULT_GOAL := help
@@ -28,7 +41,7 @@ help: ## Show this help message
 	@echo "Usage: make [target]"
 	@echo ""
 	@echo "Targets:"
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-30s %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-42s %s\n", $$1, $$2}'
 
 .PHONY: build
 build: ## Build Docker image with cache
@@ -82,52 +95,40 @@ info: ## Show image and template information
 	@echo "Image Tag:      $(IMAGE_TAG)"
 	@echo "Latest Tag:     $(IMAGE_LATEST)"
 	@echo "Dockerfile:     $(DOCKERFILE)"
-	@echo "Templates:      $(DDEV_USER_DIR) $(DDEV_DRUPAL_CORE_DIR) $(DDEV_SINGLE_PROJECT_DIR)"
+	@echo "Templates:      $(TEMPLATES)"
 
-.PHONY: push-template-ddev-user
-push-template-ddev-user: ## Push ddev-user template to Coder
-	@echo "Syncing VERSION to $(DDEV_USER_DIR)..."
-	cp VERSION $(DDEV_USER_DIR)/VERSION
-	@echo "Pushing Coder template $(DDEV_USER_DIR)..."
-	coder templates push --directory $(DDEV_USER_DIR) $(DDEV_USER_DIR) --yes \
-		--variable workspace_image_registry=index.docker.io/$(IMAGE_NAME)
-	@echo "Template push complete"
+# --- Template push targets ---
 
-.PHONY: push-template-ddev-drupal-core
-push-template-ddev-drupal-core: ## Push ddev-drupal-core template to Coder
-	@echo "Syncing VERSION to $(DDEV_DRUPAL_CORE_DIR)..."
-	cp VERSION $(DDEV_DRUPAL_CORE_DIR)/VERSION
-	@echo "Pushing Coder template $(DDEV_DRUPAL_CORE_DIR)..."
-	coder templates push --directory $(DDEV_DRUPAL_CORE_DIR) $(DDEV_DRUPAL_CORE_DIR) --yes \
-		--variable workspace_image_registry=index.docker.io/$(IMAGE_NAME) \
-		--variable cache_path=$(DRUPAL_CACHE_PATH)
-	@echo "Template push complete"
+.PHONY: push-template-user-defined-web
+push-template-user-defined-web: ## Push user-defined-web template to Coder
+	$(call push_template,user-defined-web)
 
-.PHONY: deploy-ddev-user
-deploy-ddev-user: build-and-push push-template-ddev-user ## Build image, push image, and push ddev-user template
-	@echo "Deployment of ddev-user complete!"
+.PHONY: push-template-drupal-core
+push-template-drupal-core: ## Push drupal-core template to Coder
+	$(call push_template,drupal-core)
 
-.PHONY: deploy-ddev-user-no-cache
-deploy-ddev-user-no-cache: build-and-push-no-cache push-template-ddev-user ## Build image (no cache), push image, and push ddev-user template
-	@echo "Deployment of ddev-user complete!"
+.PHONY: push-template-freeform
+push-template-freeform: ## Push freeform template to Coder
+	$(call push_template,freeform)
 
-.PHONY: deploy-ddev-drupal-core
-deploy-ddev-drupal-core: push-template-ddev-drupal-core ## Push ddev-drupal-core template (uses existing image)
-	@echo "Deployment of ddev-drupal-core complete!"
+# --- Deploy targets ---
 
-.PHONY: push-template-ddev-single-project
-push-template-ddev-single-project: ## Push ddev-single-project template to Coder
-	@echo "Syncing VERSION to $(DDEV_SINGLE_PROJECT_DIR)..."
-	cp VERSION $(DDEV_SINGLE_PROJECT_DIR)/VERSION
-	@echo "Pushing Coder template $(DDEV_SINGLE_PROJECT_DIR)..."
-	coder templates push --directory $(DDEV_SINGLE_PROJECT_DIR) $(DDEV_SINGLE_PROJECT_DIR) --yes \
-		--variable workspace_image_registry=index.docker.io/$(IMAGE_NAME)
-	@echo "Template push complete"
+.PHONY: deploy-user-defined-web
+deploy-user-defined-web: build-and-push push-template-user-defined-web ## Build image, push image, and push user-defined-web template
+	@echo "Deployment of user-defined-web complete!"
 
-.PHONY: deploy-ddev-single-project
-deploy-ddev-single-project: push-template-ddev-single-project ## Push ddev-single-project template (uses existing image)
-	@echo "Deployment of ddev-single-project complete!"
+.PHONY: deploy-user-defined-web-no-cache
+deploy-user-defined-web-no-cache: build-and-push-no-cache push-template-user-defined-web ## Build image (no cache), push, and push user-defined-web template
+	@echo "Deployment of user-defined-web complete!"
+
+.PHONY: deploy-drupal-core
+deploy-drupal-core: push-template-drupal-core ## Deploy drupal-core template (uses existing image)
+	@echo "Deployment of drupal-core complete!"
+
+.PHONY: deploy-freeform
+deploy-freeform: push-template-freeform ## Deploy freeform template (uses existing image)
+	@echo "Deployment of freeform complete!"
 
 .PHONY: deploy-all
-deploy-all: deploy-ddev-user push-template-ddev-drupal-core push-template-ddev-single-project ## Deploy image and all templates
+deploy-all: deploy-user-defined-web push-template-drupal-core push-template-freeform ## Deploy image and all templates
 	@echo "All templates deployed!"
