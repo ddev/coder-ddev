@@ -379,6 +379,10 @@ WELCOME_EOF
       echo "Warning: /home/coder-files/.ddev not found, skipping ddev config copy"
     fi
 
+    # Install mkcert CA to suppress DDEV's "mkcert may not be properly installed" warning
+    # DDEV ships its own mkcert binary; this sets up the local CA trust
+    mkcert -install 2>/dev/null || true
+
     # Pre-pull DDEV images (uses registry mirror if configured)
     _t_images=$SECONDS
     echo "Pre-pulling DDEV images..."
@@ -462,27 +466,26 @@ STATUS_HEADER
     fi
 
     # Step 3: Start DDEV
-    if ddev describe 2>/dev/null | grep -q "OK"; then
-      log_setup "✓ DDEV already running"
-      update_status "✓ DDEV start: Already running"
-    else
-      log_setup "Starting DDEV environment (this will take 2-3 minutes)..."
-      update_status "⏳ DDEV start: In progress..."
+    # Stop any lingering containers first — Docker may auto-restart DDEV containers
+    # from the persistent /var/lib/docker volume on dockerd startup, causing port conflicts
+    ddev stop 2>/dev/null || true
 
-      ddev start 2>&1 | tee -a "$SETUP_LOG"
-      DDEV_START_RC=$${PIPESTATUS[0]}
-      if [ $DDEV_START_RC -eq 0 ]; then
-        log_setup "✓ DDEV started successfully"
-        update_status "✓ DDEV start: Success"
-      else
-        log_setup "✗ Failed to start DDEV"
-        log_setup "Check $SETUP_LOG and Docker logs for details"
-        update_status "✗ DDEV start: Failed"
-        update_status ""
-        update_status "Manual recovery:"
-        update_status "  cd $DRUPAL_DIR && ddev start"
-        update_status "  Check: docker ps, docker logs"
-      fi
+    log_setup "Starting DDEV environment..."
+    update_status "⏳ DDEV start: In progress..."
+
+    ddev start 2>&1 | tee -a "$SETUP_LOG"
+    DDEV_START_RC=$${PIPESTATUS[0]}
+    if [ $DDEV_START_RC -eq 0 ]; then
+      log_setup "✓ DDEV started successfully"
+      update_status "✓ DDEV start: Success"
+    else
+      log_setup "✗ Failed to start DDEV"
+      log_setup "Check $SETUP_LOG and Docker logs for details"
+      update_status "✗ DDEV start: Failed"
+      update_status ""
+      update_status "Manual recovery:"
+      update_status "  cd $DRUPAL_DIR && ddev start"
+      update_status "  Check: docker ps, docker logs"
     fi
 
     CACHE_SEED="/home/coder-cache-seed"
