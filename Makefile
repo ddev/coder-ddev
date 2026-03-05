@@ -24,12 +24,21 @@ TEMPLATE_VARS_drupal-core      := --variable workspace_image_registry=index.dock
                                    --variable cache_path=$(DRUPAL_CACHE_PATH)
 TEMPLATE_VARS_freeform         := --variable workspace_image_registry=index.docker.io/$(IMAGE_NAME)
 
+# Per-template display metadata set via `coder templates edit` after push
+# (coder templates push only supports --name, not --description)
+TEMPLATE_EDIT_user-defined-web := --display-name "DDEV Web Workspace"
+TEMPLATE_EDIT_drupal-core      := --display-name "Drupal Core Development" \
+                                   --description "Drupal core dev environment: full DDEV stack, core clone, Umami demo site. Ready in ~30 seconds."
+TEMPLATE_EDIT_freeform         := --display-name "DDEV Freeform (Traefik)"
+
 # Shared recipe for pushing any template (call with template name as argument)
 define push_template
 	@echo "Syncing VERSION to $(1)..."
 	cp VERSION $(1)/VERSION
 	@echo "Pushing Coder template $(1)..."
 	coder templates push --directory $(1) $(1) --yes $(TEMPLATE_VARS_$(1))
+	@echo "Setting template metadata for $(1)..."
+	coder templates edit $(1) --yes $(TEMPLATE_EDIT_$(1))
 	@echo "Template $(1) push complete"
 endef
 

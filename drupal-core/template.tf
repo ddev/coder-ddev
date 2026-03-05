@@ -281,6 +281,7 @@ for a professional Drupal core development setup.
    ddev composer require ... # Add dependencies
 
 📚 DOCUMENTATION
+   Quickstart: https://github.com/ddev/coder-ddev/blob/main/docs/user/quickstart.md
    DDEV: https://docs.ddev.com/
    Drupal: https://www.drupal.org/docs
    Drupal API: https://api.drupal.org/

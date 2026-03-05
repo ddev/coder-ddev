@@ -2,6 +2,10 @@
 
 Automated Coder workspace for Drupal core development using [joachim-n/drupal-core-development-project](https://github.com/joachim-n/drupal-core-development-project). Sets up a professional development environment with Drupal core, DDEV, and a demo site.
 
+**New? See the [quickstart guide](../docs/user/quickstart.md).**
+
+[![Open in Coder](https://coder.ddev.com/open-in-coder.svg)](https://coder.ddev.com/templates/coder/drupal-core/workspace?mode=manual)
+
 ## Features
 
 - **Professional Setup**: Uses the drupal-core-development-project template

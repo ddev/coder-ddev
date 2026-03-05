@@ -2,6 +2,10 @@
 
 Coder workspace template for DDEV-based development with Docker-in-Docker support, Node.js, and Git.
 
+**Get started with Drupal core development:**
+
+[![Open in Coder](https://coder.ddev.com/open-in-coder.svg)](https://coder.ddev.com/templates/coder/drupal-core/workspace?mode=manual)
+
 ## Features
 
 - **Custom Base Image**: Ubuntu 24.04 LTS with essential development tools
