@@ -69,6 +69,10 @@ if ! ddev describe 2>/dev/null | grep -q "OK"; then
   ddev start
 fi
 
+pushd ${SEED_DIR}/repos/drupal >/dev/null
+git pull
+popd >/dev/null
+
 # Update composer dependencies (also updates repos/drupal git checkout via path repo)
 echo "Running composer update..."
 ddev composer update --with-all-dependencies
