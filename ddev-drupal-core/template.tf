@@ -58,6 +58,12 @@ variable "docker_gid" {
   default     = 988
 }
 
+variable "cache_path" {
+  description = "Host path to the drupal-core seed cache directory (mounted read-only into workspaces)"
+  type        = string
+  default     = "/home/coder/cache/drupal-core-seed"
+}
+
 
 
 # Workspace data source
@@ -468,23 +474,71 @@ STATUS_HEADER
       fi
     fi
 
-    # Step 4: Set up Drupal core development project with ddev composer create
-    if [ -f "composer.json" ] && [ -d "repos/drupal/.git" ]; then
-      log_setup "✓ Drupal core development project already set up"
-      update_status "✓ DDEV composer create: Already present"
+    CACHE_SEED="/home/coder-cache-seed"
+    DRUPAL_SETUP_NEEDED=false
+    SETUP_START=$SECONDS
+
+    # Diagnostic: report what the cache mount contains
+    log_setup "Cache mount check: $CACHE_SEED"
+    if [ -f "$CACHE_SEED/composer.json" ]; then
+      log_setup "  composer.json: present"
     else
-      log_setup "Setting up Drupal core development project with DDEV Composer..."
+      log_setup "  composer.json: MISSING (cache not seeded or bind mount empty)"
+    fi
+    if [ -d "$CACHE_SEED/repos/drupal/.git" ]; then
+      log_setup "  repos/drupal/.git: present"
+    else
+      log_setup "  repos/drupal/.git: MISSING"
+    fi
+    if [ -f "$CACHE_SEED/.tarballs/db.sql.gz" ]; then
+      log_setup "  .tarballs/db.sql.gz: present ($(du -sh $CACHE_SEED/.tarballs/db.sql.gz 2>/dev/null | cut -f1))"
+    else
+      log_setup "  .tarballs/db.sql.gz: MISSING"
+    fi
+
+    # Step 4: Set up Drupal core project — use seed cache when available (fast path)
+    if [ -f "composer.json" ] && [ -d "repos/drupal/.git" ]; then
+      log_setup "✓ Drupal core project already present — skipping setup"
+      update_status "✓ Setup: Already present"
+    elif [ -f "$CACHE_SEED/composer.json" ] && [ -d "$CACHE_SEED/repos/drupal/.git" ]; then
+      _t=$SECONDS
+      log_setup "Cache hit: seeding project from host cache (fast path)..."
+      update_status "⏳ DDEV setup: Seeding from cache..."
+      # Copy everything except .ddev/ — workspace generates its own DDEV config
+      if rsync -a --exclude='.ddev/' --exclude='.tarballs/' "$CACHE_SEED/" "$DRUPAL_DIR/" >> "$SETUP_LOG" 2>&1; then
+        log_setup "  rsync complete ($((SECONDS - _t))s)"
+        # Bring git checkout up to date (fast — objects already present locally)
+        _t=$SECONDS
+        git -C "$DRUPAL_DIR/repos/drupal" fetch --all --prune >> "$SETUP_LOG" 2>&1 || true
+        log_setup "  git fetch complete ($((SECONDS - _t))s)"
+        # Ensure vendor matches current composer.lock (no-op when lock is unchanged)
+        _t=$SECONDS
+        ddev composer install >> "$SETUP_LOG" 2>&1 || true
+        log_setup "  composer install complete ($((SECONDS - _t))s)"
+        log_setup "✓ Cache seed complete ($((SECONDS - SETUP_START))s total so far)"
+        update_status "✓ DDEV composer create: Seeded from cache"
+        DRUPAL_SETUP_NEEDED=true
+      else
+        log_setup "✗ Failed to seed from cache ($((SECONDS - _t))s), falling back to full setup..."
+        update_status "⚠ Cache seed failed, running full setup..."
+        ddev composer create joachim-n/drupal-core-development-project --no-interaction >> "$SETUP_LOG" 2>&1 || true
+        DRUPAL_SETUP_NEEDED=true
+      fi
+    else
+      _t=$SECONDS
+      log_setup "No cache available, running full composer create (this takes 5-10 minutes)..."
       log_setup "This creates a proper dev environment with:"
       log_setup "  - Drupal core git clone at repos/drupal/"
       log_setup "  - Web root at web/"
       log_setup "  - Composer dependency management"
-      update_status "⏳ DDEV composer create: In progress (this takes 3-5 minutes)..."
+      update_status "⏳ DDEV composer create: In progress (this takes 5-10 minutes)..."
 
       if ddev composer create joachim-n/drupal-core-development-project --no-interaction >> "$SETUP_LOG" 2>&1; then
-        log_setup "✓ Drupal core development project created successfully"
+        log_setup "✓ Drupal core development project created ($((SECONDS - _t))s)"
         update_status "✓ DDEV composer create: Success"
+        DRUPAL_SETUP_NEEDED=true
       else
-        log_setup "✗ Failed to create Drupal core development project"
+        log_setup "✗ Failed to create Drupal core development project ($((SECONDS - _t))s)"
         log_setup "Check $SETUP_LOG for details"
         update_status "✗ DDEV composer create: Failed"
         update_status ""
@@ -493,39 +547,70 @@ STATUS_HEADER
       fi
     fi
 
-    # Only proceed if project was created successfully
-    if [ -f "composer.json" ] && [ -d "repos/drupal" ]; then
-      # Step 5: Ensure Drush in composer require (not just require-dev)
-      # Step 5: Ensure Drush in composer require (not just require-dev)
-      log_setup "Ensuring Drush is in composer require section..."
-      update_status "⏳ Drush install: In progress..."
-
-      if ddev composer require drush/drush >> "$SETUP_LOG" 2>&1; then
-        log_setup "✓ Drush configured successfully"
-        update_status "✓ Drush install: Success"
+    # Only run steps 5 and 6 on initial setup — skip on subsequent workspace starts
+    if [ "$DRUPAL_SETUP_NEEDED" = "true" ] && [ -f "composer.json" ] && [ -d "repos/drupal" ]; then
+      # Step 5: Ensure Drush is available (skip if already present from cache)
+      if [ -f "vendor/bin/drush" ]; then
+        log_setup "✓ Drush already present"
+        update_status "✓ Drush install: Already present"
       else
-        log_setup "⚠ Warning: Failed to configure Drush"
-        update_status "⚠ Drush install: Warning"
+        _t=$SECONDS
+        log_setup "Adding Drush to composer require..."
+        update_status "⏳ Drush install: In progress..."
+
+        if ddev composer require drush/drush >> "$SETUP_LOG" 2>&1; then
+          log_setup "✓ Drush configured ($((SECONDS - _t))s)"
+          update_status "✓ Drush install: Success"
+        else
+          log_setup "⚠ Warning: Failed to configure Drush ($((SECONDS - _t))s)"
+          update_status "⚠ Drush install: Warning"
+        fi
       fi
 
-      # Step 6: Install Drupal (if not already installed)
+      # Step 6: Install or import Drupal database
       if ddev drush status 2>/dev/null | grep -q "Drupal bootstrap.*Successful"; then
         log_setup "✓ Drupal already installed"
         update_status "✓ Drupal install: Already present"
+      elif [ -f "$CACHE_SEED/.tarballs/db.sql.gz" ]; then
+        _t=$SECONDS
+        log_setup "Importing database from cache (fast path)..."
+        update_status "⏳ Drupal install: Importing cached database..."
+
+        if ddev import-db --file="$CACHE_SEED/.tarballs/db.sql.gz" >> "$SETUP_LOG" 2>&1; then
+          log_setup "✓ Database imported from cache ($((SECONDS - _t))s)"
+          log_setup ""
+          log_setup "   Admin Credentials:"
+          log_setup "      Username: admin"
+          log_setup "      Password: admin"
+          log_setup ""
+          update_status "✓ Drupal install: Imported from cache"
+        else
+          log_setup "⚠ DB import failed ($((SECONDS - _t))s), falling back to full site install..."
+          update_status "⚠ DB import failed, running full install..."
+          _t=$SECONDS
+          if ddev drush si -y demo_umami --account-pass=admin >> "$SETUP_LOG" 2>&1; then
+            log_setup "✓ Drupal installed successfully (fallback, $((SECONDS - _t))s)"
+            update_status "✓ Drupal install: Success (fallback)"
+          else
+            log_setup "✗ Failed to install Drupal ($((SECONDS - _t))s)"
+            update_status "✗ Drupal install: Failed"
+          fi
+        fi
       else
+        _t=$SECONDS
         log_setup "Installing Drupal with demo_umami profile (this will take 2-3 minutes)..."
         update_status "⏳ Drupal install: In progress..."
 
         if ddev drush si -y demo_umami --account-pass=admin >> "$SETUP_LOG" 2>&1; then
-          log_setup "✓ Drupal installed successfully!"
+          log_setup "✓ Drupal installed ($((SECONDS - _t))s)"
           log_setup ""
-          log_setup "   🔐 Admin Credentials:"
+          log_setup "   Admin Credentials:"
           log_setup "      Username: admin"
           log_setup "      Password: admin"
           log_setup ""
           update_status "✓ Drupal install: Success"
         else
-          log_setup "✗ Failed to install Drupal"
+          log_setup "✗ Failed to install Drupal ($((SECONDS - _t))s)"
           log_setup "Check $SETUP_LOG for details"
           update_status "✗ Drupal install: Failed"
           update_status ""
@@ -883,6 +968,15 @@ resource "docker_container" "workspace" {
   #   host_path      = "/var/run/docker.sock"
   #   container_path = "/var/run/docker.sock"
   # }
+
+  # Read-only seed cache: pre-built drupal-core project for fast workspace creation.
+  # If the path doesn't exist on the host, Docker creates an empty dir and the
+  # startup script gracefully falls back to a full composer create.
+  volumes {
+    host_path      = var.cache_path
+    container_path = "/home/coder-cache-seed"
+    read_only      = true
+  }
 
   mounts {
     type   = "volume"

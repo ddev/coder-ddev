@@ -11,6 +11,10 @@ DDEV_USER_DIR             := ddev-user
 DDEV_DRUPAL_CORE_DIR      := ddev-drupal-core
 DDEV_SINGLE_PROJECT_DIR   := ddev-single-project
 
+# Host path to the drupal-core seed cache (bind-mounted read-only into workspaces).
+# Override with: make deploy-ddev-drupal-core DRUPAL_CACHE_PATH=/home/youruser/cache/drupal-core-seed
+DRUPAL_CACHE_PATH ?= /home/coder/cache/drupal-core-seed
+
 # Full image tag
 IMAGE_TAG := $(IMAGE_NAME):$(VERSION)
 IMAGE_LATEST := $(IMAGE_NAME):latest
@@ -94,7 +98,8 @@ push-template-ddev-drupal-core: ## Push ddev-drupal-core template to Coder
 	cp VERSION $(DDEV_DRUPAL_CORE_DIR)/VERSION
 	@echo "Pushing Coder template $(DDEV_DRUPAL_CORE_DIR)..."
 	coder templates push --directory $(DDEV_DRUPAL_CORE_DIR) $(DDEV_DRUPAL_CORE_DIR) --yes \
-		--variable workspace_image_registry=index.docker.io/$(IMAGE_NAME)
+		--variable workspace_image_registry=index.docker.io/$(IMAGE_NAME) \
+		--variable cache_path=$(DRUPAL_CACHE_PATH)
 	@echo "Template push complete"
 
 .PHONY: deploy-ddev-user

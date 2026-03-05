@@ -1,0 +1,12 @@
+[Unit]
+Description=Hourly update of drupal-core seed cache for Coder workspaces
+
+[Timer]
+OnCalendar=hourly
+# If the system was off when the timer was due, run it soon after boot
+Persistent=true
+# Add a random delay of up to 5 minutes to spread load
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

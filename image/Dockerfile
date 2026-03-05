@@ -23,6 +23,7 @@ RUN apt-get update && \
   nano \
   openssh-client \
   passwd \
+  rsync \
   software-properties-common \
   sudo \
   unzip \

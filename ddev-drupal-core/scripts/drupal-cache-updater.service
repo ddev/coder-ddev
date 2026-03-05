@@ -1,0 +1,23 @@
+[Unit]
+Description=Update drupal-core seed cache for Coder workspaces
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+# Set User to the owner of the seed cache directory.
+# If the cache lives under a different user account, change User (and WorkingDirectory) to match.
+User=coder
+WorkingDirectory=/home/coder
+# The script is installed to /usr/local/bin/ (see docs/admin/server-setup.md).
+# If your seed directory differs from the default (/home/coder/cache/drupal-core-seed),
+# add --seed-dir here, e.g.:
+#   ExecStart=/usr/local/bin/update-drupal-cache --seed-dir /home/rfay/cache/drupal-core-seed
+ExecStart=/usr/local/bin/update-drupal-cache
+StandardOutput=journal
+StandardError=journal
+# Allow up to 30 minutes for composer update + site install
+TimeoutStartSec=1800
+
+[Install]
+WantedBy=multi-user.target

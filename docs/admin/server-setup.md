@@ -456,6 +456,150 @@ make deploy-ddev-user
 
 ---
 
+## Step 8: Set Up the Drupal Core Seed Cache (optional, highly recommended)
+
+The `ddev-drupal-core` template can provision a fully configured Drupal core development environment on new workspaces using a **seed cache** on the host. Without the cache, first-time workspace setup downloads a full git clone and all composer dependencies (~10-13 minutes). With the cache, that drops to ~15 seconds.
+
+The cache is a standing DDEV project on the host that is periodically refreshed. New workspaces copy the git checkout, vendor directory, and a pre-built database snapshot from it.
+
+### Prerequisites
+
+DDEV must be installed on the Coder server itself (not just inside workspaces). The host DDEV project runs on the host Docker daemon, separate from the Sysbox workspace containers.
+
+Follow the [DDEV Linux installation instructions](https://docs.ddev.com/en/stable/users/install/ddev-installation/#ddev-installation-linux) to install DDEV on the host.
+
+### One-time initial setup
+
+Run these commands as the host-side user:
+
+```bash
+mkdir -p ~/cache/drupal-core-seed
+cd ~/cache/drupal-core-seed
+
+# Configure DDEV project
+ddev config --project-type=drupal12 --php-version=8.5 --docroot=web \
+  --project-name=drupal-core-seed
+ddev start
+
+# Create the full drupal-core development project (takes 5-10 minutes)
+ddev composer create joachim-n/drupal-core-development-project --no-interaction
+
+# Add Drush
+ddev composer require drush/drush
+
+# Install Drupal with the demo_umami profile
+ddev drush si -y demo_umami --account-pass=admin
+
+# Export the database snapshot used by new workspaces
+mkdir -p .tarballs
+ddev export-db --file=.tarballs/db.sql.gz
+```
+
+After this runs, the seed directory contains:
+
+| Path | Contents |
+|------|----------|
+| `composer.json` / `composer.lock` | Project definition |
+| `repos/drupal/` | Git clone of Drupal core |
+| `vendor/` | All Composer packages |
+| `web/` | Docroot (symlinked) |
+| `.tarballs/db.sql.gz` | Installed database snapshot |
+| `.ddev/` | Host DDEV config — **not** copied to workspaces |
+
+### Install the hourly update timer
+
+The update script runs `composer update`, a fresh `drush si` (site install), and `export-db` to keep the cache current with Drupal HEAD. Install it as an hourly systemd timer:
+
+```bash
+REPO=~/workspace/coder-ddev   # adjust if your repo is elsewhere
+
+# Install the update script to a standard system path
+sudo install -m 755 $REPO/ddev-drupal-core/scripts/update-drupal-cache.sh \
+  /usr/local/bin/update-drupal-cache
+
+# Install the systemd units
+sudo install -m 644 $REPO/ddev-drupal-core/scripts/drupal-cache-updater.service \
+  /etc/systemd/system/
+sudo install -m 644 $REPO/ddev-drupal-core/scripts/drupal-cache-updater.timer \
+  /etc/systemd/system/
+
+# If your seed directory or cache user differs from the defaults, edit the service:
+#   sudo vim /etc/systemd/system/drupal-cache-updater.service
+# See the comments in that file for User and --seed-dir guidance.
+
+sudo systemctl daemon-reload
+sudo systemctl enable --now drupal-cache-updater.timer
+
+# Verify the timer is scheduled
+systemctl list-timers drupal-cache-updater.timer
+```
+
+### Manual refresh
+
+Run an update at any time (e.g. after a major Drupal release):
+
+```bash
+/usr/local/bin/update-drupal-cache
+
+# If your seed directory differs from the default:
+/usr/local/bin/update-drupal-cache --seed-dir /your/cache/path
+
+# Or via systemd to capture output in journald:
+sudo systemctl start drupal-cache-updater.service
+journalctl -u drupal-cache-updater.service -f
+```
+
+### Template variable
+
+The template uses a `cache_path` variable (default: `/home/coder/cache/drupal-core-seed`) for the host-side seed directory. Since this path depends on which user owns the cache, it must be set at deploy time — not hardcoded in the template.
+
+Set it via the `DRUPAL_CACHE_PATH` Makefile variable when pushing the template:
+
+```bash
+make deploy-ddev-drupal-core DRUPAL_CACHE_PATH=/home/youruser/cache/drupal-core-seed
+```
+
+Or pass it directly to `coder templates push`:
+
+```bash
+coder templates push --directory ddev-drupal-core ddev-drupal-core --yes \
+  --variable cache_path=/home/youruser/cache/drupal-core-seed
+```
+
+If you always use the same non-default path, add `DRUPAL_CACHE_PATH` to your shell environment or a `.envrc` file so you don't need to specify it on every deploy.
+
+### How new workspaces use the cache
+
+When a workspace starts for the first time:
+
+1. The startup script checks for a valid seed at `/home/coder-cache-seed` (the read-only bind mount of `cache_path`)
+2. **Cache hit:** `rsync` copies the project files (excluding `.ddev/`), `ddev composer install` ensures vendor is current, then `ddev import-db` loads the database dump (~15 seconds total)
+3. **Cache miss** (path absent or incomplete): falls back to full `ddev composer create` + `ddev drush si` — slower but always works
+
+Check workspace startup logs in the Coder dashboard or at `/tmp/drupal-setup.log` inside the workspace to confirm which path was taken.
+
+### Troubleshooting
+
+**Cache not being used:**
+- Verify the seed directory exists and is populated: `ls $SEED_DIR/composer.json $SEED_DIR/.tarballs/db.sql.gz`
+- Confirm `cache_path` in the deployed template matches your actual seed directory (check with `coder templates show ddev-drupal-core`)
+- Check the workspace startup log for the "Cache mount check" diagnostic block — it shows exactly which files were found or missing at the bind mount path
+- Look for "Cache hit" in the log; "No cache available" means the path is absent or the seed was never initialized
+
+**Seed project won't start after server reboot:**
+```bash
+cd ~/cache/drupal-core-seed && ddev start
+```
+
+**Update script fails:**
+```bash
+cd ~/cache/drupal-core-seed
+ddev describe   # verify DDEV is running
+ddev logs       # check container logs for errors
+```
+
+---
+
 ## Adding Capacity: Additional Provisioner Nodes
 
 Coder separates the **control plane** (the Coder server) from **provisioners** (the processes that run Terraform to create workspaces). By default, the Coder server includes a built-in provisioner. For additional capacity or to run workspaces on separate machines, you can run **external provisioner daemons**.
