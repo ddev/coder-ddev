@@ -1,0 +1,14 @@
+[Unit]
+Description=Coder to Discord webhook relay
+After=network.target
+
+[Service]
+Type=simple
+User=rfay
+EnvironmentFile=/etc/coder-discord-relay.env
+ExecStart=/usr/local/bin/coder-discord-relay
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -605,6 +605,84 @@ ddev logs       # check container logs for errors
 
 ---
 
+## Step 9: Set Up Discord Notifications
+
+Coder can send webhook notifications to Discord for events like new user signups, workspace creation/deletion, and workspace health alerts. This uses a small relay service that translates Coder's webhook format to Discord's.
+
+### Create a Discord webhook
+
+In Discord, go to the target channel → **Edit Channel** → **Integrations** → **Webhooks** → **New Webhook**. Copy the webhook URL and keep it secret — treat it like a password.
+
+### Install the relay service
+
+```bash
+REPO=~/workspace/coder-ddev   # adjust if your repo is elsewhere
+
+# Install the relay script
+sudo install -m 755 $REPO/scripts/coder-discord-relay /usr/local/bin/
+
+# Create the env file with your Discord webhook URL
+sudo tee /etc/coder-discord-relay.env > /dev/null <<'EOF'
+DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/YOUR_WEBHOOK_URL_HERE
+LISTEN_PORT=9876
+EOF
+sudo chmod 600 /etc/coder-discord-relay.env
+
+# Install and start the systemd service
+sudo install -m 644 $REPO/scripts/coder-discord-relay.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now coder-discord-relay
+
+# Verify it's running
+curl -s http://localhost:9876/
+```
+
+### Configure Coder to send webhooks
+
+Add to `/etc/coder.d/coder.env`:
+
+```bash
+CODER_NOTIFICATIONS_METHOD=webhook
+CODER_NOTIFICATIONS_WEBHOOK_ENDPOINT=http://localhost:9876/
+```
+
+Then restart Coder:
+
+```bash
+sudo systemctl restart coder
+```
+
+### Configure which events to receive
+
+**Deployment-level method** (admin): Go to `https://coder.ddev.com/deployment/notifications?tab=events` and set desired events to use the webhook method.
+
+**User preferences** (per-user opt-in): Go to `https://coder.ddev.com/settings/notifications` and enable specific events. Some events (e.g. "Workspace Created") are disabled by default and must be explicitly enabled here — the deployment events page only sets the delivery method, not whether the event fires for you.
+
+Recommended events to enable:
+- **User account created** — fires when any user signs up (admin-facing, enabled by default)
+- **Workspace Created** — fires when you or another user creates a workspace (must opt in at `/settings/notifications`)
+- **Workspace Deleted** — workspace removed
+- **Workspace Autobuild Failed**, **Workspace Marked as Dormant** — operational alerts
+
+### Test it
+
+```bash
+curl -X POST http://localhost:9876/ \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Test","body":"Relay is working"}'
+```
+
+This should post a message to your Discord channel.
+
+### Notes
+
+- The relay listens on `127.0.0.1` only — it is not exposed externally
+- Logs: `sudo journalctl -u coder-discord-relay -q -f`
+- The relay formats workspace and user events compactly; all other events fall back to Coder's pre-formatted title
+- If you regenerate the Discord webhook URL, update `/etc/coder-discord-relay.env` and restart the relay
+
+---
+
 ## Adding Capacity: Additional Provisioner Nodes
 
 Coder separates the **control plane** (the Coder server) from **provisioners** (the processes that run Terraform to create workspaces). By default, the Coder server includes a built-in provisioner. For additional capacity or to run workspaces on separate machines, you can run **external provisioner daemons**.

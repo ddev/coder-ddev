@@ -1,0 +1,90 @@
+#!/usr/bin/env python3
+"""
+Relay Coder webhook notifications to Discord.
+Listens for HTTP POST requests from Coder and forwards them as Discord messages.
+"""
+
+import json
+import logging
+import os
+import urllib.request
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+log = logging.getLogger(__name__)
+
+DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL", "")
+LISTEN_PORT = int(os.environ.get("LISTEN_PORT", "9876"))
+
+
+def post_to_discord(message: str) -> None:
+    payload = json.dumps({"content": message}).encode()
+    req = urllib.request.Request(
+        DISCORD_WEBHOOK_URL,
+        data=payload,
+        headers={"Content-Type": "application/json", "User-Agent": "coder-discord-relay/1.0"},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        if resp.status not in (200, 204):
+            log.error("Discord returned status %d", resp.status)
+
+
+class CoderWebhookHandler(BaseHTTPRequestHandler):
+    def log_message(self, format, *args):  # suppress default access log noise
+        pass
+
+    def do_POST(self):
+        length = int(self.headers.get("Content-Length", 0))
+        body = self.rfile.read(length)
+        try:
+            data = json.loads(body)
+            p = data.get("payload", {})
+            labels = p.get("labels", {})
+            event = p.get("notification_name", "")
+
+            if event == "Workspace Created":
+                owner = labels.get("workspace_owner_username", "?")
+                workspace = labels.get("workspace", "?")
+                template = labels.get("template", "?")
+                message = f"**New workspace:** `{owner}/{workspace}` (template: {template})"
+            elif event == "Workspace Deleted":
+                name = labels.get("name", "?")
+                initiator = labels.get("initiator", "?")
+                reason = labels.get("reason", "")
+                message = f"**Workspace deleted:** `{name}` by {initiator}" + (f" ({reason})" if reason and reason != "initiated by user" else "")
+            elif "User account" in event:
+                # labels vary; fall back to title which contains the username
+                message = f"**{data.get('title', event)}**"
+            else:
+                log.info("Unhandled event %r labels: %s", event, json.dumps(labels))
+                message = f"**{data.get('title', event)}**"
+
+            log.info("Forwarding: %s", message)
+
+            if DISCORD_WEBHOOK_URL:
+                post_to_discord(message)
+            else:
+                log.warning("DISCORD_WEBHOOK_URL not set, skipping forward")
+
+            self.send_response(204)
+            self.end_headers()
+        except Exception as e:
+            log.error("Error handling webhook: %s", e)
+            self.send_response(500)
+            self.end_headers()
+
+    def do_GET(self):
+        # Health check
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain")
+        self.end_headers()
+        self.wfile.write(b"coder-discord-relay ok\n")
+
+
+if __name__ == "__main__":
+    if not DISCORD_WEBHOOK_URL:
+        log.warning("DISCORD_WEBHOOK_URL is not set — messages will be logged but not forwarded")
+    log.info("Listening on port %d", LISTEN_PORT)
+    server = HTTPServer(("127.0.0.1", LISTEN_PORT), CoderWebhookHandler)
+    server.serve_forever()
