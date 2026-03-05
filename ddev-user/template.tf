@@ -327,13 +327,17 @@ resource "coder_agent" "main" {
     if [ -d /home/coder-files/.ddev ]; then
       echo "Copying ddev configuration and commands from init-scripts..."
       
-      # Copy global_config.yaml if it doesn't exist or overwrite to ensure latest version
-      if [ -f /home/coder-files/.ddev/global_config.yaml ]; then
-        cp -f /home/coder-files/.ddev/global_config.yaml ~/.ddev/global_config.yaml
-        chmod 644 ~/.ddev/global_config.yaml
-        echo "✓ ddev global_config.yaml copied"
+      # Copy global_config.yaml only on first run to preserve user customizations
+      if [ ! -f ~/.ddev/global_config.yaml ]; then
+        if [ -f /home/coder-files/.ddev/global_config.yaml ]; then
+          cp /home/coder-files/.ddev/global_config.yaml ~/.ddev/global_config.yaml
+          chmod 644 ~/.ddev/global_config.yaml
+          echo "✓ ddev global_config.yaml copied (first run)"
+        else
+          echo "Warning: /home/coder-files/.ddev/global_config.yaml not found"
+        fi
       else
-        echo "Warning: /home/coder-files/.ddev/global_config.yaml not found"
+        echo "✓ ddev global_config.yaml already exists, preserving user settings"
       fi
     else
       echo "Warning: /home/coder-files/.ddev not found, skipping ddev config copy"

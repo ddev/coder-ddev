@@ -216,12 +216,16 @@ resource "coder_agent" "main" {
 
     # Copy DDEV global config (enables ddev-router) and host commands
     mkdir -p ~/.ddev/commands/host
-    if [ -f /home/coder-files/.ddev/global_config.yaml ]; then
-      cp -f /home/coder-files/.ddev/global_config.yaml ~/.ddev/global_config.yaml
-      chmod 644 ~/.ddev/global_config.yaml
-      echo "✓ ddev global_config.yaml copied"
+    if [ ! -f ~/.ddev/global_config.yaml ]; then
+      if [ -f /home/coder-files/.ddev/global_config.yaml ]; then
+        cp /home/coder-files/.ddev/global_config.yaml ~/.ddev/global_config.yaml
+        chmod 644 ~/.ddev/global_config.yaml
+        echo "✓ ddev global_config.yaml copied (first run)"
+      else
+        echo "Warning: /home/coder-files/.ddev/global_config.yaml not found"
+      fi
     else
-      echo "Warning: /home/coder-files/.ddev/global_config.yaml not found"
+      echo "✓ ddev global_config.yaml already exists, preserving user settings"
     fi
     if [ -d /home/coder-files/.ddev/commands/host ]; then
       cp -f /home/coder-files/.ddev/commands/host/* ~/.ddev/commands/host/
