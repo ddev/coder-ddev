@@ -355,29 +355,8 @@ WELCOME_EOF
       echo "Docker Daemon already running."
     fi
 
-    # Create .ddev directory for ddev config
+    # Create .ddev directory for ddev config (DDEV creates global_config.yaml on first use)
     mkdir -p ~/.ddev
-    
-    # Copy ddev configuration and commands from init-scripts after ddev installation
-    # This ensures ddev doesn't overwrite our custom configuration
-    if [ -d /home/coder-files/.ddev ]; then
-      echo "Copying ddev configuration and commands from init-scripts..."
-      
-      # Copy global_config.yaml only on first run to preserve user customizations
-      if [ ! -f ~/.ddev/global_config.yaml ]; then
-        if [ -f /home/coder-files/.ddev/global_config.yaml ]; then
-          cp /home/coder-files/.ddev/global_config.yaml ~/.ddev/global_config.yaml
-          chmod 644 ~/.ddev/global_config.yaml
-          echo "✓ ddev global_config.yaml copied (first run)"
-        else
-          echo "Warning: /home/coder-files/.ddev/global_config.yaml not found"
-        fi
-      else
-        echo "✓ ddev global_config.yaml already exists, preserving user settings"
-      fi
-    else
-      echo "Warning: /home/coder-files/.ddev not found, skipping ddev config copy"
-    fi
 
     # Always omit ddev-router — this template uses direct port binding, not the router.
     # Must run every startup because the shared global_config.yaml defaults to omit_containers: []

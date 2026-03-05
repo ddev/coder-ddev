@@ -214,19 +214,8 @@ resource "coder_agent" "main" {
       echo "Docker Daemon already running."
     fi
 
-    # Copy DDEV global config (enables ddev-router) and host commands
+    # Create .ddev directory (DDEV creates global_config.yaml on first use)
     mkdir -p ~/.ddev/commands/host
-    if [ ! -f ~/.ddev/global_config.yaml ]; then
-      if [ -f /home/coder-files/.ddev/global_config.yaml ]; then
-        cp /home/coder-files/.ddev/global_config.yaml ~/.ddev/global_config.yaml
-        chmod 644 ~/.ddev/global_config.yaml
-        echo "✓ ddev global_config.yaml copied (first run)"
-      else
-        echo "Warning: /home/coder-files/.ddev/global_config.yaml not found"
-      fi
-    else
-      echo "✓ ddev global_config.yaml already exists, preserving user settings"
-    fi
     if [ -d /home/coder-files/.ddev/commands/host ]; then
       cp -f /home/coder-files/.ddev/commands/host/* ~/.ddev/commands/host/
       chmod 755 ~/.ddev/commands/host/*
