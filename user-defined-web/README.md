@@ -1,4 +1,4 @@
-# DDEV User Template
+# User-Defined Web DDEV Template
 
 General-purpose DDEV workspace for developing any project type supported by DDEV (PHP, WordPress, Laravel, Drupal, Magento, and more). Provides a full Docker environment via Sysbox with VS Code for Web and DDEV pre-configured.
 
@@ -15,7 +15,7 @@ General-purpose DDEV workspace for developing any project type supported by DDEV
 
 ```bash
 # Create workspace
-coder create --template ddev-user my-workspace
+coder create --template user-defined-web my-workspace
 
 # SSH in
 coder ssh my-workspace

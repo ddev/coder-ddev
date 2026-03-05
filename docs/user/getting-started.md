@@ -24,7 +24,7 @@ With this template, DDEV runs inside your cloud workspace, giving you all DDEV f
 You need access to a Coder server. Ask your administrator for:
 - Coder server URL (e.g., `https://coder.example.com`)
 - Username and password (or SSO login)
-- Confirmation that the `ddev-user` template is available
+- Confirmation that the `user-defined-web` template is available
 
 ### Local Tools
 
@@ -105,7 +105,7 @@ coder list
 ### Via Web UI
 
 1. Click **Create Workspace** button
-2. Select **ddev-user** template
+2. Select **user-defined-web** template
 3. Enter a workspace name (e.g., `my-first-workspace`)
    - Use lowercase, numbers, hyphens
    - No spaces or special characters
@@ -123,10 +123,10 @@ coder list
 
 ```bash
 # Create workspace with defaults
-coder create --template ddev-user my-first-workspace --yes
+coder create --template user-defined-web my-first-workspace --yes
 
 # Or with custom parameters
-coder create --template ddev-user my-first-workspace \
+coder create --template user-defined-web my-first-workspace \
   --parameter cpu=8 \
   --parameter memory=16 \
   --yes

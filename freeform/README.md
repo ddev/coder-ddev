@@ -1,6 +1,6 @@
-# DDEV Single-Project Template
+# Freeform DDEV Template
 
-Coder workspace optimized for a single DDEV project with full Traefik routing integration. Coder-aware routing rules are automatically configured so web, Mailpit, and optional Adminer are accessible via stable subdomains.
+Coder workspace for a single DDEV project with full Traefik routing integration. Coder-aware routing rules are automatically configured so web, Mailpit, and optional Adminer are accessible via stable subdomains.
 
 ## Features
 
@@ -27,7 +27,7 @@ The DDEV project name does not need to match the workspace name — the routing 
 
 ```bash
 # Create workspace
-coder create --template ddev-single-project myworkspace
+coder create --template freeform myworkspace
 
 # SSH in
 coder ssh myworkspace
@@ -74,7 +74,7 @@ After `ddev coder-setup`, routing updates are fully automatic — no need to run
 Enable Adminer when creating or updating the workspace:
 
 ```bash
-coder create --template ddev-single-project myworkspace
+coder create --template freeform myworkspace
 # Select: enable_adminer = true
 ```
 

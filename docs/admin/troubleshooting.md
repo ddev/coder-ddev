@@ -23,7 +23,7 @@ This guide covers common issues with the DDEV Coder template and their solutions
 **Check:**
 ```bash
 # Validate Terraform syntax
-cd ddev-user
+cd user-defined-web
 terraform init
 terraform validate
 
@@ -40,15 +40,15 @@ terraform fmt -check
 **Solution:**
 ```bash
 # Fix syntax errors
-terraform fmt ddev-user/template.tf
+terraform fmt user-defined-web/template.tf
 
 # Test locally
-cd ddev-user
+cd user-defined-web
 terraform init
 terraform plan
 
 # Push with verbose output
-coder templates push --directory ddev-user ddev-user --yes --verbose
+coder templates push --directory user-defined-web user-defined-web --yes --verbose
 ```
 
 ### Template Not Visible to Users
@@ -61,7 +61,7 @@ coder templates push --directory ddev-user ddev-user --yes --verbose
 coder templates list
 
 # Check template organization
-coder templates show ddev-user --json | grep organization
+coder templates show user-defined-web --json | grep organization
 
 # Check user's organization
 coder users show <username> --json | grep organization
@@ -85,13 +85,13 @@ docker pull ddev/coder-ddev:v0.1
 docker login
 
 # Check template image reference
-grep workspace_image_registry ddev-user/template.tf
+grep workspace_image_registry user-defined-web/template.tf
 ```
 
 **Solution:**
 ```bash
 # For private registries, configure template variables:
-coder create --template ddev-user my-workspace \
+coder create --template user-defined-web my-workspace \
   --parameter registry_username=myuser \
   --parameter registry_password=mypass \
   --yes
@@ -143,7 +143,7 @@ df -h /home/coder/workspaces/
 
 **Symptom:** Startup script fails with permission or command errors
 
-**Check startup script:** `ddev-user/scripts/startup.sh`
+**Check startup script:** `user-defined-web/scripts/startup.sh`
 
 **Common issues:**
 
@@ -200,7 +200,7 @@ docker ps -a | grep coder
 ```bash
 # Delete and recreate workspace
 coder delete my-workspace --yes
-coder create --template ddev-user my-workspace --yes
+coder create --template user-defined-web my-workspace --yes
 
 # Or force restart
 docker restart coder-<workspace-id>
@@ -248,14 +248,14 @@ apt-get install -y jq ./sysbox-ce_${SYSBOX_VERSION}-0.linux_amd64.deb
 **Cause 2: Container not using Sysbox runtime**
 ```bash
 # Check template.tf
-grep runtime ddev-user/template.tf
+grep runtime user-defined-web/template.tf
 # Should be: runtime = "sysbox-runc"
 ```
 
 **Cause 3: Missing security profiles**
 ```bash
 # Check template.tf
-grep security_opt ddev-user/template.tf
+grep security_opt user-defined-web/template.tf
 # Should include:
 # security_opt = ["apparmor:unconfined", "seccomp:unconfined"]
 ```
@@ -273,11 +273,11 @@ docker volume ls | grep dind-cache
 **Solution:**
 ```bash
 # Fix template.tf and redeploy
-coder templates push --directory ddev-user ddev-user --yes
+coder templates push --directory user-defined-web user-defined-web --yes
 
 # Recreate workspace
 coder delete my-workspace --yes
-coder create --template ddev-user my-workspace --yes
+coder create --template user-defined-web my-workspace --yes
 ```
 
 ### Docker Daemon Crashes
@@ -304,7 +304,7 @@ cat /tmp/dockerd.log
 # To increase resources, delete and recreate workspace with higher memory
 # (Back up data first: coder ssh my-workspace -- tar -czf ~/backup.tar.gz ~/projects)
 coder delete my-workspace --yes
-coder create --template ddev-user my-workspace --parameter memory=16 --yes
+coder create --template user-defined-web my-workspace --parameter memory=16 --yes
 
 # Clean up Docker resources
 docker system prune -a --volumes -f
@@ -423,7 +423,7 @@ df -h
 # To increase memory, delete and recreate workspace with higher memory
 # (Back up data first: ddev export-db --file=dump.sql.gz)
 coder delete my-workspace --yes
-coder create --template ddev-user my-workspace --parameter memory=16 --yes
+coder create --template user-defined-web my-workspace --parameter memory=16 --yes
 
 # Split large imports
 gunzip < dump.sql.gz | split -l 50000 - split_
@@ -719,7 +719,7 @@ docker stats $(docker ps -q --filter name=ddev)
 # To increase resources, delete and recreate workspace
 # (Back up data first: coder ssh my-workspace -- tar -czf ~/backup.tar.gz ~/projects)
 coder delete my-workspace --yes
-coder create --template ddev-user my-workspace --parameter memory=16 --yes
+coder create --template user-defined-web my-workspace --parameter memory=16 --yes
 
 # Use NFS for file sharing (if Mutagen is slow)
 # Edit .ddev/config.yaml:
@@ -829,7 +829,7 @@ coder scp my-workspace:~/backup.tar.gz ./
 
 # 3. Delete and recreate workspace
 coder delete my-workspace --yes
-coder create --template ddev-user my-workspace --yes
+coder create --template user-defined-web my-workspace --yes
 
 # 4. Restore data
 coder scp ./backup.tar.gz my-workspace:~/
@@ -875,7 +875,7 @@ When reporting issues, provide:
 
 3. **Template version:**
    ```bash
-   grep image_version ddev-user/template.tf
+   grep image_version user-defined-web/template.tf
    cat VERSION
    ```
 

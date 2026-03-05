@@ -1,0 +1,8 @@
+# Vault token file (not committed to Git)
+vault-token.txt
+
+# VERSION is copied from root by Makefile before push
+VERSION
+
+# Terraform working directory
+.terraform/

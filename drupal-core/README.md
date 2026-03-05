@@ -1,4 +1,4 @@
-# DDEV Drupal Core Development Template
+# Drupal Core Development Template
 
 Automated Coder workspace for Drupal core development using [joachim-n/drupal-core-development-project](https://github.com/joachim-n/drupal-core-development-project). Sets up a professional development environment with Drupal core, DDEV, and a demo site.
 
@@ -15,18 +15,22 @@ Automated Coder workspace for Drupal core development using [joachim-n/drupal-co
 
 ## Initial Setup Time
 
-First workspace creation takes approximately 10-15 minutes:
-- DDEV configuration and start: 2-3 minutes
-- DDEV composer create: 3-5 minutes (clones Drupal, sets up structure, installs dependencies)
-- Drupal installation: 2-3 minutes (demo_umami profile)
+When a seed cache is available on the server (the default), first workspace creation takes approximately **15-30 seconds**:
+- rsync from seed cache: ~3s
+- git fetch: ~1s
+- composer install: ~2s
+- Database import: ~9s
+- DDEV start: ~15s
 
-Subsequent starts are fast (< 1 minute) as everything is cached.
+Without a seed cache, first setup takes 10-15 minutes (full composer create + Drupal install).
+
+Subsequent starts are fast (< 1 minute) as everything is already present.
 
 ## Quick Start
 
 ```bash
 # Create workspace
-coder create --template ddev-drupal-core my-drupal-dev
+coder create --template drupal-core my-drupal-dev
 
 # Wait for setup to complete (monitor in Coder UI logs)
 # Then access via Coder dashboard "DDEV Web" app
@@ -55,7 +59,7 @@ coder create --template ddev-drupal-core my-drupal-dev
 │   └── ...
 ├── WELCOME.txt              # Welcome message
 ├── SETUP_STATUS.txt         # Setup completion status
-└── projects/                # Additional projects (if needed)
+└── projects/                # Additional projects directory (pre-created)
 ```
 
 ## Common Commands

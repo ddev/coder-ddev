@@ -545,8 +545,8 @@ STATUS_HEADER
       fi
     fi
 
-    # Only run steps 5 and 6 on initial setup — skip on subsequent workspace starts
-    if [ "$DRUPAL_SETUP_NEEDED" = "true" ] && [ -f "composer.json" ] && [ -d "repos/drupal" ]; then
+    # Steps 5-7: run whenever project files are present — inner checks handle idempotency
+    if [ -f "composer.json" ] && [ -d "repos/drupal" ]; then
       # Step 5: Ensure Drush is available (skip if already present from cache)
       if [ -f "vendor/bin/drush" ]; then
         log_setup "✓ Drush already present"

@@ -89,18 +89,18 @@ See `image/README.md` for details on customizing the Docker image.
 
 ```bash
 # Push template only
-make push-template-ddev-user
+make push-template-user-defined-web
 
 # Full deployment (build image + push image + push template)
-make deploy-ddev-user
+make deploy-user-defined-web
 
 # Full deployment without cache
-make deploy-ddev-user-no-cache
+make deploy-user-defined-web-no-cache
 ```
 
 ### Template Configuration
 
-The template is defined in `ddev-user/template.tf`. Key configuration parameters:
+The template is defined in `user-defined-web/template.tf`. Key configuration parameters:
 
 ```hcl
 variable "workspace_image_registry" {
@@ -128,7 +128,7 @@ variable "docker_gid" {
 
 1. Update `workspace_image_registry` in `template.tf`
 2. Configure `registry_username` and `registry_password` variables
-3. Push template: `coder templates push --directory ddev-user ddev-user --yes`
+3. Push template: `coder templates push --directory user-defined-web user-defined-web --yes`
 
 ## Version Management
 
@@ -143,10 +143,10 @@ The `VERSION` file in the root directory controls the image tag. The Makefile au
 echo "v0.7" > VERSION
 
 # 2. Build, push image, and push template (VERSION is synced automatically)
-make deploy-ddev-user
+make deploy-user-defined-web
 
 # Or without cache for clean build
-make deploy-ddev-user-no-cache
+make deploy-user-defined-web-no-cache
 ```
 
 ## Managing Workspaces
@@ -156,7 +156,7 @@ make deploy-ddev-user-no-cache
 **Via Web UI:**
 1. Log into Coder dashboard
 2. Click "Create Workspace"
-3. Select "ddev-user" template
+3. Select "user-defined-web" template
 4. Enter workspace name
 5. Configure parameters (optional: CPU, memory)
 6. Click "Create Workspace"
@@ -164,10 +164,10 @@ make deploy-ddev-user-no-cache
 **Via CLI:**
 ```bash
 # Create with defaults
-coder create --template ddev-user my-workspace --yes
+coder create --template user-defined-web my-workspace --yes
 
 # Create with custom parameters
-coder create --template ddev-user my-workspace \
+coder create --template user-defined-web my-workspace \
   --parameter cpu=8 \
   --parameter memory=16 \
   --yes
@@ -180,7 +180,7 @@ coder create --template ddev-user my-workspace \
 coder list
 
 # List workspaces for specific template
-coder list --template ddev-user
+coder list --template user-defined-web
 
 # Show detailed workspace info
 coder show my-workspace
@@ -243,10 +243,10 @@ coder delete workspace1 workspace2 workspace3 --yes
 
 ```bash
 # 1. Edit template.tf
-vim ddev-user/template.tf
+vim user-defined-web/template.tf
 
 # 2. Push updated template
-make push-template-ddev-user
+make push-template-user-defined-web
 ```
 
 ### Updating Docker Image
@@ -257,7 +257,7 @@ make push-template-ddev-user
 echo "v0.7" > VERSION
 
 # 3. Build and deploy
-make deploy-ddev-user
+make deploy-user-defined-web
 
 # Users must rebuild workspaces to get new Docker image
 ```
@@ -266,8 +266,8 @@ make deploy-ddev-user
 
 ```bash
 # Revert to previous template version
-git checkout <previous-commit> ddev-user/template.tf
-coder templates push --directory ddev-user ddev-user --yes
+git checkout <previous-commit> user-defined-web/template.tf
+coder templates push --directory user-defined-web user-defined-web --yes
 
 # Users on old version are unaffected
 # Users can update to rollback version via: coder update <workspace>
@@ -313,7 +313,7 @@ git tag -a v0.1 -m "Release v0.1"
 git push origin v0.1
 
 # Track changes
-git log --oneline ddev-user/template.tf
+git log --oneline user-defined-web/template.tf
 ```
 
 ### Monitoring
@@ -407,8 +407,8 @@ Monitor resource usage and adjust template defaults accordingly.
 
 ### Template Naming
 
-- Use clear, descriptive names: `ddev-user`, `ddev-developer`
-- Version templates for major changes: `ddev-user-v2`
+- Use clear, descriptive names: `user-defined-web`, `ddev-developer`
+- Version templates for major changes: `user-defined-web-v2`
 - Avoid generic names: `template1`, `test`
 
 ### Image Management

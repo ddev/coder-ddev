@@ -94,9 +94,9 @@ coder organizations members add <org-name> <username>
 ```bash
 # Deploy template to specific organization
 coder templates push \
-  --directory ddev-user \
+  --directory user-defined-web \
   --organization <org-name> \
-  ddev-user \
+  user-defined-web \
   --yes
 
 # Users can only create workspaces from templates in their organization
@@ -139,7 +139,7 @@ coder publickey remove <key-id>
 The DDEV template automatically configures Git SSH via Coder's GitSSH wrapper:
 
 ```bash
-# In workspace startup script (ddev-user/scripts/startup.sh):
+# In workspace startup script (user-defined-web/scripts/startup.sh):
 git config --global core.sshCommand "$GIT_SSH_COMMAND"
 ```
 
@@ -261,7 +261,7 @@ Coder does not support workspace sharing out-of-the-box.
 
 **Template-level defaults:**
 
-Edit `ddev-user/template.tf`:
+Edit `user-defined-web/template.tf`:
 ```hcl
 variable "cpu" {
   default     = 4
@@ -484,7 +484,7 @@ coder ssh my-workspace -- coder gitssh --help
 
 **Check:**
 - User role and permissions: `coder users show <username>`
-- Template access restrictions: `coder templates show ddev-user`
+- Template access restrictions: `coder templates show user-defined-web`
 - Organization membership: `coder organizations members list <org>`
 
 ```bash
@@ -492,7 +492,7 @@ coder ssh my-workspace -- coder gitssh --help
 coder users show <username>
 
 # Check template permissions (if using Coder Enterprise)
-coder templates show ddev-user --json | grep -i allow
+coder templates show user-defined-web --json | grep -i allow
 ```
 
 ## Additional Resources

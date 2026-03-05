@@ -19,20 +19,20 @@ This project provides a Coder v2+ template for DDEV-based development environmen
 
 ### Template Management
 ```bash
-# Deploy or update template
-coder templates push --directory ddev-user ddev-user --yes
+# Deploy or update template (example: user-defined-web)
+coder templates push --directory user-defined-web user-defined-web --yes
 
 # List all templates
 coder templates list
 
 # Delete template (must delete workspaces first)
-coder templates delete ddev-user --yes
+coder templates delete user-defined-web --yes
 ```
 
 ### Workspace Management
 ```bash
 # Create workspace
-coder create --template ddev-user <workspace-name> --yes
+coder create --template user-defined-web <workspace-name> --yes
 
 # List workspaces
 coder list
@@ -58,7 +58,7 @@ make build-and-push
 
 # Update version for new releases
 echo "v0.2" > VERSION
-make deploy-ddev-user
+make deploy-user-defined-web
 ```
 
 ### DDEV Commands (within workspace)
@@ -132,7 +132,7 @@ The template uses **Sysbox-runc** instead of privileged Docker containers:
 **Critical:** The `/home/coder` volume mount hides image contents, so files must be copied from `/home/coder-files/` during startup script execution.
 
 ### Startup Script Flow
-The startup script is inline in `ddev-user/template.tf` (inside the `coder_agent` resource's `startup_script` field). It performs:
+The startup script is inline in `user-defined-web/template.tf` (inside the `coder_agent` resource's `startup_script` field). It performs:
 1. **Permissions** - Fix ownership of `/home/coder` volume
 2. **Home initialization** - Copy skeleton files if first run
 3. **Git SSH setup** - Configure Coder's GitSSH wrapper
@@ -150,7 +150,7 @@ The startup script is inline in `ddev-user/template.tf` (inside the `coder_agent
 - **Isolation**: Each workspace gets separate host directory and Docker volume
 
 ### Terraform Variables
-Key template variables in `ddev-user/template.tf`:
+Key template variables in `user-defined-web/template.tf`:
 - `workspace_image_registry` - Docker registry URL (default: `index.docker.io/ddev/coder-ddev`)
 - `image_version` - Image tag (default: read from `VERSION` file or `v0.1`)
 - `cpu` / `memory` - Resource limits (defaults: 4 cores, 8GB RAM)
@@ -257,11 +257,11 @@ Additional logs in workspace:
 
 ## Important Code Locations
 
-- `ddev-user/template.tf` - Main Terraform template definition (startup script is inline in coder_agent)
-- `ddev-user/template.tf` - Coder agent configuration with inline startup script
-- `ddev-user/template.tf` - VS Code for Web module (official Coder module)
-- `ddev-user/template.tf` - Graceful DDEV shutdown script (coder_script resource)
-- `ddev-user/template.tf` - Docker container resource
+- `user-defined-web/template.tf` - Main Terraform template definition (startup script is inline in coder_agent)
+- `user-defined-web/template.tf` - Coder agent configuration with inline startup script
+- `user-defined-web/template.tf` - VS Code for Web module (official Coder module)
+- `user-defined-web/template.tf` - Graceful DDEV shutdown script (coder_script resource)
+- `user-defined-web/template.tf` - Docker container resource
 - `image/Dockerfile` - Base image build instructions
 - `image/scripts/.ddev/global_config.yaml` - DDEV defaults
 - `VERSION` - Image version used by template (read automatically)
