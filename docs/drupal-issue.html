@@ -310,7 +310,17 @@
             <option value="minimal">minimal (~3–5 min, full install)</option>
             <option value="standard">standard (~3–5 min, full install)</option>
           </select>
-          <div class="hint">demo_umami uses a pre-built database for fast startup. Other profiles require a full site install.</div>
+          <div class="hint">demo_umami uses a pre-built database for fast startup. Other profiles require a full site install. Issue fork workspaces always do a full install.</div>
+        </div>
+
+        <div class="field">
+          <label for="drupal-version-select">Drupal Version</label>
+          <select id="drupal-version-select">
+            <option value="12">12.x (HEAD / upcoming)</option>
+            <option value="11">11.x (stable)</option>
+            <option value="10">10.x (stable)</option>
+          </select>
+          <div class="hint">Auto-detected from the issue. Sets the DDEV project type and PHP version.</div>
         </div>
 
         <div class="field">
@@ -351,6 +361,15 @@
         </div>
 
         <div class="field">
+          <label for="manual-drupal-version">Drupal Version</label>
+          <select id="manual-drupal-version">
+            <option value="12">12.x (HEAD / upcoming)</option>
+            <option value="11">11.x (stable)</option>
+            <option value="10">10.x (stable)</option>
+          </select>
+        </div>
+
+        <div class="field">
           <label for="manual-workspace-name">Workspace Name</label>
           <input type="text" id="manual-workspace-name" placeholder="issue-3568144">
         </div>
@@ -376,6 +395,7 @@
 
     let currentIssueFork = '';
     let currentNid = '';
+    let currentDrupalMajor = '12';
 
     function setStatus(msg, type) {
       const el = document.getElementById('status');
@@ -437,15 +457,20 @@
 
         currentIssueFork = issueFork;
 
-        // Step 2: fetch issue title from Drupal.org API (best-effort — don't block on failure)
+        // Step 2: fetch issue title and version from Drupal.org API (best-effort — don't block on failure)
         let title = 'Issue #' + nid;
+        let drupalMajor = '12';
         try {
           const issueResp = await fetch('https://www.drupal.org/api-d7/node/' + nid + '.json');
           if (issueResp.ok) {
             const issue = await issueResp.json();
             if (issue.title) title = issue.title;
+            // field_issue_version e.g. "10.6.x-dev" or "11.x-dev" → extract major version
+            const ver = issue.field_issue_version || '';
+            const m = ver.match(/^(\d+)\./);
+            if (m) drupalMajor = m[1];
           }
-        } catch (_) { /* title stays as fallback */ }
+        } catch (_) { /* title/version stay as fallback */ }
 
         // Populate branch selector
         const branchSelect = document.getElementById('branch-select');
@@ -463,6 +488,10 @@
 
         // Set issue title
         document.getElementById('issue-title-text').textContent = '#' + nid + ': ' + title;
+
+        // Store and display detected Drupal version
+        currentDrupalMajor = drupalMajor;
+        document.getElementById('drupal-version-select').value = drupalMajor;
 
         // Pre-fill workspace name
         const wsName = document.getElementById('workspace-name');
@@ -483,7 +512,7 @@
       document.getElementById('load-btn').disabled = false;
     }
 
-    function buildCoderUrl(issueFork, issueBranch, installProfile, workspaceName) {
+    function buildCoderUrl(issueFork, issueBranch, installProfile, drupalVersion, workspaceName) {
       const base = CODER_BASE + '/templates/' + CODER_TEMPLATE + '/workspace';
       const params = new URLSearchParams({
         mode: 'manual',
@@ -491,6 +520,7 @@
         'param.issue_fork': issueFork,
         'param.issue_branch': issueBranch,
         'param.install_profile': installProfile,
+        'param.drupal_version': drupalVersion,
       });
       return base + '?' + params.toString();
     }
@@ -498,6 +528,7 @@
     function openWorkspace() {
       const branch = document.getElementById('branch-select').value;
       const profile = document.getElementById('profile-select').value;
+      const drupalVersion = document.getElementById('drupal-version-select').value;
       const wsName = document.getElementById('workspace-name').value || ('issue-' + currentNid);
 
       if (!currentIssueFork || !branch) {
@@ -505,7 +536,7 @@
         return;
       }
 
-      const url = buildCoderUrl(currentIssueFork, branch, profile, wsName);
+      const url = buildCoderUrl(currentIssueFork, branch, profile, drupalVersion, wsName);
       window.open(url, '_blank');
     }
 
@@ -513,6 +544,7 @@
       const fork = document.getElementById('manual-fork').value.trim();
       const branch = document.getElementById('manual-branch').value.trim();
       const profile = document.getElementById('manual-profile').value;
+      const drupalVersion = document.getElementById('manual-drupal-version').value;
       const wsName = document.getElementById('manual-workspace-name').value || ('issue-' + currentNid);
 
       if (!fork || !branch) {
@@ -520,7 +552,7 @@
         return;
       }
 
-      const url = buildCoderUrl(fork, branch, profile, wsName);
+      const url = buildCoderUrl(fork, branch, profile, drupalVersion, wsName);
       window.open(url, '_blank');
     }
 
