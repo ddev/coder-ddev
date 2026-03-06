@@ -88,7 +88,7 @@ data "coder_parameter" "issue_branch" {
 data "coder_parameter" "drupal_version" {
   name         = "drupal_version"
   display_name = "Drupal Version"
-  description  = "Major Drupal version — sets DDEV project type and PHP version. Match the version of the issue you are working on."
+  description  = "Major Drupal version — sets DDEV project type. Match the version of the issue you are working on."
   type         = "string"
   default      = "12"
   mutable      = true
@@ -482,20 +482,20 @@ STATUS_HEADER
     cd "$DRUPAL_DIR" || exit 1
 
     # Step 2: Configure DDEV (must be done before composer create)
-    # Derive project type and PHP version from the Drupal major version parameter
+    # Derive project type from the Drupal major version parameter (let DDEV pick default PHP version)
     DRUPAL_VERSION="${data.coder_parameter.drupal_version.value}"
     case "$DRUPAL_VERSION" in
-      10) DDEV_PROJECT_TYPE="drupal10"; PHP_VERSION="8.3" ;;
-      11) DDEV_PROJECT_TYPE="drupal11"; PHP_VERSION="8.3" ;;
-      *)  DDEV_PROJECT_TYPE="drupal12"; PHP_VERSION="8.5" ;;
+      10) DDEV_PROJECT_TYPE="drupal10" ;;
+      11) DDEV_PROJECT_TYPE="drupal11" ;;
+      *)  DDEV_PROJECT_TYPE="drupal12" ;;
     esac
 
     if [ ! -f ".ddev/config.yaml" ]; then
-      log_setup "Configuring DDEV for Drupal $DRUPAL_VERSION ($DDEV_PROJECT_TYPE, PHP $PHP_VERSION)..."
+      log_setup "Configuring DDEV for Drupal $DRUPAL_VERSION ($DDEV_PROJECT_TYPE)..."
       update_status "⏳ DDEV config: In progress..."
 
-      if ddev config --project-type="$DDEV_PROJECT_TYPE" --php-version="$PHP_VERSION" --docroot=web --host-webserver-port=80 >> "$SETUP_LOG" 2>&1; then
-        log_setup "✓ DDEV configured (project-type=$DDEV_PROJECT_TYPE php=$PHP_VERSION docroot=web)"
+      if ddev config --project-type="$DDEV_PROJECT_TYPE" --docroot=web --host-webserver-port=80 >> "$SETUP_LOG" 2>&1; then
+        log_setup "✓ DDEV configured (project-type=$DDEV_PROJECT_TYPE docroot=web)"
         update_status "✓ DDEV config: Success"
       else
         log_setup "✗ Failed to configure DDEV"
@@ -504,7 +504,7 @@ STATUS_HEADER
         update_status ""
         update_status "Manual recovery:"
         update_status "  cd $DRUPAL_DIR"
-        update_status "  ddev config --project-type=$DDEV_PROJECT_TYPE --php-version=$PHP_VERSION --docroot=web --host-webserver-port=80"
+        update_status "  ddev config --project-type=$DDEV_PROJECT_TYPE --docroot=web --host-webserver-port=80"
       fi
 
       # Configure DDEV global settings (omit router)
