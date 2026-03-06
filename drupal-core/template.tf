@@ -733,6 +733,10 @@ STATUS_HEADER
         fi
       fi
 
+      # Step 6.5: Cache rebuild — ensures a clean state after any setup path
+      log_setup "Running cache rebuild..."
+      ddev drush cr >> "$SETUP_LOG" 2>&1 || true
+
       # Step 7: Install custom DDEV launch command
       mkdir -p ~/.ddev/commands/host
       cat > ~/.ddev/commands/host/launch << 'LAUNCH_EOF'
