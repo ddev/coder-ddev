@@ -579,10 +579,12 @@ STATUS_HEADER
     fi
 
     # Step 4: Set up Drupal core project — use seed cache when available (fast path)
+    # Issue forks skip the cache: the seed composer.json requires "drupal/core: dev-main" and
+    # vendor is resolved for PHP 8.5/drupal12, both incompatible with non-main issue branches.
     if [ -f "composer.json" ] && [ -d "repos/drupal/.git" ]; then
       log_setup "✓ Drupal core project already present — skipping setup"
       update_status "✓ Setup: Already present"
-    elif [ -f "$CACHE_SEED/composer.json" ] && [ -d "$CACHE_SEED/repos/drupal/.git" ]; then
+    elif [ "$USING_ISSUE_FORK" = "false" ] && [ -f "$CACHE_SEED/composer.json" ] && [ -d "$CACHE_SEED/repos/drupal/.git" ]; then
       _t=$SECONDS
       log_setup "Cache hit: seeding project from host cache (fast path)..."
       update_status "⏳ DDEV setup: Seeding from cache..."
@@ -593,31 +595,7 @@ STATUS_HEADER
         _t=$SECONDS
         git -C "$DRUPAL_DIR/repos/drupal" fetch --all --prune >> "$SETUP_LOG" 2>&1 || true
         log_setup "  git fetch complete ($((SECONDS - _t))s)"
-        # Checkout issue fork branch (must happen before composer install so vendor matches branch)
-        if [ "$USING_ISSUE_FORK" = "true" ]; then
-          _t=$SECONDS
-          REPOS_DIR="$DRUPAL_DIR/repos/drupal"
-          CURRENT_BRANCH=$(git -C "$REPOS_DIR" branch --show-current 2>/dev/null || echo "")
-          if [ -n "$ISSUE_BRANCH" ] && [ "$CURRENT_BRANCH" = "$ISSUE_BRANCH" ]; then
-            log_setup "  ✓ Already on issue branch: $ISSUE_BRANCH"
-          else
-            if [ -n "$ISSUE_FORK" ]; then
-              log_setup "  Adding issue fork remote: $ISSUE_FORK"
-              git -C "$REPOS_DIR" remote remove issue 2>/dev/null || true
-              git -C "$REPOS_DIR" remote add issue "https://git.drupalcode.org/issue/$ISSUE_FORK.git"
-              git -C "$REPOS_DIR" fetch issue 2>&1 | tee -a "$SETUP_LOG" || true
-            fi
-            if [ -n "$ISSUE_BRANCH" ]; then
-              log_setup "  Checking out issue branch: $ISSUE_BRANCH"
-              git -C "$REPOS_DIR" checkout -b "$ISSUE_BRANCH" "issue/$ISSUE_BRANCH" 2>&1 | tee -a "$SETUP_LOG" || \
-              git -C "$REPOS_DIR" checkout "$ISSUE_BRANCH" 2>&1 | tee -a "$SETUP_LOG" || \
-              log_setup "  ✗ Failed to check out branch $ISSUE_BRANCH (continuing anyway)"
-            fi
-          fi
-          log_setup "  issue fork setup complete ($((SECONDS - _t))s)"
-          ISSUE_FORK_CHECKOUT_DONE=true
-        fi
-        # Ensure vendor matches current composer.lock (no-op when lock is unchanged; reflects issue branch if checked out)
+        # Sync vendor with the (unchanged main-branch) lock file
         _t=$SECONDS
         ddev composer install >> "$SETUP_LOG" 2>&1 || true
         log_setup "  composer install complete ($((SECONDS - _t))s)"
@@ -655,8 +633,12 @@ STATUS_HEADER
 
     # Steps 5-7: run whenever project files are present — inner checks handle idempotency
     if [ -f "composer.json" ] && [ -d "repos/drupal" ]; then
-      # Step 4.5: Issue fork checkout — runs if not already done in the cache-seed fast path
-      # Must happen before Drush install so that vendor reflects the correct branch
+      # Step 4.5: Issue fork checkout + composer reinstall
+      # Runs after fresh composer create (ISSUE_FORK_CHECKOUT_DONE=false).
+      # The seed cache is skipped for issue forks, so we start from a freshly-created
+      # drupal12/main project. After checking out the issue branch we must regenerate
+      # vendor: the project composer.json hardcodes "drupal/core: dev-main" and vendor
+      # is resolved for drupal12/PHP8.5 — both wrong for a non-main issue branch.
       if [ "$USING_ISSUE_FORK" = "true" ] && [ "$ISSUE_FORK_CHECKOUT_DONE" = "false" ]; then
         REPOS_DIR="$DRUPAL_DIR/repos/drupal"
         if [ -d "$REPOS_DIR/.git" ]; then
@@ -677,9 +659,15 @@ STATUS_HEADER
               log_setup "✗ Failed to check out branch $ISSUE_BRANCH (continuing anyway)"
             fi
           fi
-          # Re-run composer install so vendor reflects the checked-out branch
-          log_setup "Running composer install for issue branch..."
+          # Update drupal/core constraint from "dev-main" to "*" so Composer accepts
+          # any branch version from the path repository, then do a clean vendor install.
+          log_setup "Updating drupal/core constraint and regenerating vendor for issue branch..."
+          sed -i 's|"drupal/core": "dev-main"|"drupal/core": "*"|' composer.json 2>/dev/null || true
+          rm -f composer.lock
+          rm -rf vendor/
+          _t=$SECONDS
           ddev composer install >> "$SETUP_LOG" 2>&1 || true
+          log_setup "  composer install complete ($((SECONDS - _t))s)"
         fi
       fi
 
