@@ -713,32 +713,62 @@ STATUS_HEADER
             ACTUAL_DRUPAL_MAJOR="$DRUPAL_VERSION"
           fi
 
-          # Fix 1 (ALL versions): set drupal/core inline alias in root composer.json so the
-          # path repo branch (dev-<branch>) satisfies CoreRecommended's version constraint.
-          # Inline aliases are declared in the *requiring* package — no files in repos/drupal touched.
-          jq --arg val "dev-$CHECKED_OUT_BRANCH as $TARGET_ALIAS" \
-            '.require["drupal/core"] = $val' \
-            composer.json > composer.json.tmp && mv composer.json.tmp composer.json
-          log_setup "  Set drupal/core inline alias: dev-$CHECKED_OUT_BRANCH as $TARGET_ALIAS"
+          # Fix 1 + Fix 2: set version constraints to use path repos for the checked-out branch.
+          #
+          # For 10.x / 11.x: use inline alias "dev-$BRANCH as N.x-dev" on drupal/core and all
+          # drupal/* sub-packages (except drupal/drupal). drupal/core uses self.version for
+          # sub-packages; with the alias self.version = N.x-dev. Sub-packages must also be aliased
+          # so path repos satisfy that constraint. Packagist has no N.x-dev alias for sub-packages
+          # on these versions, so there is no conflict.
+          # Pin drupal/drupal to dev-$BRANCH so Packagist's version cannot pull in remote packages.
+          #
+          # For 12.x/main: inline alias CANNOT be used. With "dev-$BRANCH as 12.x-dev", Composer
+          # puts both dev-$BRANCH AND 12.x-dev in the resolution pool; both emit self.version
+          # requirements (dev-$BRANCH and 12.x-dev) for sub-packages, which conflict. Packagist
+          # defines 12.x-dev = dev-main for every sub-package, blocking a second inline alias.
+          # Solution: temporarily add "dev-$BRANCH": "12.x-dev" to the branch-alias in
+          # repos/drupal/composer.json (drupal/drupal) and repos/drupal/core/composer.json
+          # (drupal/core). Path repos then satisfy 12.x-dev natively. Root drupal/core is changed
+          # from "dev-main" to "12.x-dev" so path repo wins over Packagist. drupal/drupal's
+          # self.version becomes 12.x-dev, consistent with drupal/core — sub-packages come from
+          # Packagist at 12.x-dev = dev-main (same code). After composer update the repos/drupal
+          # files are restored with git checkout, keeping the git checkout clean.
+          if [ "$ACTUAL_DRUPAL_MAJOR" != "12" ]; then
+            # 10.x / 11.x: inline alias for drupal/core and all drupal/* sub-packages
+            jq --arg val "dev-$CHECKED_OUT_BRANCH as $TARGET_ALIAS" \
+              '.require |= with_entries(if (.key | startswith("drupal/")) and .key != "drupal/drupal" then .value = $val else . end)' \
+              composer.json > composer.json.tmp && mv composer.json.tmp composer.json
+            log_setup "  Set inline alias for all drupal/* packages: dev-$CHECKED_OUT_BRANCH as $TARGET_ALIAS"
+            # Pin drupal/drupal to path repo
+            jq --arg branch "dev-$CHECKED_OUT_BRANCH" \
+              '.require["drupal/drupal"] = $branch' \
+              composer.json > composer.json.tmp && mv composer.json.tmp composer.json
+            log_setup "  Pinned drupal/drupal to path repo: dev-$CHECKED_OUT_BRANCH"
+          else
+            # 12.x: add temporary branch-alias to path repo files, set root to 12.x-dev
+            for _repo_file in composer.json core/composer.json; do
+              jq --arg b "dev-$CHECKED_OUT_BRANCH" '.extra["branch-alias"][$b] = "12.x-dev"' \
+                "$REPOS_DIR/$_repo_file" > "$REPOS_DIR/$_repo_file.tmp" \
+                && mv "$REPOS_DIR/$_repo_file.tmp" "$REPOS_DIR/$_repo_file"
+            done
+            log_setup "  Added temporary branch-alias dev-$CHECKED_OUT_BRANCH=12.x-dev to path repos"
+            # Change root drupal/core from "dev-main" to "12.x-dev" so path repo (with alias) wins
+            jq --arg alias "$TARGET_ALIAS" \
+              '.require["drupal/core"] = $alias' \
+              composer.json > composer.json.tmp && mv composer.json.tmp composer.json
+            log_setup "  Set root drupal/core to: $TARGET_ALIAS (path repo with branch-alias will satisfy this)"
+          fi
 
-          # Fix 2 (ALL versions): pin drupal/drupal to the path repo version so Composer
-          # cannot fall back to Packagist's drupal/drupal (whose self.version requirements
-          # would pull in remote packages instead of path repos).
-          jq --arg branch "dev-$CHECKED_OUT_BRANCH" \
-            '.require["drupal/drupal"] = $branch' \
-            composer.json > composer.json.tmp && mv composer.json.tmp composer.json
-          log_setup "  Pinned drupal/drupal to path repo: dev-$CHECKED_OUT_BRANCH"
-
-          # Fix 3 (actual drupal 10 only): drupal/core-dev 10.x requires composer/composer ^2.8.1
-          # AND justinrainbow/json-schema ^5.2, but composer 2.9.x requires ^6.5.1 — conflict.
-          # Pin to 2.8.x and disable the security advisory block.
-          # We use ACTUAL_DRUPAL_MAJOR (not DRUPAL_VERSION) so a mis-selected version doesn't
-          # apply the pin to a 11/12 branch where it adds an unnecessary constraint.
+          # Fix 3: drupal/core-dev on some branches (10.x, 11.2.x, ...) requires
+          # justinrainbow/json-schema ^5.2, but composer 2.9.x requires ^6.5.1 — conflict.
+          # Detect from the actual path repo rather than assuming by major version.
           # See https://www.drupal.org/project/drupal/issues/3557585
-          if [ "$ACTUAL_DRUPAL_MAJOR" = "10" ]; then
+          _core_dev_json_schema=$(jq -r '.require["justinrainbow/json-schema"] // ""' \
+            "$REPOS_DIR/composer/Metapackage/DevDependencies/composer.json" 2>/dev/null || echo "")
+          if echo "$_core_dev_json_schema" | grep -q '^\^5'; then
             jq '.require["composer/composer"] = "~2.8.1" | .config.audit["block-insecure"] = false' \
               composer.json > composer.json.tmp && mv composer.json.tmp composer.json
-            log_setup "  Applied drupal10 fix: pinned composer/composer to ~2.8.1"
+            log_setup "  Applied composer/composer pin to ~2.8.1 (json-schema conflict detected)"
           fi
 
           # Fix 4 (ALL versions if directory exists): drupal/drupal on 11.x+ requires
@@ -770,6 +800,13 @@ STATUS_HEADER
             update_status "Manual recovery:"
             update_status "  cd $DRUPAL_DIR && ddev composer update -W"
             SETUP_FAILED=true
+          fi
+
+          # For 12.x, restore the temporarily modified path repo files so git checkout stays clean.
+          if [ "$ACTUAL_DRUPAL_MAJOR" = "12" ]; then
+            git -C "$REPOS_DIR" checkout -- composer.json core/composer.json >> "$SETUP_LOG" 2>&1 \
+              && log_setup "  Restored repos/drupal path repo files (12.x branch-alias cleanup)" \
+              || log_setup "  ⚠ Could not restore repos/drupal files — check git status in repos/drupal"
           fi
           fi # end SETUP_FAILED (branch checkout) guard
         fi
