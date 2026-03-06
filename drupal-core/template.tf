@@ -490,37 +490,33 @@ STATUS_HEADER
       *)  DDEV_PROJECT_TYPE="drupal12" ;;
     esac
 
-    if [ ! -f ".ddev/config.yaml" ]; then
-      log_setup "Configuring DDEV for Drupal $DRUPAL_VERSION ($DDEV_PROJECT_TYPE)..."
-      update_status "⏳ DDEV config: In progress..."
+    # Always run ddev config to ensure project type is correct (host dir may persist across workspace delete/recreate)
+    log_setup "Configuring DDEV for Drupal $DRUPAL_VERSION ($DDEV_PROJECT_TYPE)..."
+    update_status "⏳ DDEV config: In progress..."
 
-      if ddev config --project-type="$DDEV_PROJECT_TYPE" --docroot=web --host-webserver-port=80 >> "$SETUP_LOG" 2>&1; then
-        log_setup "✓ DDEV configured (project-type=$DDEV_PROJECT_TYPE docroot=web)"
-        update_status "✓ DDEV config: Success"
-      else
-        log_setup "✗ Failed to configure DDEV"
-        log_setup "Check $SETUP_LOG for details"
-        update_status "✗ DDEV config: Failed"
-        update_status ""
-        update_status "Manual recovery:"
-        update_status "  cd $DRUPAL_DIR"
-        update_status "  ddev config --project-type=$DDEV_PROJECT_TYPE --docroot=web --host-webserver-port=80"
-      fi
-
-      # Configure DDEV global settings (omit router)
-      log_setup "Configuring DDEV global settings..."
-      update_status "⏳ DDEV global config: In progress..."
-
-      if ddev config global --omit-containers=ddev-router >> "$SETUP_LOG" 2>&1; then
-        log_setup "✓ DDEV global config applied (router omitted)"
-        update_status "✓ DDEV global config: Success"
-      else
-        log_setup "⚠ Warning: Failed to set DDEV global config (non-critical)"
-        update_status "⚠ DDEV global config: Warning (non-critical)"
-      fi
+    if ddev config --project-type="$DDEV_PROJECT_TYPE" --docroot=web --host-webserver-port=80 >> "$SETUP_LOG" 2>&1; then
+      log_setup "✓ DDEV configured (project-type=$DDEV_PROJECT_TYPE docroot=web)"
+      update_status "✓ DDEV config: Success"
     else
-      log_setup "✓ DDEV already configured"
-      update_status "✓ DDEV config: Already present"
+      log_setup "✗ Failed to configure DDEV"
+      log_setup "Check $SETUP_LOG for details"
+      update_status "✗ DDEV config: Failed"
+      update_status ""
+      update_status "Manual recovery:"
+      update_status "  cd $DRUPAL_DIR"
+      update_status "  ddev config --project-type=$DDEV_PROJECT_TYPE --docroot=web --host-webserver-port=80"
+    fi
+
+    # Configure DDEV global settings (omit router)
+    log_setup "Configuring DDEV global settings..."
+    update_status "⏳ DDEV global config: In progress..."
+
+    if ddev config global --omit-containers=ddev-router >> "$SETUP_LOG" 2>&1; then
+      log_setup "✓ DDEV global config applied (router omitted)"
+      update_status "✓ DDEV global config: Success"
+    else
+      log_setup "⚠ Warning: Failed to set DDEV global config (non-critical)"
+      update_status "⚠ DDEV global config: Warning (non-critical)"
     fi
 
     # Step 3: Start DDEV
