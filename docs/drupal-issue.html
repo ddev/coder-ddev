@@ -418,42 +418,34 @@
       setStatus('Loading issue ' + nid + '...', 'loading');
 
       try {
-        // Step 1: fetch issue from Drupal.org API
-        const issueResp = await fetch('https://www.drupal.org/api-d7/node/' + nid + '.json');
-        if (!issueResp.ok) throw new Error('Drupal.org API returned ' + issueResp.status);
-        const issue = await issueResp.json();
+        // Issue fork name is always drupal-{nid} by convention on git.drupalcode.org
+        const issueFork = 'drupal-' + nid;
+        const encodedProject = encodeURIComponent('issue/' + issueFork);
 
-        const title = issue.title || ('Issue #' + nid);
-
-        // Extract issue fork name
-        // field_issue_fork may be a string, an object, or an array depending on API version
-        let issueFork = '';
-        const f = issue.field_issue_fork;
-        if (typeof f === 'string') {
-          issueFork = f;
-        } else if (f && typeof f === 'object') {
-          // Try common shapes: {value: '...'}, {und: [{value: '...'}]}, or plain string nested
-          if (f.value) issueFork = f.value;
-          else if (Array.isArray(f.und) && f.und[0] && f.und[0].value) issueFork = f.und[0].value;
-          else if (Array.isArray(f) && f[0] && f[0].value) issueFork = f[0].value;
-        }
-
-        if (!issueFork) {
+        // Step 1: verify fork exists and fetch branches from git.drupalcode.org
+        setStatus('Loading issue fork ' + issueFork + '...', 'loading');
+        const branchResp = await fetch(
+          'https://git.drupalcode.org/api/v4/projects/' + encodedProject + '/repository/branches?per_page=100&order_by=updated_at&sort=desc'
+        );
+        if (branchResp.status === 404) {
           setStatus('Issue #' + nid + ' does not have an issue fork yet. Click "Get push access" on the issue page to create one, then try again.', 'info');
           document.getElementById('load-btn').disabled = false;
           return;
         }
+        if (!branchResp.ok) throw new Error('git.drupalcode.org API returned ' + branchResp.status);
+        const branches = await branchResp.json();
 
         currentIssueFork = issueFork;
 
-        // Step 2: fetch branches from git.drupalcode.org
-        setStatus('Loading branches for ' + issueFork + '...', 'loading');
-        const encodedProject = encodeURIComponent('issue/' + issueFork);
-        const branchResp = await fetch(
-          'https://git.drupalcode.org/api/v4/projects/' + encodedProject + '/repository/branches?per_page=100&order_by=updated_at&sort=desc'
-        );
-        if (!branchResp.ok) throw new Error('git.drupalcode.org API returned ' + branchResp.status);
-        const branches = await branchResp.json();
+        // Step 2: fetch issue title from Drupal.org API (best-effort — don't block on failure)
+        let title = 'Issue #' + nid;
+        try {
+          const issueResp = await fetch('https://www.drupal.org/api-d7/node/' + nid + '.json');
+          if (issueResp.ok) {
+            const issue = await issueResp.json();
+            if (issue.title) title = issue.title;
+          }
+        } catch (_) { /* title stays as fallback */ }
 
         // Populate branch selector
         const branchSelect = document.getElementById('branch-select');
