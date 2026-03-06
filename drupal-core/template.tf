@@ -490,7 +490,10 @@ STATUS_HEADER
       *)  DDEV_PROJECT_TYPE="drupal12" ;;
     esac
 
-    # Always run ddev config to ensure project type is correct (host dir may persist across workspace delete/recreate)
+    # Always regenerate .ddev/config.yaml from scratch so DDEV picks its own defaults
+    # for the project type (e.g. correct PHP version). Preserving an old config.yaml
+    # would leave stale fields like php_version untouched even when project-type changes.
+    rm -f .ddev/config.yaml
     log_setup "Configuring DDEV for Drupal $DRUPAL_VERSION ($DDEV_PROJECT_TYPE)..."
     update_status "⏳ DDEV config: In progress..."
 
