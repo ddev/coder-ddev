@@ -64,6 +64,28 @@ variable "cache_path" {
   default     = "/home/rfay/cache/drupal-core-seed"
 }
 
+variable "issue_fork" {
+  description = "Drupal.org issue fork name (e.g., drupal-3568144). Leave empty for standard Drupal core development."
+  type        = string
+  default     = ""
+}
+
+variable "issue_branch" {
+  description = "Issue branch to check out in the drupal core git repo (e.g., 3568144-editorfilterxss-11.x). Leave empty for HEAD."
+  type        = string
+  default     = ""
+}
+
+variable "install_profile" {
+  description = "Drupal install profile. demo_umami uses the seed cache for fast startup (~30s). Other profiles require a full site install (~3-5 min)."
+  type        = string
+  default     = "demo_umami"
+  validation {
+    condition     = contains(["demo_umami", "minimal", "standard"], var.install_profile)
+    error_message = "install_profile must be one of: demo_umami, minimal, standard"
+  }
+}
+
 
 
 # Workspace data source
@@ -475,6 +497,7 @@ STATUS_HEADER
 
     CACHE_SEED="/home/coder-cache-seed"
     DRUPAL_SETUP_NEEDED=false
+    ISSUE_FORK_CHECKOUT_DONE=false
     SETUP_START=$SECONDS
 
     # Diagnostic: report what the cache mount contains
@@ -495,6 +518,16 @@ STATUS_HEADER
       log_setup "  .tarballs/db.sql.gz: MISSING"
     fi
 
+    # Issue fork / install profile parameters (baked in at template evaluation)
+    ISSUE_FORK="${var.issue_fork}"
+    ISSUE_BRANCH="${var.issue_branch}"
+    INSTALL_PROFILE="${var.install_profile}"
+    USING_ISSUE_FORK=false
+    if [ -n "$ISSUE_FORK" ] || [ -n "$ISSUE_BRANCH" ]; then
+      USING_ISSUE_FORK=true
+      log_setup "Issue fork mode: ISSUE_FORK=$ISSUE_FORK  ISSUE_BRANCH=$ISSUE_BRANCH  INSTALL_PROFILE=$INSTALL_PROFILE"
+    fi
+
     # Step 4: Set up Drupal core project — use seed cache when available (fast path)
     if [ -f "composer.json" ] && [ -d "repos/drupal/.git" ]; then
       log_setup "✓ Drupal core project already present — skipping setup"
@@ -510,7 +543,31 @@ STATUS_HEADER
         _t=$SECONDS
         git -C "$DRUPAL_DIR/repos/drupal" fetch --all --prune >> "$SETUP_LOG" 2>&1 || true
         log_setup "  git fetch complete ($((SECONDS - _t))s)"
-        # Ensure vendor matches current composer.lock (no-op when lock is unchanged)
+        # Checkout issue fork branch (must happen before composer install so vendor matches branch)
+        if [ "$USING_ISSUE_FORK" = "true" ]; then
+          _t=$SECONDS
+          REPOS_DIR="$DRUPAL_DIR/repos/drupal"
+          CURRENT_BRANCH=$(git -C "$REPOS_DIR" branch --show-current 2>/dev/null || echo "")
+          if [ -n "$ISSUE_BRANCH" ] && [ "$CURRENT_BRANCH" = "$ISSUE_BRANCH" ]; then
+            log_setup "  ✓ Already on issue branch: $ISSUE_BRANCH"
+          else
+            if [ -n "$ISSUE_FORK" ]; then
+              log_setup "  Adding issue fork remote: $ISSUE_FORK"
+              git -C "$REPOS_DIR" remote remove issue 2>/dev/null || true
+              git -C "$REPOS_DIR" remote add issue "https://git.drupalcode.org/issue/$ISSUE_FORK.git"
+              git -C "$REPOS_DIR" fetch issue 2>&1 | tee -a "$SETUP_LOG" || true
+            fi
+            if [ -n "$ISSUE_BRANCH" ]; then
+              log_setup "  Checking out issue branch: $ISSUE_BRANCH"
+              git -C "$REPOS_DIR" checkout -b "$ISSUE_BRANCH" "issue/$ISSUE_BRANCH" 2>&1 | tee -a "$SETUP_LOG" || \
+              git -C "$REPOS_DIR" checkout "$ISSUE_BRANCH" 2>&1 | tee -a "$SETUP_LOG" || \
+              log_setup "  ✗ Failed to check out branch $ISSUE_BRANCH (continuing anyway)"
+            fi
+          fi
+          log_setup "  issue fork setup complete ($((SECONDS - _t))s)"
+          ISSUE_FORK_CHECKOUT_DONE=true
+        fi
+        # Ensure vendor matches current composer.lock (no-op when lock is unchanged; reflects issue branch if checked out)
         _t=$SECONDS
         ddev composer install >> "$SETUP_LOG" 2>&1 || true
         log_setup "  composer install complete ($((SECONDS - _t))s)"
@@ -548,6 +605,34 @@ STATUS_HEADER
 
     # Steps 5-7: run whenever project files are present — inner checks handle idempotency
     if [ -f "composer.json" ] && [ -d "repos/drupal" ]; then
+      # Step 4.5: Issue fork checkout — runs if not already done in the cache-seed fast path
+      # Must happen before Drush install so that vendor reflects the correct branch
+      if [ "$USING_ISSUE_FORK" = "true" ] && [ "$ISSUE_FORK_CHECKOUT_DONE" = "false" ]; then
+        REPOS_DIR="$DRUPAL_DIR/repos/drupal"
+        if [ -d "$REPOS_DIR/.git" ]; then
+          CURRENT_BRANCH=$(git -C "$REPOS_DIR" branch --show-current 2>/dev/null || echo "")
+          if [ -n "$ISSUE_BRANCH" ] && [ "$CURRENT_BRANCH" = "$ISSUE_BRANCH" ]; then
+            log_setup "✓ Already on issue branch: $ISSUE_BRANCH"
+          else
+            if [ -n "$ISSUE_FORK" ]; then
+              log_setup "Adding issue fork remote: $ISSUE_FORK"
+              git -C "$REPOS_DIR" remote remove issue 2>/dev/null || true
+              git -C "$REPOS_DIR" remote add issue "https://git.drupalcode.org/issue/$ISSUE_FORK.git"
+              git -C "$REPOS_DIR" fetch issue 2>&1 | tee -a "$SETUP_LOG" || true
+            fi
+            if [ -n "$ISSUE_BRANCH" ]; then
+              log_setup "Checking out issue branch: $ISSUE_BRANCH"
+              git -C "$REPOS_DIR" checkout -b "$ISSUE_BRANCH" "issue/$ISSUE_BRANCH" 2>&1 | tee -a "$SETUP_LOG" || \
+              git -C "$REPOS_DIR" checkout "$ISSUE_BRANCH" 2>&1 | tee -a "$SETUP_LOG" || \
+              log_setup "✗ Failed to check out branch $ISSUE_BRANCH (continuing anyway)"
+            fi
+          fi
+          # Re-run composer install so vendor reflects the checked-out branch
+          log_setup "Running composer install for issue branch..."
+          ddev composer install >> "$SETUP_LOG" 2>&1 || true
+        fi
+      fi
+
       # Step 5: Ensure Drush is available (skip if already present from cache)
       if [ -f "vendor/bin/drush" ]; then
         log_setup "✓ Drush already present"
@@ -567,10 +652,14 @@ STATUS_HEADER
       fi
 
       # Step 6: Install or import Drupal database
+      # Fast path (DB cache import) is only used when:
+      #   - No issue fork (issue code may differ from cached DB)
+      #   - Install profile is demo_umami (cache was built with that profile)
+      #   - Cache tarball exists
       if ddev drush status 2>/dev/null | grep -q "Drupal bootstrap.*Successful"; then
         log_setup "✓ Drupal already installed"
         update_status "✓ Drupal install: Already present"
-      elif [ -f "$CACHE_SEED/.tarballs/db.sql.gz" ]; then
+      elif [ "$USING_ISSUE_FORK" = "false" ] && [ "$INSTALL_PROFILE" = "demo_umami" ] && [ -f "$CACHE_SEED/.tarballs/db.sql.gz" ]; then
         _t=$SECONDS
         log_setup "Importing database from cache (fast path)..."
         update_status "⏳ Drupal install: Importing cached database..."
@@ -587,7 +676,7 @@ STATUS_HEADER
           log_setup "⚠ DB import failed ($((SECONDS - _t))s), falling back to full site install..."
           update_status "⚠ DB import failed, running full install..."
           _t=$SECONDS
-          if ddev drush si -y demo_umami --account-pass=admin >> "$SETUP_LOG" 2>&1; then
+          if ddev drush si -y "$INSTALL_PROFILE" --account-pass=admin >> "$SETUP_LOG" 2>&1; then
             log_setup "✓ Drupal installed successfully (fallback, $((SECONDS - _t))s)"
             update_status "✓ Drupal install: Success (fallback)"
           else
@@ -597,10 +686,14 @@ STATUS_HEADER
         fi
       else
         _t=$SECONDS
-        log_setup "Installing Drupal with demo_umami profile (this will take 2-3 minutes)..."
+        if [ "$USING_ISSUE_FORK" = "true" ]; then
+          log_setup "Installing Drupal with $INSTALL_PROFILE profile (issue fork: full install required)..."
+        else
+          log_setup "Installing Drupal with $INSTALL_PROFILE profile (this will take 2-3 minutes)..."
+        fi
         update_status "⏳ Drupal install: In progress..."
 
-        if ddev drush si -y demo_umami --account-pass=admin >> "$SETUP_LOG" 2>&1; then
+        if ddev drush si -y "$INSTALL_PROFILE" --account-pass=admin >> "$SETUP_LOG" 2>&1; then
           log_setup "✓ Drupal installed ($((SECONDS - _t))s)"
           log_setup ""
           log_setup "   Admin Credentials:"
@@ -615,7 +708,7 @@ STATUS_HEADER
           update_status ""
           update_status "Manual recovery:"
           update_status "  cd $DRUPAL_DIR"
-          update_status "  ddev drush si -y demo_umami --account-pass=admin"
+          update_status "  ddev drush si -y $INSTALL_PROFILE --account-pass=admin"
         fi
       fi
 

@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Drupal Issue Picker — DDEV Coder Workspaces</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0e0e10;
+      color: #e8e8e8;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    header {
+      padding: 1.25rem 2rem;
+      border-bottom: 1px solid #1c1c1e;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    header a {
+      color: #a78bfa;
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+
+    header a:hover { text-decoration: underline; }
+
+    header .sep { color: #444; }
+
+    header .title { color: #e8e8e8; font-weight: 600; font-size: 0.9rem; }
+
+    .page {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 3rem 2rem 5rem;
+    }
+
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.5rem;
+    }
+
+    .subtitle {
+      color: #777;
+      font-size: 1rem;
+      margin-bottom: 2.5rem;
+    }
+
+    /* ── Input section ───────────────────────────────── */
+    .input-row {
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 2rem;
+    }
+
+    .input-row input {
+      flex: 1;
+      background: #161619;
+      border: 1px solid #2a2a32;
+      border-radius: 8px;
+      padding: 0.7rem 1rem;
+      color: #e8e8e8;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .input-row input::placeholder { color: #555; }
+    .input-row input:focus { border-color: #7c5af0; }
+
+    .btn-load {
+      background: #7c5af0;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 0.7rem 1.25rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s;
+    }
+
+    .btn-load:hover { background: #6d4de0; }
+    .btn-load:disabled { background: #3a3050; color: #777; cursor: not-allowed; }
+
+    /* ── Status / error ──────────────────────────────── */
+    .status {
+      font-size: 0.9rem;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      margin-bottom: 1.5rem;
+      display: none;
+    }
+
+    .status.loading {
+      display: block;
+      background: #161619;
+      border: 1px solid #2a2a32;
+      color: #999;
+    }
+
+    .status.error {
+      display: block;
+      background: #1f0f0f;
+      border: 1px solid #5a1a1a;
+      color: #f87171;
+    }
+
+    .status.info {
+      display: block;
+      background: #0f1a1f;
+      border: 1px solid #1a4a5a;
+      color: #7dd3fc;
+    }
+
+    /* ── Result form ─────────────────────────────────── */
+    #result-form { display: none; }
+
+    .issue-title {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #c4b5fd;
+      margin-bottom: 1.75rem;
+      padding: 0.75rem 1rem;
+      background: #13101f;
+      border: 1px solid #2a2040;
+      border-radius: 8px;
+    }
+
+    .issue-title span {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 400;
+      color: #666;
+      margin-bottom: 0.2rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .fields {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      margin-bottom: 2rem;
+    }
+
+    .field label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: #777;
+      margin-bottom: 0.4rem;
+    }
+
+    .field select,
+    .field input[type="text"] {
+      width: 100%;
+      background: #161619;
+      border: 1px solid #2a2a32;
+      border-radius: 8px;
+      padding: 0.65rem 1rem;
+      color: #e8e8e8;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.15s;
+      appearance: none;
+    }
+
+    .field select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23777' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 1rem center;
+      padding-right: 2.5rem;
+    }
+
+    .field select:focus,
+    .field input[type="text"]:focus { border-color: #7c5af0; }
+
+    .field .hint {
+      font-size: 0.8rem;
+      color: #555;
+      margin-top: 0.3rem;
+    }
+
+    .btn-open {
+      width: 100%;
+      background: #7c5af0;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 0.85rem 1.5rem;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .btn-open:hover { background: #6d4de0; }
+
+    /* ── Manual fallback ─────────────────────────────── */
+    #manual-form { display: none; }
+
+    .manual-notice {
+      font-size: 0.85rem;
+      color: #888;
+      margin-bottom: 1.25rem;
+      padding: 0.65rem 0.9rem;
+      background: #111114;
+      border: 1px solid #222228;
+      border-radius: 6px;
+    }
+
+    /* ── Notes ───────────────────────────────────────── */
+    .notes {
+      margin-top: 2.5rem;
+      border-top: 1px solid #1c1c1e;
+      padding-top: 2rem;
+    }
+
+    .notes h2 {
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #555;
+      margin-bottom: 0.9rem;
+    }
+
+    .notes ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .notes li {
+      font-size: 0.88rem;
+      color: #666;
+      padding-left: 1rem;
+      position: relative;
+    }
+
+    .notes li::before {
+      content: '·';
+      position: absolute;
+      left: 0;
+      color: #444;
+    }
+
+    code {
+      background: #1a1a1f;
+      border: 1px solid #2a2a30;
+      padding: 0.1em 0.35em;
+      border-radius: 4px;
+      font-family: 'SF Mono', Consolas, monospace;
+      font-size: 0.85em;
+      color: #c4b5fd;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <a href="/">DDEV Coder Workspaces</a>
+    <span class="sep">/</span>
+    <span class="title">Drupal Issue Picker</span>
+  </header>
+
+  <div class="page">
+    <h1>Drupal Issue Picker</h1>
+    <p class="subtitle">Enter a Drupal.org issue URL or number to launch a pre-configured workspace.</p>
+
+    <div class="input-row">
+      <input type="text" id="issue-input"
+        placeholder="e.g. 3568144 or https://www.drupal.org/project/drupal/issues/3568144"
+        autofocus>
+      <button class="btn-load" id="load-btn" onclick="loadIssue()">Load Issue</button>
+    </div>
+
+    <div class="status" id="status"></div>
+
+    <!-- Auto-populated form -->
+    <div id="result-form">
+      <div class="issue-title">
+        <span>Issue</span>
+        <span id="issue-title-text"></span>
+      </div>
+
+      <div class="fields">
+        <div class="field">
+          <label for="branch-select">Branch</label>
+          <select id="branch-select"></select>
+        </div>
+
+        <div class="field">
+          <label for="profile-select">Install Profile</label>
+          <select id="profile-select">
+            <option value="demo_umami">demo_umami (recommended — fastest, ~30s)</option>
+            <option value="minimal">minimal (~3–5 min, full install)</option>
+            <option value="standard">standard (~3–5 min, full install)</option>
+          </select>
+          <div class="hint">demo_umami uses a pre-built database for fast startup. Other profiles require a full site install.</div>
+        </div>
+
+        <div class="field">
+          <label for="workspace-name">Workspace Name</label>
+          <input type="text" id="workspace-name" placeholder="issue-3568144">
+          <div class="hint">Must be lowercase letters, numbers, and hyphens only.</div>
+        </div>
+      </div>
+
+      <button class="btn-open" onclick="openWorkspace()">Open Dev Environment</button>
+    </div>
+
+    <!-- Manual fallback form (shown on API error) -->
+    <div id="manual-form">
+      <div class="manual-notice">
+        Could not fetch issue data automatically. Enter values manually below.
+      </div>
+
+      <div class="fields">
+        <div class="field">
+          <label for="manual-fork">Issue Fork Name</label>
+          <input type="text" id="manual-fork" placeholder="drupal-3568144">
+          <div class="hint">Format: drupal-{issue-number}</div>
+        </div>
+
+        <div class="field">
+          <label for="manual-branch">Issue Branch</label>
+          <input type="text" id="manual-branch" placeholder="3568144-editorfilterxss-11.x">
+        </div>
+
+        <div class="field">
+          <label for="manual-profile">Install Profile</label>
+          <select id="manual-profile">
+            <option value="demo_umami">demo_umami (recommended — fastest, ~30s)</option>
+            <option value="minimal">minimal (~3–5 min, full install)</option>
+            <option value="standard">standard (~3–5 min, full install)</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="manual-workspace-name">Workspace Name</label>
+          <input type="text" id="manual-workspace-name" placeholder="issue-3568144">
+        </div>
+      </div>
+
+      <button class="btn-open" onclick="openManualWorkspace()">Open Dev Environment</button>
+    </div>
+
+    <div class="notes">
+      <h2>Notes</h2>
+      <ul>
+        <li>Requires a GitHub account — <a href="https://coder.ddev.com/login" style="color:#a78bfa">sign in at coder.ddev.com</a> first</li>
+        <li>Issue fork workspaces always run a full <code>ddev drush si</code> (branch code may differ from the cached database)</li>
+        <li>The <code>demo_umami</code> fast path (~30s) is only used for standard Drupal core without an issue fork</li>
+        <li>Issue fork must exist on <a href="https://git.drupalcode.org" style="color:#a78bfa">git.drupalcode.org</a> — click "Get push access" on the issue page to create one</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    const CODER_BASE = 'https://coder.ddev.com';
+    const CODER_TEMPLATE = 'coder/drupal-core';
+
+    let currentIssueFork = '';
+    let currentNid = '';
+
+    function setStatus(msg, type) {
+      const el = document.getElementById('status');
+      el.textContent = msg;
+      el.className = 'status ' + type;
+    }
+
+    function clearStatus() {
+      const el = document.getElementById('status');
+      el.className = 'status';
+    }
+
+    function parseIssueNumber(raw) {
+      const s = raw.trim();
+      // Plain number
+      if (/^\d+$/.test(s)) return s;
+      // URL: .../issues/3568144 or .../issues/3568144/...
+      const m = s.match(/\/issues\/(\d+)/);
+      if (m) return m[1];
+      return null;
+    }
+
+    function sanitizeWorkspaceName(name) {
+      return name.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+    }
+
+    async function loadIssue() {
+      const raw = document.getElementById('issue-input').value;
+      const nid = parseIssueNumber(raw);
+
+      if (!nid) {
+        setStatus('Could not parse an issue number from that input. Enter a number like 3568144 or a full drupal.org issue URL.', 'error');
+        return;
+      }
+
+      currentNid = nid;
+      document.getElementById('result-form').style.display = 'none';
+      document.getElementById('manual-form').style.display = 'none';
+      document.getElementById('load-btn').disabled = true;
+      setStatus('Loading issue ' + nid + '...', 'loading');
+
+      try {
+        // Step 1: fetch issue from Drupal.org API
+        const issueResp = await fetch('https://www.drupal.org/api-d7/node/' + nid + '.json');
+        if (!issueResp.ok) throw new Error('Drupal.org API returned ' + issueResp.status);
+        const issue = await issueResp.json();
+
+        const title = issue.title || ('Issue #' + nid);
+
+        // Extract issue fork name
+        // field_issue_fork may be a string, an object, or an array depending on API version
+        let issueFork = '';
+        const f = issue.field_issue_fork;
+        if (typeof f === 'string') {
+          issueFork = f;
+        } else if (f && typeof f === 'object') {
+          // Try common shapes: {value: '...'}, {und: [{value: '...'}]}, or plain string nested
+          if (f.value) issueFork = f.value;
+          else if (Array.isArray(f.und) && f.und[0] && f.und[0].value) issueFork = f.und[0].value;
+          else if (Array.isArray(f) && f[0] && f[0].value) issueFork = f[0].value;
+        }
+
+        if (!issueFork) {
+          setStatus('Issue #' + nid + ' does not have an issue fork yet. Click "Get push access" on the issue page to create one, then try again.', 'info');
+          document.getElementById('load-btn').disabled = false;
+          return;
+        }
+
+        currentIssueFork = issueFork;
+
+        // Step 2: fetch branches from git.drupalcode.org
+        setStatus('Loading branches for ' + issueFork + '...', 'loading');
+        const encodedProject = encodeURIComponent('issue/' + issueFork);
+        const branchResp = await fetch(
+          'https://git.drupalcode.org/api/v4/projects/' + encodedProject + '/repository/branches?per_page=100&order_by=updated_at&sort=desc'
+        );
+        if (!branchResp.ok) throw new Error('git.drupalcode.org API returned ' + branchResp.status);
+        const branches = await branchResp.json();
+
+        // Populate branch selector
+        const branchSelect = document.getElementById('branch-select');
+        branchSelect.innerHTML = '';
+        branches.forEach(b => {
+          const opt = document.createElement('option');
+          opt.value = b.name;
+          opt.textContent = b.name;
+          branchSelect.appendChild(opt);
+        });
+
+        // Pre-select branch that starts with the issue number
+        const preferred = branches.find(b => b.name.startsWith(nid + '-'));
+        if (preferred) branchSelect.value = preferred.name;
+
+        // Set issue title
+        document.getElementById('issue-title-text').textContent = '#' + nid + ': ' + title;
+
+        // Pre-fill workspace name
+        const wsName = document.getElementById('workspace-name');
+        wsName.value = 'issue-' + nid;
+
+        clearStatus();
+        document.getElementById('result-form').style.display = 'block';
+
+      } catch (err) {
+        console.error(err);
+        // Show manual fallback
+        setStatus('Could not load issue data automatically (' + err.message + '). Enter values below.', 'error');
+        document.getElementById('manual-workspace-name').value = 'issue-' + nid;
+        document.getElementById('manual-fork').value = 'drupal-' + nid;
+        document.getElementById('manual-form').style.display = 'block';
+      }
+
+      document.getElementById('load-btn').disabled = false;
+    }
+
+    function buildCoderUrl(issueFork, issueBranch, installProfile, workspaceName) {
+      const base = CODER_BASE + '/templates/' + CODER_TEMPLATE + '/workspace';
+      const params = new URLSearchParams({
+        mode: 'manual',
+        name: sanitizeWorkspaceName(workspaceName),
+        'param.issue_fork': issueFork,
+        'param.issue_branch': issueBranch,
+        'param.install_profile': installProfile,
+      });
+      return base + '?' + params.toString();
+    }
+
+    function openWorkspace() {
+      const branch = document.getElementById('branch-select').value;
+      const profile = document.getElementById('profile-select').value;
+      const wsName = document.getElementById('workspace-name').value || ('issue-' + currentNid);
+
+      if (!currentIssueFork || !branch) {
+        setStatus('Please load an issue first.', 'error');
+        return;
+      }
+
+      const url = buildCoderUrl(currentIssueFork, branch, profile, wsName);
+      window.open(url, '_blank');
+    }
+
+    function openManualWorkspace() {
+      const fork = document.getElementById('manual-fork').value.trim();
+      const branch = document.getElementById('manual-branch').value.trim();
+      const profile = document.getElementById('manual-profile').value;
+      const wsName = document.getElementById('manual-workspace-name').value || ('issue-' + currentNid);
+
+      if (!fork || !branch) {
+        setStatus('Issue fork name and branch are required.', 'error');
+        return;
+      }
+
+      const url = buildCoderUrl(fork, branch, profile, wsName);
+      window.open(url, '_blank');
+    }
+
+    // Allow Enter key in input
+    document.getElementById('issue-input').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') loadIssue();
+    });
+  </script>
+
+</body>
+</html>
