@@ -573,6 +573,7 @@ STATUS_HEADER
     ISSUE_BRANCH="${data.coder_parameter.issue_branch.value}"
     INSTALL_PROFILE="${data.coder_parameter.install_profile.value}"
     USING_ISSUE_FORK=false
+    SETUP_FAILED=false
     if [ -n "$ISSUE_FORK" ] || [ -n "$ISSUE_BRANCH" ]; then
       USING_ISSUE_FORK=true
       log_setup "Issue fork mode: ISSUE_FORK=$ISSUE_FORK  ISSUE_BRANCH=$ISSUE_BRANCH  INSTALL_PROFILE=$INSTALL_PROFILE"
@@ -666,71 +667,111 @@ STATUS_HEADER
             log_setup "✓ Already on issue branch: $ISSUE_BRANCH"
           else
             if [ -n "$ISSUE_FORK" ]; then
-              log_setup "Adding issue fork remote: $ISSUE_FORK"
+              log_setup "Adding issue fork remote and fetching: $ISSUE_FORK"
               git -C "$REPOS_DIR" remote remove issue 2>/dev/null || true
-              git -C "$REPOS_DIR" remote add issue "https://git.drupalcode.org/issue/$ISSUE_FORK.git"
-              git -C "$REPOS_DIR" fetch issue 2>&1 | tee -a "$SETUP_LOG" || true
+              git -C "$REPOS_DIR" remote add issue "https://git.drupalcode.org/issue/drupal-$ISSUE_FORK.git"
+              if git -C "$REPOS_DIR" fetch issue >> "$SETUP_LOG" 2>&1; then
+                log_setup "  ✓ Fetched from issue remote"
+              else
+                log_setup "✗ Failed to fetch from issue remote $ISSUE_FORK — aborting setup"
+                SETUP_FAILED=true
+              fi
             fi
-            if [ -n "$ISSUE_BRANCH" ]; then
+            if [ "$SETUP_FAILED" != "true" ] && [ -n "$ISSUE_BRANCH" ]; then
               log_setup "Checking out issue branch: $ISSUE_BRANCH"
-              git -C "$REPOS_DIR" checkout -b "$ISSUE_BRANCH" "issue/$ISSUE_BRANCH" 2>&1 | tee -a "$SETUP_LOG" || \
-              git -C "$REPOS_DIR" checkout "$ISSUE_BRANCH" 2>&1 | tee -a "$SETUP_LOG" || \
-              log_setup "✗ Failed to check out branch $ISSUE_BRANCH (continuing anyway)"
+              if git -C "$REPOS_DIR" checkout -b "$ISSUE_BRANCH" "issue/$ISSUE_BRANCH" >> "$SETUP_LOG" 2>&1 || \
+                 git -C "$REPOS_DIR" checkout "$ISSUE_BRANCH" >> "$SETUP_LOG" 2>&1; then
+                log_setup "  ✓ Checked out branch: $ISSUE_BRANCH"
+              else
+                log_setup "✗ Failed to check out branch $ISSUE_BRANCH — aborting setup"
+                SETUP_FAILED=true
+              fi
             fi
           fi
 
           # Apply composer.json fixes so ddev composer install resolves correctly.
           # Root composer.json hardcodes "drupal/core: dev-main" which conflicts with
           # non-main issue branches in the canonical path repos.
+          if [ "$SETUP_FAILED" = "true" ]; then
+            log_setup "✗ Skipping composer.json fixes due to branch checkout failure"
+          else
           log_setup "Applying composer.json fixes for Drupal $DRUPAL_VERSION issue branch..."
-          # Fix 1 (ALL versions): relax drupal/core constraint so path repo version is accepted.
-          jq '.require["drupal/core"] = "*"' composer.json > composer.json.tmp && mv composer.json.tmp composer.json
+          # Detect actual Drupal major version from CoreRecommended's constraint on disk
+          # (e.g. "10.5.x-dev" → "10", "11.x-dev" → "11") rather than trusting the
+          # user-selected DRUPAL_VERSION — users sometimes select the wrong version.
+          CHECKED_OUT_BRANCH=$(git -C "$REPOS_DIR" branch --show-current 2>/dev/null || echo "")
+          TARGET_ALIAS=$(jq -r '.require["drupal/core"]' \
+            "$REPOS_DIR/composer/Metapackage/CoreRecommended/composer.json" 2>/dev/null || echo "")
+          ACTUAL_DRUPAL_MAJOR=$(echo "$TARGET_ALIAS" | grep -oE '^[0-9]+' || echo "$DRUPAL_VERSION")
+          if [ -n "$TARGET_ALIAS" ] && [ -n "$CHECKED_OUT_BRANCH" ]; then
+            log_setup "  Detected Drupal $ACTUAL_DRUPAL_MAJOR.x (CoreRecommended requires $TARGET_ALIAS)"
+            if [ "$ACTUAL_DRUPAL_MAJOR" != "$DRUPAL_VERSION" ]; then
+              log_setup "  ⚠ Drupal version mismatch: user selected $DRUPAL_VERSION but branch is actually $ACTUAL_DRUPAL_MAJOR.x"
+            fi
+          else
+            log_setup "  ⚠ Could not detect Drupal version (CHECKED_OUT_BRANCH='$CHECKED_OUT_BRANCH' TARGET_ALIAS='$TARGET_ALIAS')"
+            ACTUAL_DRUPAL_MAJOR="$DRUPAL_VERSION"
+          fi
 
-          if [ "$DRUPAL_VERSION" = "10" ]; then
-            # Fix 2 (drupal 10): drupal/core-dev 10.x requires composer/composer ^2.8.1 AND
-            # justinrainbow/json-schema ^5.2, but 2.9.x requires ^6.5.1 — conflict.
-            # Pin to 2.8.x and disable the security advisory block (it's a dev tool, not a
-            # web vulnerability — see https://www.drupal.org/project/drupal/issues/3557585).
+          # Fix 1 (ALL versions): set drupal/core inline alias in root composer.json so the
+          # path repo branch (dev-<branch>) satisfies CoreRecommended's version constraint.
+          # Inline aliases are declared in the *requiring* package — no files in repos/drupal touched.
+          jq --arg val "dev-$CHECKED_OUT_BRANCH as $TARGET_ALIAS" \
+            '.require["drupal/core"] = $val' \
+            composer.json > composer.json.tmp && mv composer.json.tmp composer.json
+          log_setup "  Set drupal/core inline alias: dev-$CHECKED_OUT_BRANCH as $TARGET_ALIAS"
+
+          # Fix 2 (ALL versions): pin drupal/drupal to the path repo version so Composer
+          # cannot fall back to Packagist's drupal/drupal (whose self.version requirements
+          # would pull in remote packages instead of path repos).
+          jq --arg branch "dev-$CHECKED_OUT_BRANCH" \
+            '.require["drupal/drupal"] = $branch' \
+            composer.json > composer.json.tmp && mv composer.json.tmp composer.json
+          log_setup "  Pinned drupal/drupal to path repo: dev-$CHECKED_OUT_BRANCH"
+
+          # Fix 3 (actual drupal 10 only): drupal/core-dev 10.x requires composer/composer ^2.8.1
+          # AND justinrainbow/json-schema ^5.2, but composer 2.9.x requires ^6.5.1 — conflict.
+          # Pin to 2.8.x and disable the security advisory block.
+          # We use ACTUAL_DRUPAL_MAJOR (not DRUPAL_VERSION) so a mis-selected version doesn't
+          # apply the pin to a 11/12 branch where it adds an unnecessary constraint.
+          # See https://www.drupal.org/project/drupal/issues/3557585
+          if [ "$ACTUAL_DRUPAL_MAJOR" = "10" ]; then
             jq '.require["composer/composer"] = "~2.8.1" | .config.audit["block-insecure"] = false' \
               composer.json > composer.json.tmp && mv composer.json.tmp composer.json
             log_setup "  Applied drupal10 fix: pinned composer/composer to ~2.8.1"
-          else
-            # Fix 3 (drupal 11/12): drupal/core-recommended requires a specific drupal/core
-            # version (e.g. 11.x-dev) but the path repo offers dev-<issue> without that alias.
-            # Read the required version from core-recommended and add it as a branch-alias.
-            CHECKED_OUT_BRANCH=$(git -C "$REPOS_DIR" branch --show-current 2>/dev/null || echo "")
-            TARGET_ALIAS=$(jq -r '.require["drupal/core"]' \
-              "$REPOS_DIR/composer/Metapackage/CoreRecommended/composer.json" 2>/dev/null || echo "")
-            if [ -n "$TARGET_ALIAS" ] && [ -n "$CHECKED_OUT_BRANCH" ]; then
-              jq --arg branch "dev-$CHECKED_OUT_BRANCH" --arg alias "$TARGET_ALIAS" \
-                '.extra["branch-alias"] = {($branch): $alias}' \
-                "$REPOS_DIR/core/composer.json" > /tmp/core-composer.tmp \
-                && mv /tmp/core-composer.tmp "$REPOS_DIR/core/composer.json"
-              log_setup "  Added branch-alias: dev-$CHECKED_OUT_BRANCH → $TARGET_ALIAS"
-            fi
-            # drupal/drupal on 11.x+ requires drupal/core-recipe-unpack self.version but
-            # it is not in the joachim-n path repos list. Add it if the directory exists.
-            if [ -d "$REPOS_DIR/composer/Plugin/RecipeUnpack" ]; then
-              jq '.repositories += [{"type":"path","url":"repos/drupal/composer/Plugin/RecipeUnpack"}]' \
-                composer.json > composer.json.tmp && mv composer.json.tmp composer.json
-              log_setup "  Added RecipeUnpack path repo"
-            fi
           fi
 
-          # Now install dependencies for the checked-out issue branch.
-          log_setup "Running composer install for issue branch..."
-          update_status "⏳ Composer install for issue branch: In progress..."
+          # Fix 4 (ALL versions if directory exists): drupal/drupal on 11.x+ requires
+          # drupal/core-recipe-unpack at self.version. It is not in the joachim-n path repos
+          # list, so we add it. Gated on directory existence so it is safe on 10.x branches
+          # that don't have it. MUST be universal — not gated on DRUPAL_VERSION — because a
+          # user may select "10" while the actual issue branch is 11.x code.
+          if [ -d "$REPOS_DIR/composer/Plugin/RecipeUnpack" ]; then
+            jq '.repositories += [{"type":"path","url":"repos/drupal/composer/Plugin/RecipeUnpack"}]' \
+              composer.json > composer.json.tmp && mv composer.json.tmp composer.json
+            log_setup "  Added RecipeUnpack path repo"
+          fi
+
+          # Now resolve dependencies for the checked-out issue branch.
+          # Use 'update -W' (not 'install') so composer re-solves the full dependency graph
+          # with the new composer.json constraints rather than trying to honour a stale lock file.
+          log_setup "Running composer update -W for issue branch..."
+          update_status "⏳ Composer update for issue branch: In progress..."
           _t=$SECONDS
-          if ddev composer install 2>&1 | tee -a "$SETUP_LOG"; then
-            log_setup "✓ Composer install complete ($((SECONDS - _t))s)"
-            update_status "✓ Composer install for issue branch: Success"
+          ddev composer update -W 2>&1 | tee -a "$SETUP_LOG"
+          _composer_exit=$${PIPESTATUS[0]}
+          if [ "$_composer_exit" = "0" ]; then
+            log_setup "✓ Composer update complete ($((SECONDS - _t))s)"
+            update_status "✓ Composer update for issue branch: Success"
           else
-            log_setup "✗ Composer install failed ($((SECONDS - _t))s)"
-            update_status "✗ Composer install for issue branch: Failed"
+            log_setup "✗ Composer update failed (exit $_composer_exit, $((SECONDS - _t))s) — skipping remaining setup"
+            update_status "✗ Composer update for issue branch: Failed"
             update_status ""
             update_status "Manual recovery:"
-            update_status "  cd $DRUPAL_DIR && ddev composer install"
+            update_status "  cd $DRUPAL_DIR && ddev composer update -W"
+            SETUP_FAILED=true
           fi
+          fi # end SETUP_FAILED (branch checkout) guard
         fi
       fi
 
@@ -743,6 +784,12 @@ STATUS_HEADER
         ln -s ../../vendor repos/drupal/vendor && log_setup "  symlink restored" || log_setup "  symlink restore failed (non-critical)"
       fi
 
+      # Steps 5 and 6 are skipped if an earlier step (e.g. composer update) failed.
+      if [ "$SETUP_FAILED" = "true" ]; then
+        log_setup "⚠ Skipping Drush and Drupal install due to earlier failure"
+        update_status "⚠ Setup incomplete — see drupal-setup.log for details"
+      else
+
       # Step 5: Ensure Drush is available (skip if already present from cache or pre-checkout install)
       if [ -f "vendor/bin/drush" ]; then
         log_setup "✓ Drush already present"
@@ -752,7 +799,7 @@ STATUS_HEADER
         log_setup "Adding Drush..."
         update_status "⏳ Drush install: In progress..."
 
-        if ddev composer require drush/drush >> "$SETUP_LOG" 2>&1; then
+        if ddev composer require drush/drush -W >> "$SETUP_LOG" 2>&1; then
           log_setup "✓ Drush configured ($((SECONDS - _t))s)"
           update_status "✓ Drush install: Success"
         else
@@ -821,6 +868,7 @@ STATUS_HEADER
           update_status "  ddev drush si -y $INSTALL_PROFILE --account-pass=admin"
         fi
       fi
+      fi # end SETUP_FAILED guard
 
       # Step 6.5: Cache rebuild — ensures a clean state after any setup path
       log_setup "Running cache rebuild..."
