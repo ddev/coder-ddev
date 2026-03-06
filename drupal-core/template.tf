@@ -597,7 +597,7 @@ STATUS_HEADER
         log_setup "  git fetch complete ($((SECONDS - _t))s)"
         # Sync vendor with the (unchanged main-branch) lock file
         _t=$SECONDS
-        ddev composer install >> "$SETUP_LOG" 2>&1 || true
+        ddev composer install >> "$SETUP_LOG" 2>&1
         log_setup "  composer install complete ($((SECONDS - _t))s)"
         log_setup "✓ Cache seed complete ($((SECONDS - SETUP_START))s total so far)"
         update_status "✓ DDEV composer create: Seeded from cache"
@@ -605,7 +605,7 @@ STATUS_HEADER
       else
         log_setup "✗ Failed to seed from cache ($((SECONDS - _t))s), falling back to full setup..."
         update_status "⚠ Cache seed failed, running full setup..."
-        ddev composer create joachim-n/drupal-core-development-project --no-interaction >> "$SETUP_LOG" 2>&1 || true
+        ddev composer create joachim-n/drupal-core-development-project --no-interaction >> "$SETUP_LOG" 2>&1
         DRUPAL_SETUP_NEEDED=true
       fi
     else
@@ -639,12 +639,11 @@ STATUS_HEADER
 
     # Steps 5-7: run whenever project files are present — inner checks handle idempotency
     if [ -f "composer.json" ] && [ -d "repos/drupal" ]; then
-      # Step 4.5: Issue fork checkout + composer reinstall
+      # Step 4.5: Issue fork branch checkout + autoload regeneration
       # Runs after fresh composer create (ISSUE_FORK_CHECKOUT_DONE=false).
-      # The seed cache is skipped for issue forks, so we start from a freshly-created
-      # drupal12/main project. After checking out the issue branch we must regenerate
-      # vendor: the project composer.json hardcodes "drupal/core: dev-main" and vendor
-      # is resolved for drupal12/PHP8.5 — both wrong for a non-main issue branch.
+      # Drush was already added above (before this step, while on main branch).
+      # After checkout, vendor/drupal/core path-repo symlink auto-reflects the new branch.
+      # We disable platform-check and regenerate the autoload classmap — no vendor rebuild.
       if [ "$USING_ISSUE_FORK" = "true" ] && [ "$ISSUE_FORK_CHECKOUT_DONE" = "false" ]; then
         REPOS_DIR="$DRUPAL_DIR/repos/drupal"
         if [ -d "$REPOS_DIR/.git" ]; then
@@ -665,29 +664,35 @@ STATUS_HEADER
               log_setup "✗ Failed to check out branch $ISSUE_BRANCH (continuing anyway)"
             fi
           fi
-          # Update composer.json for issue branch compatibility:
-          #   - Loosen "drupal/core: dev-main" to "*" — accepts any path-repo branch version
-          #   - Add drush/drush upfront so it resolves in the same composer install pass
-          #     (a separate "composer require drush/drush" triggers a new resolution that
-          #      conflicts with the issue-branch version reported by the path repos)
-          log_setup "Updating composer.json and regenerating vendor for issue branch..."
-          python3 -c "import json; d=json.load(open('composer.json')); d['require'].update({'drupal/core':'*','drush/drush':'*'}); json.dump(d,open('composer.json','w'),indent=4)" 2>/dev/null || \
-            sed -i 's|"drupal/core": "dev-main"|"drupal/core": "*"|' composer.json
-          rm -f composer.lock
-          rm -rf vendor/
+          # After branch checkout, vendor/drupal/core is a path-repo symlink pointing to
+          # repos/drupal/core — it already reflects the checked-out branch automatically.
+          # No vendor rebuild is needed. We just:
+          #   1. Disable platform-check (lock was resolved for a different PHP/Drupal version)
+          #   2. Regenerate the autoload classmap so new branch classes are found
+          log_setup "Regenerating autoload for issue branch (path-repo symlinks already reflect branch)..."
+          jq '.config["platform-check"] = false' composer.json > composer.json.tmp && mv composer.json.tmp composer.json
           _t=$SECONDS
-          ddev composer install 2>&1 | tee -a "$SETUP_LOG" || true
-          log_setup "  composer install complete ($((SECONDS - _t))s)"
+          ddev composer dump-autoload --no-scripts 2>&1 | tee -a "$SETUP_LOG"
+          log_setup "  autoload regenerated ($((SECONDS - _t))s)"
         fi
       fi
 
-      # Step 5: Ensure Drush is available (skip if already present from cache)
+      # Step 4.9: Restore repos/drupal/vendor symlink if missing.
+      # This symlink (repos/drupal/vendor -> ../../vendor) is created by joachim-n's
+      # post-install scripts. It can be absent when a previous workspace attempt failed
+      # before composer install completed.
+      if [ -d "repos/drupal/.git" ] && [ ! -e "repos/drupal/vendor" ]; then
+        log_setup "Restoring missing repos/drupal/vendor symlink..."
+        ln -s ../../vendor repos/drupal/vendor && log_setup "  symlink restored" || log_setup "  symlink restore failed (non-critical)"
+      fi
+
+      # Step 5: Ensure Drush is available (skip if already present from cache or pre-checkout install)
       if [ -f "vendor/bin/drush" ]; then
         log_setup "✓ Drush already present"
         update_status "✓ Drush install: Already present"
       else
         _t=$SECONDS
-        log_setup "Adding Drush to composer require..."
+        log_setup "Adding Drush..."
         update_status "⏳ Drush install: In progress..."
 
         if ddev composer require drush/drush >> "$SETUP_LOG" 2>&1; then
@@ -763,6 +768,18 @@ STATUS_HEADER
       # Step 6.5: Cache rebuild — ensures a clean state after any setup path
       log_setup "Running cache rebuild..."
       ddev drush cr >> "$SETUP_LOG" 2>&1 || true
+
+      # Step 6.6: Set up phpunit.xml for running core tests
+      if [ ! -f "phpunit.xml" ] && [ -f "phpunit-ddev.xml" ]; then
+        cp phpunit-ddev.xml phpunit.xml
+        # Replace PROJECT_NAME.ddev.site placeholder with actual workspace URL
+        if [ -n "$VSCODE_PROXY_URI" ] && [ -n "$CODER_WORKSPACE_OWNER_NAME" ]; then
+          CODER_DOMAIN=$(echo "$VSCODE_PROXY_URI" | sed -E 's|https?://[^.]+\.(.+?)(/.*)?$|\1|')
+          SITE_URL="https://80--$${CODER_WORKSPACE_NAME}--$${CODER_WORKSPACE_OWNER_NAME}.$${CODER_DOMAIN}"
+          sed -i "s|PROJECT_NAME\.ddev\.site|$${SITE_URL#https://}|" phpunit.xml
+        fi
+        log_setup "✓ phpunit.xml configured (run tests with: ddev exec vendor/bin/phpunit web/core/tests/...)"
+      fi
 
       # Step 7: Install custom DDEV launch command
       mkdir -p ~/.ddev/commands/host
