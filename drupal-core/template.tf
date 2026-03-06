@@ -110,21 +110,21 @@ data "coder_parameter" "drupal_version" {
 data "coder_parameter" "install_profile" {
   name         = "install_profile"
   display_name = "Install Profile"
-  description  = "demo_umami uses the seed cache for fast startup (~30s). Other profiles require a full site install (~3-5 min)."
+  description  = "Drupal install profile. demo_umami uses a pre-built database snapshot; other profiles run a full site install. Issue fork workspaces always run a full install."
   type         = "string"
   default      = "demo_umami"
   mutable      = true
   order        = 3
   option {
-    name  = "demo_umami (fast, ~30s — recommended)"
+    name  = "demo_umami"
     value = "demo_umami"
   }
   option {
-    name  = "minimal (~3-5 min, full install)"
+    name  = "minimal"
     value = "minimal"
   }
   option {
-    name  = "standard (~3-5 min, full install)"
+    name  = "standard"
     value = "standard"
   }
 }
