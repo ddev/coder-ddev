@@ -665,14 +665,18 @@ STATUS_HEADER
               log_setup "✗ Failed to check out branch $ISSUE_BRANCH (continuing anyway)"
             fi
           fi
-          # Update drupal/core constraint from "dev-main" to "*" so Composer accepts
-          # any branch version from the path repository, then do a clean vendor install.
-          log_setup "Updating drupal/core constraint and regenerating vendor for issue branch..."
-          sed -i 's|"drupal/core": "dev-main"|"drupal/core": "*"|' composer.json 2>/dev/null || true
+          # Update composer.json for issue branch compatibility:
+          #   - Loosen "drupal/core: dev-main" to "*" — accepts any path-repo branch version
+          #   - Add drush/drush upfront so it resolves in the same composer install pass
+          #     (a separate "composer require drush/drush" triggers a new resolution that
+          #      conflicts with the issue-branch version reported by the path repos)
+          log_setup "Updating composer.json and regenerating vendor for issue branch..."
+          python3 -c "import json; d=json.load(open('composer.json')); d['require'].update({'drupal/core':'*','drush/drush':'*'}); json.dump(d,open('composer.json','w'),indent=4)" 2>/dev/null || \
+            sed -i 's|"drupal/core": "dev-main"|"drupal/core": "*"|' composer.json
           rm -f composer.lock
           rm -rf vendor/
           _t=$SECONDS
-          ddev composer install >> "$SETUP_LOG" 2>&1 || true
+          ddev composer install 2>&1 | tee -a "$SETUP_LOG" || true
           log_setup "  composer install complete ($((SECONDS - _t))s)"
         fi
       fi
