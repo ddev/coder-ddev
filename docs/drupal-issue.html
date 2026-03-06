@@ -425,7 +425,7 @@
         // Step 1: verify fork exists and fetch branches from git.drupalcode.org
         setStatus('Loading issue fork ' + issueFork + '...', 'loading');
         const branchResp = await fetch(
-          'https://git.drupalcode.org/api/v4/projects/' + encodedProject + '/repository/branches?per_page=100&order_by=updated_at&sort=desc'
+          'https://git.drupalcode.org/api/v4/projects/' + encodedProject + '/repository/branches?per_page=100'
         );
         if (branchResp.status === 404) {
           setStatus('Issue #' + nid + ' does not have an issue fork yet. Click "Get push access" on the issue page to create one, then try again.', 'info');
