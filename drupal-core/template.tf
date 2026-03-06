@@ -68,7 +68,7 @@ variable "cache_path" {
 data "coder_parameter" "issue_fork" {
   name         = "issue_fork"
   display_name = "Issue Fork"
-  description  = "Drupal.org issue fork name (e.g., drupal-3568144). Leave empty for standard Drupal core development."
+  description  = "Drupal.org issue number or fork name (e.g., 3568144 or drupal-3568144). Leave empty for standard Drupal core development."
   type         = "string"
   default      = ""
   mutable      = true
@@ -570,6 +570,7 @@ STATUS_HEADER
 
     # Issue fork / install profile parameters (baked in at template evaluation)
     ISSUE_FORK="${data.coder_parameter.issue_fork.value}"
+    ISSUE_FORK="$${ISSUE_FORK#drupal-}"  # strip leading "drupal-" if user provided it
     ISSUE_BRANCH="${data.coder_parameter.issue_branch.value}"
     INSTALL_PROFILE="${data.coder_parameter.install_profile.value}"
     USING_ISSUE_FORK=false
@@ -816,9 +817,12 @@ STATUS_HEADER
       # This symlink (repos/drupal/vendor -> ../../vendor) is created by joachim-n's
       # post-install scripts. It can be absent when a previous workspace attempt failed
       # before composer install completed.
-      if [ -d "repos/drupal/.git" ] && [ ! -e "repos/drupal/vendor" ]; then
+      if [ -d "repos/drupal/.git" ] && [ ! -e "repos/drupal/vendor" ] && [ ! -L "repos/drupal/vendor" ]; then
         log_setup "Restoring missing repos/drupal/vendor symlink..."
         ln -s ../../vendor repos/drupal/vendor && log_setup "  symlink restored" || log_setup "  symlink restore failed (non-critical)"
+      elif [ -d "repos/drupal/.git" ] && [ -L "repos/drupal/vendor" ] && [ ! -e "repos/drupal/vendor" ]; then
+        log_setup "Fixing broken repos/drupal/vendor symlink..."
+        ln -sf ../../vendor repos/drupal/vendor && log_setup "  symlink fixed" || log_setup "  symlink fix failed (non-critical)"
       fi
 
       # Steps 5 and 6 are skipped if an earlier step (e.g. composer update) failed.
