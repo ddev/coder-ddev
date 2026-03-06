@@ -621,6 +621,12 @@ STATUS_HEADER
         log_setup "✓ Drupal core development project created ($((SECONDS - _t))s)"
         update_status "✓ DDEV composer create: Success"
         DRUPAL_SETUP_NEEDED=true
+        # Supplement git objects from seed cache so issue-branch fetch only downloads the delta
+        if [ -d "$CACHE_SEED/repos/drupal/.git/objects" ]; then
+          log_setup "Supplementing git objects from seed cache..."
+          rsync -a "$CACHE_SEED/repos/drupal/.git/objects/" "$DRUPAL_DIR/repos/drupal/.git/objects/" >> "$SETUP_LOG" 2>&1 || true
+          log_setup "  git objects supplement complete"
+        fi
       else
         log_setup "✗ Failed to create Drupal core development project ($((SECONDS - _t))s)"
         log_setup "Check $SETUP_LOG for details"
