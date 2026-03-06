@@ -64,25 +64,46 @@ variable "cache_path" {
   default     = "/home/rfay/cache/drupal-core-seed"
 }
 
-variable "issue_fork" {
-  description = "Drupal.org issue fork name (e.g., drupal-3568144). Leave empty for standard Drupal core development."
-  type        = string
-  default     = ""
+# Per-workspace user parameters (shown in workspace creation UI, pre-fillable via ?param.name=value URL)
+data "coder_parameter" "issue_fork" {
+  name         = "issue_fork"
+  display_name = "Issue Fork"
+  description  = "Drupal.org issue fork name (e.g., drupal-3568144). Leave empty for standard Drupal core development."
+  type         = "string"
+  default      = ""
+  mutable      = true
+  order        = 1
 }
 
-variable "issue_branch" {
-  description = "Issue branch to check out in the drupal core git repo (e.g., 3568144-editorfilterxss-11.x). Leave empty for HEAD."
-  type        = string
-  default     = ""
+data "coder_parameter" "issue_branch" {
+  name         = "issue_branch"
+  display_name = "Issue Branch"
+  description  = "Issue branch to check out (e.g., 3568144-editorfilterxss-11.x). Leave empty for HEAD."
+  type         = "string"
+  default      = ""
+  mutable      = true
+  order        = 2
 }
 
-variable "install_profile" {
-  description = "Drupal install profile. demo_umami uses the seed cache for fast startup (~30s). Other profiles require a full site install (~3-5 min)."
-  type        = string
-  default     = "demo_umami"
-  validation {
-    condition     = contains(["demo_umami", "minimal", "standard"], var.install_profile)
-    error_message = "install_profile must be one of: demo_umami, minimal, standard"
+data "coder_parameter" "install_profile" {
+  name         = "install_profile"
+  display_name = "Install Profile"
+  description  = "demo_umami uses the seed cache for fast startup (~30s). Other profiles require a full site install (~3-5 min)."
+  type         = "string"
+  default      = "demo_umami"
+  mutable      = true
+  order        = 3
+  option {
+    name  = "demo_umami (fast, ~30s — recommended)"
+    value = "demo_umami"
+  }
+  option {
+    name  = "minimal (~3-5 min, full install)"
+    value = "minimal"
+  }
+  option {
+    name  = "standard (~3-5 min, full install)"
+    value = "standard"
   }
 }
 
@@ -519,9 +540,9 @@ STATUS_HEADER
     fi
 
     # Issue fork / install profile parameters (baked in at template evaluation)
-    ISSUE_FORK="${var.issue_fork}"
-    ISSUE_BRANCH="${var.issue_branch}"
-    INSTALL_PROFILE="${var.install_profile}"
+    ISSUE_FORK="${data.coder_parameter.issue_fork.value}"
+    ISSUE_BRANCH="${data.coder_parameter.issue_branch.value}"
+    INSTALL_PROFILE="${data.coder_parameter.install_profile.value}"
     USING_ISSUE_FORK=false
     if [ -n "$ISSUE_FORK" ] || [ -n "$ISSUE_BRANCH" ]; then
       USING_ISSUE_FORK=true
