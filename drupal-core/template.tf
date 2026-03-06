@@ -610,40 +610,54 @@ STATUS_HEADER
       fi
     else
       _t=$SECONDS
-      log_setup "No cache available, running full composer create (this takes 5-10 minutes)..."
-      log_setup "This creates a proper dev environment with:"
-      log_setup "  - Drupal core git clone at repos/drupal/"
-      log_setup "  - Web root at web/"
-      log_setup "  - Composer dependency management"
-      update_status "⏳ DDEV composer create: In progress (this takes 5-10 minutes)..."
-
-      if ddev composer create joachim-n/drupal-core-development-project --no-interaction >> "$SETUP_LOG" 2>&1; then
-        log_setup "✓ Drupal core development project created ($((SECONDS - _t))s)"
-        update_status "✓ DDEV composer create: Success"
-        DRUPAL_SETUP_NEEDED=true
-        # Supplement git objects from seed cache so issue-branch fetch only downloads the delta
-        if [ -d "$CACHE_SEED/repos/drupal/.git/objects" ]; then
-          log_setup "Supplementing git objects from seed cache..."
-          rsync -a "$CACHE_SEED/repos/drupal/.git/objects/" "$DRUPAL_DIR/repos/drupal/.git/objects/" >> "$SETUP_LOG" 2>&1 || true
-          log_setup "  git objects supplement complete"
+      if [ "$USING_ISSUE_FORK" = "true" ]; then
+        # Issue fork: create project structure WITHOUT installing dependencies.
+        # We must checkout the issue branch before composer install so that vendor
+        # is resolved for the correct branch, not for main/drupal12.
+        log_setup "Issue fork: creating project structure (dependencies installed after branch checkout)..."
+        update_status "⏳ DDEV composer create-project: In progress..."
+        if ddev composer create-project --no-install --no-interaction joachim-n/drupal-core-development-project . >> "$SETUP_LOG" 2>&1; then
+          log_setup "✓ Project structure created ($((SECONDS - _t))s)"
+          update_status "✓ DDEV composer create-project: Success"
+          DRUPAL_SETUP_NEEDED=true
+          # Supplement git objects from seed cache so issue-branch fetch only downloads the delta
+          if [ -d "$CACHE_SEED/repos/drupal/.git/objects" ]; then
+            log_setup "Supplementing git objects from seed cache..."
+            rsync -a "$CACHE_SEED/repos/drupal/.git/objects/" "$DRUPAL_DIR/repos/drupal/.git/objects/" >> "$SETUP_LOG" 2>&1 || true
+            log_setup "  git objects supplement complete"
+          fi
+        else
+          log_setup "✗ Failed to create project structure ($((SECONDS - _t))s)"
+          log_setup "Check $SETUP_LOG for details"
+          update_status "✗ DDEV composer create-project: Failed"
+          update_status ""
+          update_status "Manual recovery:"
+          update_status "  cd $DRUPAL_DIR && ddev composer create-project --no-install joachim-n/drupal-core-development-project ."
         fi
       else
-        log_setup "✗ Failed to create Drupal core development project ($((SECONDS - _t))s)"
-        log_setup "Check $SETUP_LOG for details"
-        update_status "✗ DDEV composer create: Failed"
-        update_status ""
-        update_status "Manual recovery:"
-        update_status "  cd $DRUPAL_DIR && ddev composer create joachim-n/drupal-core-development-project"
+        log_setup "No cache available, running full composer create (this takes 5-10 minutes)..."
+        update_status "⏳ DDEV composer create: In progress (this takes 5-10 minutes)..."
+        if ddev composer create joachim-n/drupal-core-development-project --no-interaction >> "$SETUP_LOG" 2>&1; then
+          log_setup "✓ Drupal core development project created ($((SECONDS - _t))s)"
+          update_status "✓ DDEV composer create: Success"
+          DRUPAL_SETUP_NEEDED=true
+        else
+          log_setup "✗ Failed to create Drupal core development project ($((SECONDS - _t))s)"
+          log_setup "Check $SETUP_LOG for details"
+          update_status "✗ DDEV composer create: Failed"
+          update_status ""
+          update_status "Manual recovery:"
+          update_status "  cd $DRUPAL_DIR && ddev composer create joachim-n/drupal-core-development-project"
+        fi
       fi
     fi
 
     # Steps 5-7: run whenever project files are present — inner checks handle idempotency
     if [ -f "composer.json" ] && [ -d "repos/drupal" ]; then
-      # Step 4.5: Issue fork branch checkout + autoload regeneration
-      # Runs after fresh composer create (ISSUE_FORK_CHECKOUT_DONE=false).
-      # Drush was already added above (before this step, while on main branch).
-      # After checkout, vendor/drupal/core path-repo symlink auto-reflects the new branch.
-      # We disable platform-check and regenerate the autoload classmap — no vendor rebuild.
+      # Step 4.5: Issue fork — checkout branch, fix composer.json, run composer install.
+      # For issue forks the project was created with --no-install so no vendor exists yet.
+      # We must checkout the issue branch BEFORE composer install so that vendor is
+      # resolved for the correct Drupal version, not for main/drupal12.
       if [ "$USING_ISSUE_FORK" = "true" ] && [ "$ISSUE_FORK_CHECKOUT_DONE" = "false" ]; then
         REPOS_DIR="$DRUPAL_DIR/repos/drupal"
         if [ -d "$REPOS_DIR/.git" ]; then
@@ -664,16 +678,59 @@ STATUS_HEADER
               log_setup "✗ Failed to check out branch $ISSUE_BRANCH (continuing anyway)"
             fi
           fi
-          # After branch checkout, vendor/drupal/core is a path-repo symlink pointing to
-          # repos/drupal/core — it already reflects the checked-out branch automatically.
-          # No vendor rebuild is needed. We just:
-          #   1. Disable platform-check (lock was resolved for a different PHP/Drupal version)
-          #   2. Regenerate the autoload classmap so new branch classes are found
-          log_setup "Regenerating autoload for issue branch (path-repo symlinks already reflect branch)..."
-          jq '.config["platform-check"] = false' composer.json > composer.json.tmp && mv composer.json.tmp composer.json
+
+          # Apply composer.json fixes so ddev composer install resolves correctly.
+          # Root composer.json hardcodes "drupal/core: dev-main" which conflicts with
+          # non-main issue branches in the canonical path repos.
+          log_setup "Applying composer.json fixes for Drupal $DRUPAL_VERSION issue branch..."
+          # Fix 1 (ALL versions): relax drupal/core constraint so path repo version is accepted.
+          jq '.require["drupal/core"] = "*"' composer.json > composer.json.tmp && mv composer.json.tmp composer.json
+
+          if [ "$DRUPAL_VERSION" = "10" ]; then
+            # Fix 2 (drupal 10): drupal/core-dev 10.x requires composer/composer ^2.8.1 AND
+            # justinrainbow/json-schema ^5.2, but 2.9.x requires ^6.5.1 — conflict.
+            # Pin to 2.8.x and disable the security advisory block (it's a dev tool, not a
+            # web vulnerability — see https://www.drupal.org/project/drupal/issues/3557585).
+            jq '.require["composer/composer"] = "~2.8.1" | .config.audit["block-insecure"] = false' \
+              composer.json > composer.json.tmp && mv composer.json.tmp composer.json
+            log_setup "  Applied drupal10 fix: pinned composer/composer to ~2.8.1"
+          else
+            # Fix 3 (drupal 11/12): drupal/core-recommended requires a specific drupal/core
+            # version (e.g. 11.x-dev) but the path repo offers dev-<issue> without that alias.
+            # Read the required version from core-recommended and add it as a branch-alias.
+            CHECKED_OUT_BRANCH=$(git -C "$REPOS_DIR" branch --show-current 2>/dev/null || echo "")
+            TARGET_ALIAS=$(jq -r '.require["drupal/core"]' \
+              "$REPOS_DIR/composer/Metapackage/CoreRecommended/composer.json" 2>/dev/null || echo "")
+            if [ -n "$TARGET_ALIAS" ] && [ -n "$CHECKED_OUT_BRANCH" ]; then
+              jq --arg branch "dev-$CHECKED_OUT_BRANCH" --arg alias "$TARGET_ALIAS" \
+                '.extra["branch-alias"] = {($branch): $alias}' \
+                "$REPOS_DIR/core/composer.json" > /tmp/core-composer.tmp \
+                && mv /tmp/core-composer.tmp "$REPOS_DIR/core/composer.json"
+              log_setup "  Added branch-alias: dev-$CHECKED_OUT_BRANCH → $TARGET_ALIAS"
+            fi
+            # drupal/drupal on 11.x+ requires drupal/core-recipe-unpack self.version but
+            # it is not in the joachim-n path repos list. Add it if the directory exists.
+            if [ -d "$REPOS_DIR/composer/Plugin/RecipeUnpack" ]; then
+              jq '.repositories += [{"type":"path","url":"repos/drupal/composer/Plugin/RecipeUnpack"}]' \
+                composer.json > composer.json.tmp && mv composer.json.tmp composer.json
+              log_setup "  Added RecipeUnpack path repo"
+            fi
+          fi
+
+          # Now install dependencies for the checked-out issue branch.
+          log_setup "Running composer install for issue branch..."
+          update_status "⏳ Composer install for issue branch: In progress..."
           _t=$SECONDS
-          ddev composer dump-autoload --no-scripts 2>&1 | tee -a "$SETUP_LOG"
-          log_setup "  autoload regenerated ($((SECONDS - _t))s)"
+          if ddev composer install 2>&1 | tee -a "$SETUP_LOG"; then
+            log_setup "✓ Composer install complete ($((SECONDS - _t))s)"
+            update_status "✓ Composer install for issue branch: Success"
+          else
+            log_setup "✗ Composer install failed ($((SECONDS - _t))s)"
+            update_status "✗ Composer install for issue branch: Failed"
+            update_status ""
+            update_status "Manual recovery:"
+            update_status "  cd $DRUPAL_DIR && ddev composer install"
+          fi
         fi
       fi
 
