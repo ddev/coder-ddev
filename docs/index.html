@@ -42,21 +42,32 @@
       font-size: 1.15rem;
       color: #999;
       max-width: 480px;
-      margin-bottom: 2.5rem;
+      margin-bottom: 2rem;
     }
 
-    .auth-note {
-      font-size: 0.95rem;
-      color: #666;
-      margin-bottom: 1.25rem;
+    .auth-callout {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      background: #161619;
+      border: 1px solid #30303a;
+      border-radius: 10px;
+      padding: 0.85rem 1.25rem;
+      margin-bottom: 1.75rem;
+      font-size: 1rem;
+      color: #bbb;
+      max-width: 420px;
     }
 
-    .auth-note a {
-      color: #a78bfa;
+    .auth-callout svg { flex-shrink: 0; }
+
+    .auth-callout a {
+      color: #c4b5fd;
+      font-weight: 600;
       text-decoration: none;
     }
 
-    .auth-note a:hover { text-decoration: underline; }
+    .auth-callout a:hover { text-decoration: underline; }
 
     .open-btn img {
       height: 52px;
@@ -79,10 +90,7 @@
       animation: bob 2s ease-in-out infinite;
     }
 
-    .scroll-hint::after {
-      content: '↓';
-      font-size: 1.1rem;
-    }
+    .scroll-hint::after { content: '↓'; font-size: 1.1rem; }
 
     @keyframes bob {
       0%, 100% { transform: translateX(-50%) translateY(0); }
@@ -148,6 +156,43 @@
       color: #c4b5fd;
     }
 
+    /* ── Template cards ─────────────────────────────── */
+    .template-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .template-card {
+      background: #161619;
+      border: 1px solid #2a2a32;
+      border-radius: 10px;
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.5rem;
+    }
+
+    .template-card .info h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #e8e8e8;
+      margin-bottom: 0.25rem;
+    }
+
+    .template-card .info p {
+      font-size: 0.9rem;
+      color: #777;
+    }
+
+    .template-card .btn img {
+      height: 40px;
+      display: block;
+      flex-shrink: 0;
+    }
+
+    /* ── Resources ──────────────────────────────────── */
     .links {
       display: flex;
       flex-direction: column;
@@ -174,8 +219,16 @@
   <section class="hero">
     <img class="logo" src="https://raw.githubusercontent.com/ddev/ddev/main/docs/content/developers/logos/SVG/Logo_w_text_dark.svg" alt="DDEV">
     <h1>Coder Workspaces</h1>
-    <p class="tagline">Cloud-hosted Drupal core development environments. Full DDEV stack, ready in ~30 seconds — no local setup required.</p>
-    <p class="auth-note">Sign in with your GitHub account at <a href="https://coder.ddev.com">coder.ddev.com</a>, then click:</p>
+    <p class="tagline">Cloud-hosted development environments powered by DDEV. Full stack, ready in ~30 seconds — no local setup required.</p>
+
+    <div class="auth-callout">
+      <!-- GitHub mark -->
+      <svg width="22" height="22" viewBox="0 0 98 96" fill="#ccc" xmlns="http://www.w3.org/2000/svg">
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M48.854 0C21.839 0 0 22 0 49.217c0 21.756 13.993 40.172 33.405 46.69 2.427.49 3.316-1.059 3.316-2.362 0-1.141-.08-5.052-.08-9.127-13.59 2.934-16.42-5.867-16.42-5.867-2.184-5.704-5.42-7.17-5.42-7.17-4.448-3.015.324-3.015.324-3.015 4.934.326 7.523 5.052 7.523 5.052 4.367 7.496 11.404 5.378 14.235 4.074.404-3.178 1.699-5.378 3.074-6.6-10.839-1.141-22.243-5.378-22.243-24.283 0-5.378 1.94-9.778 5.014-13.2-.485-1.222-2.184-6.275.486-13.038 0 0 4.125-1.304 13.426 5.052a46.97 46.97 0 0 1 12.214-1.63c4.125 0 8.33.571 12.213 1.63 9.302-6.356 13.427-5.052 13.427-5.052 2.67 6.763.97 11.816.485 13.038 3.155 3.422 5.015 7.822 5.015 13.2 0 18.905-11.404 23.06-22.324 24.283 1.78 1.548 3.316 4.481 3.316 9.126 0 6.6-.08 11.897-.08 13.526 0 1.304.89 2.853 3.316 2.364 19.412-6.52 33.405-24.935 33.405-46.691C97.707 22 75.788 0 48.854 0z"/>
+      </svg>
+      <span>Requires a <strong>GitHub account</strong> — <a href="https://coder.ddev.com/login">sign in at coder.ddev.com</a> first</span>
+    </div>
+
     <a class="open-btn" href="https://coder.ddev.com/templates/coder/drupal-core/workspace?mode=manual">
       <img src="https://coder.ddev.com/open-in-coder.svg" alt="Open in Coder">
     </a>
@@ -189,8 +242,8 @@
     <section>
       <h2>How it works</h2>
       <ol class="steps">
-        <li>Sign in with GitHub at <a href="https://coder.ddev.com" style="color:#a78bfa">coder.ddev.com</a></li>
-        <li>Click <strong>Create Workspace</strong> — Drupal core sets up automatically</li>
+        <li>Sign in with GitHub at <a href="https://coder.ddev.com/login" style="color:#a78bfa">coder.ddev.com</a></li>
+        <li>Click <strong>Create Workspace</strong> — your environment sets up automatically</li>
         <li>Click <strong>DDEV Web</strong> to open the running site, or <strong>VS Code</strong> to edit code</li>
       </ol>
     </section>
@@ -202,6 +255,30 @@
         <li>Running Drupal site with Umami demo profile — login <code>admin</code> / <code>admin</code>, or <code>ddev drush uli</code></li>
         <li>PHP 8.5, DDEV, Composer, drush, VS Code for Web — all pre-installed</li>
       </ol>
+    </section>
+
+    <section>
+      <h2>Other templates</h2>
+      <div class="template-cards">
+        <div class="template-card">
+          <div class="info">
+            <h3>DDEV Web Workspace</h3>
+            <p>Bring your own project — any PHP, Node, or Python project with DDEV</p>
+          </div>
+          <a class="btn" href="https://coder.ddev.com/templates/coder/user-defined-web/workspace?mode=manual">
+            <img src="https://coder.ddev.com/open-in-coder.svg" alt="Open in Coder">
+          </a>
+        </div>
+        <div class="template-card">
+          <div class="info">
+            <h3>DDEV Freeform</h3>
+            <p>Single DDEV project with Traefik routing for stable public subdomains</p>
+          </div>
+          <a class="btn" href="https://coder.ddev.com/templates/coder/freeform/workspace?mode=manual">
+            <img src="https://coder.ddev.com/open-in-coder.svg" alt="Open in Coder">
+          </a>
+        </div>
+      </div>
     </section>
 
     <section>
