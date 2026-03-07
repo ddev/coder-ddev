@@ -6,3 +6,6 @@
 # Python
 __pycache__/
 *.pyc
+
+# Temp files
+composer.json.tmp

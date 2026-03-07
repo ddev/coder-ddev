@@ -2,23 +2,29 @@
 # create-test-workspaces.sh — Create Coder workspaces for issue-branch testing.
 #
 # Usage:
-#   bash drupal-core/scripts/create-test-workspaces.sh              # create all 5 default workspaces
-#   bash drupal-core/scripts/create-test-workspaces.sh ISSUE:BRANCH:DRUPAL_MAJOR  # create one
+#   bash drupal-core/scripts/create-test-workspaces.sh              # create all default workspaces
+#   bash drupal-core/scripts/create-test-workspaces.sh ISSUE:BRANCH:DRUPAL_MAJOR  # create one issue-fork workspace
+#   bash drupal-core/scripts/create-test-workspaces.sh ::DRUPAL_MAJOR             # create one plain-version workspace
 #   bash drupal-core/scripts/create-test-workspaces.sh --check      # check logs of existing test workspaces
 #   bash drupal-core/scripts/create-test-workspaces.sh --delete     # delete all test workspaces
 #
 # Triples format: ISSUE:BRANCH:DRUPAL_MAJOR
+#   Leave ISSUE and BRANCH empty (::DRUPAL_MAJOR) for plain-version tests without an issue fork.
 #   DRUPAL_MAJOR is 10, 11, or 12 (used for --parameter drupal_version=N)
 #
 # Requirements: coder CLI authenticated against your Coder deployment
-# Workspaces are named t-<issue> and created with the drupal-core template.
+# Workspaces are named t-<issue> (issue forks) or t-v<major> (plain versions).
 
 TEMPLATE="drupal-core"
 WORKSPACE_PREFIX="t-"
 INSTALL_PROFILE="demo_umami"
 
-# Default test matrix (issue:branch:drupal-major triples)
+# Default test matrix
 DEFAULT_TESTS=(
+  # Plain version tests (no issue fork) — exercises the non-main branch path
+  "::10"
+  "::11"
+  # Issue-fork tests
   "3380334:3380334-user-update-10000:10"
   "3515218:3515218-deprecate-nodeispage-and:11"
   "3562560:3562560-show-both-minor:11"
@@ -46,14 +52,25 @@ else
   TESTS=("${DEFAULT_TESTS[@]}")
 fi
 
+# Derive workspace name from a test triple (ISSUE:BRANCH:DRUPAL_MAJOR)
+ws_name() {
+  local issue="${1%%:*}"
+  local rest="${1#*:}"
+  local major="${rest##*:}"
+  if [ -n "$issue" ]; then
+    echo "${WORKSPACE_PREFIX}${issue}"
+  else
+    echo "${WORKSPACE_PREFIX}v${major}"
+  fi
+}
+
 # ---------------------------------------------------------------------------
 # Delete mode
 # ---------------------------------------------------------------------------
 if [ "$MODE" = "delete" ]; then
   log "Deleting test workspaces..."
   for PAIR in "${TESTS[@]}"; do
-    ISSUE="${PAIR%%:*}"
-    WS="${WORKSPACE_PREFIX}${ISSUE}"
+    WS=$(ws_name "$PAIR")
     log "  Deleting $WS..."
     coder delete "$WS" --yes 2>&1 || log "  (not found or already deleted)"
   done
@@ -67,10 +84,17 @@ fi
 if [ "$MODE" = "check" ]; then
   for PAIR in "${TESTS[@]}"; do
     ISSUE="${PAIR%%:*}"
-    REST="${PAIR#*:}"
-    BRANCH="${REST%%:*}"
-    WS="${WORKSPACE_PREFIX}${ISSUE}"
-    echo "=== $WS ($BRANCH) ==="
+    if [ -z "$ISSUE" ]; then
+      BRANCH=""
+      DRUPAL_VERSION="${PAIR##*:}"
+    else
+      REST="${PAIR#*:}"
+      BRANCH="${REST%%:*}"
+      DRUPAL_VERSION="${REST##*:}"
+    fi
+    WS=$(ws_name "$PAIR")
+    LABEL="${ISSUE:-v${DRUPAL_VERSION}}${BRANCH:+ ($BRANCH)}"
+    echo "=== $WS [$LABEL] ==="
     coder logs "$WS" 2>&1 | grep -E "(✓|✗|⚠|Setup Complete|setup complete|composer update|Composer update|Detected Drupal|inline alias|Temp branch|Pinned composer|RecipeUnpack|drush si|Drupal install)" | tail -15
     echo ""
   done
@@ -80,7 +104,6 @@ fi
 # ---------------------------------------------------------------------------
 # Create mode
 # ---------------------------------------------------------------------------
-declare -A WORKSPACE_NAMES
 CREATED=()
 FAILED=()
 
@@ -88,10 +111,16 @@ TIMESTAMP=$(date '+%m%d-%H%M')
 
 for PAIR in "${TESTS[@]}"; do
   ISSUE="${PAIR%%:*}"
-  REST="${PAIR#*:}"
-  BRANCH="${REST%%:*}"
-  DRUPAL_VERSION="${REST##*:}"
-  BASE_WS="${WORKSPACE_PREFIX}${ISSUE}"
+  if [ -z "$ISSUE" ]; then
+    # "::DRUPAL_MAJOR" format — no issue fork, no branch override, just version
+    BRANCH=""
+    DRUPAL_VERSION="${PAIR##*:}"
+  else
+    REST="${PAIR#*:}"
+    BRANCH="${REST%%:*}"
+    DRUPAL_VERSION="${REST##*:}"
+  fi
+  BASE_WS=$(ws_name "$PAIR")
 
   # If the base name already exists, append a timestamp to avoid collision
   if coder show "$BASE_WS" >/dev/null 2>&1; then
@@ -101,7 +130,11 @@ for PAIR in "${TESTS[@]}"; do
     WS="$BASE_WS"
   fi
 
-  log "Creating workspace $WS (issue #$ISSUE, branch $BRANCH, Drupal $DRUPAL_VERSION)..."
+  if [ -n "$ISSUE" ]; then
+    log "Creating workspace $WS (issue #$ISSUE, branch $BRANCH, Drupal $DRUPAL_VERSION)..."
+  else
+    log "Creating workspace $WS (plain Drupal $DRUPAL_VERSION, no issue fork)..."
+  fi
 
   if coder create --template "$TEMPLATE" "$WS" --yes \
       --parameter issue_fork="$ISSUE" \
@@ -109,7 +142,6 @@ for PAIR in "${TESTS[@]}"; do
       --parameter drupal_version="$DRUPAL_VERSION" \
       --parameter install_profile="$INSTALL_PROFILE" 2>&1 | tail -3; then
     CREATED+=("$WS")
-    WORKSPACE_NAMES["$ISSUE"]="$WS"
     log "  Created: $WS"
   else
     FAILED+=("$WS")

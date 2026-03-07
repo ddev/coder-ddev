@@ -134,9 +134,9 @@ Common issues:
 ### Manual Recovery
 If automatic setup fails, you can complete steps manually:
 ```bash
-cd ~
-mkdir -p drupal-core && cd drupal-core
-ddev config --project-type=drupal12 --docroot=web --php-version=8.5
+cd ~/drupal-core
+# Adjust project-type to match your version: drupal10, drupal11, or drupal12
+ddev config --project-type=drupal12 --docroot=web
 ddev start
 ddev composer create joachim-n/drupal-core-development-project
 ddev composer require drush/drush
@@ -144,6 +144,20 @@ ddev drush si -y demo_umami --account-pass=admin
 ```
 
 ## Customization
+
+### Choose Drupal Version
+Set the `drupal_version` parameter to target a specific major version:
+```bash
+# Default: 12.x (main branch, latest development)
+coder create --template drupal-core my-workspace
+
+# Stable 11.x branch
+coder create --template drupal-core my-11x-workspace --parameter drupal_version=11
+
+# Stable 10.x branch
+coder create --template drupal-core my-10x-workspace --parameter drupal_version=10
+```
+The version controls the DDEV project type (PHP version) and the git branch checked out in `repos/drupal/`. Non-12.x versions always run a full Drupal site install (no cached DB snapshot).
 
 ### Change Drupal Profile
 Set the `install_profile` parameter when creating the workspace:
@@ -165,7 +179,7 @@ Create scripts in `~/.ddev/commands/host/` or `.ddev/commands/web/`
 - **Volumes**:
   - `/home/coder` - Persistent workspace data
   - `/var/lib/docker` - Docker images and containers
-- **Drupal**: Main branch from https://git.drupalcode.org/project/drupal (cloned via template)
+- **Drupal**: Cloned from https://git.drupalcode.org/project/drupal — defaults to `main` (12.x); select 11.x or 10.x via the `drupal_version` parameter for stable branch development
 
 ## Development Workflow
 

@@ -95,7 +95,7 @@ data "coder_parameter" "drupal_version" {
   mutable      = true
   order        = 4
   option {
-    name  = "12.x (HEAD / upcoming)"
+    name  = "12.x (main branch)"
     value = "12"
   }
   option {
@@ -111,7 +111,7 @@ data "coder_parameter" "drupal_version" {
 data "coder_parameter" "install_profile" {
   name         = "install_profile"
   display_name = "Install Profile"
-  description  = "Drupal install profile. demo_umami uses a pre-built database snapshot; other profiles run a full site install. Issue fork workspaces always run a full install."
+  description  = "Drupal install profile. demo_umami uses a pre-built database snapshot (12.x only); other profiles and non-12.x versions always run a full site install."
   type         = "string"
   default      = "demo_umami"
   mutable      = true
@@ -458,6 +458,13 @@ STATUS_HEADER
       *)  DDEV_PROJECT_TYPE="drupal12" ;;
     esac
 
+    # Map version to git branch (non-main versions need a dedicated branch checkout)
+    case "$DRUPAL_VERSION" in
+      10) DRUPAL_BRANCH="10.x" ;;
+      11) DRUPAL_BRANCH="11.x" ;;
+      *)  DRUPAL_BRANCH="main" ;;
+    esac
+
     # Always regenerate .ddev/config.yaml from scratch so DDEV picks its own defaults
     # for the project type (e.g. correct PHP version). Preserving an old config.yaml
     # would leave stale fields like php_version untouched even when project-type changes.
@@ -554,6 +561,14 @@ STATUS_HEADER
       log_setup "Issue fork mode: ISSUE_FORK=$ISSUE_FORK  ISSUE_BRANCH=$ISSUE_BRANCH  INSTALL_PROFILE=$INSTALL_PROFILE"
     fi
 
+    # Non-main versions (10.x, 11.x) without an issue fork also need branch checkout +
+    # composer.json fixes + composer update — cannot use the main-branch cached DB.
+    NEEDS_NONMAIN_CHECKOUT=false
+    if [ "$DRUPAL_BRANCH" != "main" ] && [ "$USING_ISSUE_FORK" = "false" ]; then
+      NEEDS_NONMAIN_CHECKOUT=true
+      log_setup "Non-main version mode: DRUPAL_VERSION=$DRUPAL_VERSION DRUPAL_BRANCH=$DRUPAL_BRANCH INSTALL_PROFILE=$INSTALL_PROFILE"
+    fi
+
     # Log issue link early so it's visible at the top of the agent logs
     if [ -n "$ISSUE_FORK" ]; then
       log_setup "🔗 Issue: https://www.drupal.org/project/drupal/issues/$ISSUE_FORK"
@@ -630,12 +645,36 @@ WELCOME_STATIC
     if [ -f "composer.json" ] && [ -d "repos/drupal/.git" ]; then
       log_setup "✓ Drupal core project already present — skipping setup"
       update_status "✓ Setup: Already present"
-      # For HEAD workspaces (non-issue-fork), keep the drupal repo current on every start
+      # For non-issue-fork workspaces, keep the drupal repo current on every start
       if [ "$USING_ISSUE_FORK" = "false" ]; then
         _t=$SECONDS
         git -C "$DRUPAL_DIR/repos/drupal" fetch --all --prune >> "$SETUP_LOG" 2>&1 || true
-        git -C "$DRUPAL_DIR/repos/drupal" merge --ff-only origin/main >> "$SETUP_LOG" 2>&1 || true
-        log_setup "  git fetch+merge complete ($((SECONDS - _t))s)"
+        # Resolve 10.x placeholder to actual latest remote minor (e.g. 10.6.x)
+        if [ "$DRUPAL_BRANCH" = "10.x" ]; then
+          _r=$(git -C "$DRUPAL_DIR/repos/drupal" branch -r 2>/dev/null | grep -oE "10\.[0-9]+\.x" | sort -V | tail -1 || echo "")
+          [ -n "$_r" ] && { DRUPAL_BRANCH="$_r"; log_setup "  Resolved Drupal 10 branch → $DRUPAL_BRANCH"; }
+        fi
+        CURRENT_BRANCH=$(git -C "$DRUPAL_DIR/repos/drupal" branch --show-current 2>/dev/null || echo "")
+        if [ "$CURRENT_BRANCH" = "$DRUPAL_BRANCH" ]; then
+          git -C "$DRUPAL_DIR/repos/drupal" merge --ff-only "origin/$DRUPAL_BRANCH" >> "$SETUP_LOG" 2>&1 || true
+          log_setup "  git fetch+merge $DRUPAL_BRANCH complete ($((SECONDS - _t))s)"
+        else
+          log_setup "  ⚠ Branch mismatch: repo is on '$CURRENT_BRANCH', need '$DRUPAL_BRANCH' — switching..."
+          git -C "$DRUPAL_DIR/repos/drupal" checkout "$DRUPAL_BRANCH" >> "$SETUP_LOG" 2>&1 || \
+            git -C "$DRUPAL_DIR/repos/drupal" checkout -b "$DRUPAL_BRANCH" "origin/$DRUPAL_BRANCH" >> "$SETUP_LOG" 2>&1 || true
+          log_setup "  git checkout $DRUPAL_BRANCH complete ($((SECONDS - _t))s)"
+          # vendor is from the old branch — trigger composer.json fixes + update below
+          [ "$DRUPAL_BRANCH" != "main" ] && DRUPAL_SETUP_NEEDED=true
+        fi
+      fi
+      # If non-main branch: check vendor stamp to catch cases where vendor is stale
+      # (e.g. recycled host directory where branch was switched but composer update never ran)
+      if [ "$DRUPAL_BRANCH" != "main" ] && [ "$USING_ISSUE_FORK" = "false" ] && [ "$DRUPAL_SETUP_NEEDED" = "false" ]; then
+        _vendor_branch=$(cat "$DRUPAL_DIR/.vendor-branch" 2>/dev/null || echo "")
+        if [ "$_vendor_branch" != "$DRUPAL_BRANCH" ]; then
+          log_setup "  Vendor stamp is '$_vendor_branch', need '$DRUPAL_BRANCH' — triggering composer update..."
+          DRUPAL_SETUP_NEEDED=true
+        fi
       fi
     elif [ "$USING_ISSUE_FORK" = "false" ] && [ -f "$CACHE_SEED/composer.json" ] && [ -d "$CACHE_SEED/repos/drupal/.git" ]; then
       _t=$SECONDS
@@ -648,10 +687,22 @@ WELCOME_STATIC
         _t=$SECONDS
         git -C "$DRUPAL_DIR/repos/drupal" fetch --all --prune >> "$SETUP_LOG" 2>&1 || true
         log_setup "  git fetch complete ($((SECONDS - _t))s)"
-        # Sync vendor with the (unchanged main-branch) lock file
-        _t=$SECONDS
-        ddev composer install >> "$SETUP_LOG" 2>&1
-        log_setup "  composer install complete ($((SECONDS - _t))s)"
+        # Resolve 10.x placeholder to actual latest remote minor (e.g. 10.6.x)
+        if [ "$DRUPAL_BRANCH" = "10.x" ]; then
+          _r=$(git -C "$DRUPAL_DIR/repos/drupal" branch -r 2>/dev/null | grep -oE "10\.[0-9]+\.x" | sort -V | tail -1 || echo "")
+          [ -n "$_r" ] && { DRUPAL_BRANCH="$_r"; log_setup "  Resolved Drupal 10 branch → $DRUPAL_BRANCH"; }
+        fi
+        if [ "$DRUPAL_BRANCH" = "main" ]; then
+          # Sync vendor with the (unchanged main-branch) lock file
+          _t=$SECONDS
+          ddev composer install >> "$SETUP_LOG" 2>&1
+          log_setup "  composer install complete ($((SECONDS - _t))s)"
+        else
+          # Non-main: checkout target branch now; composer.json fixes + update run below
+          git -C "$DRUPAL_DIR/repos/drupal" checkout -b "$DRUPAL_BRANCH" "origin/$DRUPAL_BRANCH" >> "$SETUP_LOG" 2>&1 || \
+            git -C "$DRUPAL_DIR/repos/drupal" checkout "$DRUPAL_BRANCH" >> "$SETUP_LOG" 2>&1 || true
+          log_setup "  git checkout $DRUPAL_BRANCH complete"
+        fi
         log_setup "✓ Cache seed complete ($((SECONDS - SETUP_START))s total so far)"
         update_status "✓ DDEV composer create: Seeded from cache"
         DRUPAL_SETUP_NEEDED=true
@@ -687,6 +738,29 @@ WELCOME_STATIC
           update_status "Manual recovery:"
           update_status "  cd $DRUPAL_DIR && ddev composer create-project --no-install \"joachim-n/drupal-core-development-project:dev-main\" ."
         fi
+      elif [ "$NEEDS_NONMAIN_CHECKOUT" = "true" ]; then
+        # Non-main version (10.x/11.x) without cache: create project structure then checkout branch.
+        # Must use --no-install (like issue fork) so vendor is resolved for the correct branch.
+        log_setup "Creating project structure for Drupal $DRUPAL_VERSION ($DRUPAL_BRANCH), no cache available..."
+        update_status "⏳ DDEV composer create-project: In progress..."
+        if ddev composer create-project --no-install --no-interaction "joachim-n/drupal-core-development-project:dev-main" . >> "$SETUP_LOG" 2>&1; then
+          log_setup "✓ Project structure created ($((SECONDS - _t))s)"
+          update_status "✓ DDEV composer create-project: Success"
+          DRUPAL_SETUP_NEEDED=true
+          # Supplement git objects from seed cache so branch fetch only downloads the delta
+          if [ -d "$CACHE_SEED/repos/drupal/.git/objects" ]; then
+            log_setup "Supplementing git objects from seed cache..."
+            rsync -a "$CACHE_SEED/repos/drupal/.git/objects/" "$DRUPAL_DIR/repos/drupal/.git/objects/" >> "$SETUP_LOG" 2>&1 || true
+            log_setup "  git objects supplement complete"
+          fi
+        else
+          log_setup "✗ Failed to create project structure ($((SECONDS - _t))s)"
+          log_setup "Check $SETUP_LOG for details"
+          update_status "✗ DDEV composer create-project: Failed"
+          update_status ""
+          update_status "Manual recovery:"
+          update_status "  cd $DRUPAL_DIR && ddev composer create-project --no-install \"joachim-n/drupal-core-development-project:dev-main\" ."
+        fi
       else
         log_setup "No cache available, running full composer create (this takes 5-10 minutes)..."
         update_status "⏳ DDEV composer create: In progress (this takes 5-10 minutes)..."
@@ -707,35 +781,60 @@ WELCOME_STATIC
 
     # Steps 5-7: run whenever project files are present — inner checks handle idempotency
     if [ -f "composer.json" ] && [ -d "repos/drupal" ]; then
-      # Step 4.5: Issue fork — checkout branch, fix composer.json, run composer install.
-      # For issue forks the project was created with --no-install so no vendor exists yet.
-      # We must checkout the issue branch BEFORE composer install so that vendor is
+      # Step 4.5: Branch checkout, composer.json fixes, and composer update.
+      # Applies to: (a) issue forks, and (b) non-main versions (10.x/11.x) without an issue fork.
+      # In both cases the project was created with --no-install so no vendor exists yet.
+      # The branch must be checked out BEFORE composer install so that vendor is
       # resolved for the correct Drupal version, not for main/drupal12.
-      if [ "$USING_ISSUE_FORK" = "true" ] && [ "$ISSUE_FORK_CHECKOUT_DONE" = "false" ]; then
+      if ([ "$USING_ISSUE_FORK" = "true" ] || ([ "$NEEDS_NONMAIN_CHECKOUT" = "true" ] && [ "$DRUPAL_SETUP_NEEDED" = "true" ])) && [ "$ISSUE_FORK_CHECKOUT_DONE" = "false" ]; then
         REPOS_DIR="$DRUPAL_DIR/repos/drupal"
         if [ -d "$REPOS_DIR/.git" ]; then
-          CURRENT_BRANCH=$(git -C "$REPOS_DIR" branch --show-current 2>/dev/null || echo "")
-          if [ -n "$ISSUE_BRANCH" ] && [ "$CURRENT_BRANCH" = "$ISSUE_BRANCH" ]; then
-            log_setup "✓ Already on issue branch: $ISSUE_BRANCH"
-          else
-            if [ -n "$ISSUE_FORK" ]; then
-              log_setup "Adding issue fork remote and fetching: $ISSUE_FORK"
-              git -C "$REPOS_DIR" remote remove issue 2>/dev/null || true
-              git -C "$REPOS_DIR" remote add issue "https://git.drupalcode.org/issue/drupal-$ISSUE_FORK.git"
-              if git -C "$REPOS_DIR" fetch issue >> "$SETUP_LOG" 2>&1; then
-                log_setup "  ✓ Fetched from issue remote"
-              else
-                log_setup "✗ Failed to fetch from issue remote $ISSUE_FORK — aborting setup"
-                SETUP_FAILED=true
+          if [ "$USING_ISSUE_FORK" = "true" ]; then
+            # Issue fork: add the fork remote and checkout the issue branch
+            CURRENT_BRANCH=$(git -C "$REPOS_DIR" branch --show-current 2>/dev/null || echo "")
+            if [ -n "$ISSUE_BRANCH" ] && [ "$CURRENT_BRANCH" = "$ISSUE_BRANCH" ]; then
+              log_setup "✓ Already on issue branch: $ISSUE_BRANCH"
+            else
+              if [ -n "$ISSUE_FORK" ]; then
+                log_setup "Adding issue fork remote and fetching: $ISSUE_FORK"
+                git -C "$REPOS_DIR" remote remove issue 2>/dev/null || true
+                git -C "$REPOS_DIR" remote add issue "https://git.drupalcode.org/issue/drupal-$ISSUE_FORK.git"
+                if git -C "$REPOS_DIR" fetch issue >> "$SETUP_LOG" 2>&1; then
+                  log_setup "  ✓ Fetched from issue remote"
+                else
+                  log_setup "✗ Failed to fetch from issue remote $ISSUE_FORK — aborting setup"
+                  SETUP_FAILED=true
+                fi
+              fi
+              if [ "$SETUP_FAILED" != "true" ] && [ -n "$ISSUE_BRANCH" ]; then
+                log_setup "Checking out issue branch: $ISSUE_BRANCH"
+                if git -C "$REPOS_DIR" checkout -b "$ISSUE_BRANCH" "issue/$ISSUE_BRANCH" >> "$SETUP_LOG" 2>&1 || \
+                   git -C "$REPOS_DIR" checkout "$ISSUE_BRANCH" >> "$SETUP_LOG" 2>&1; then
+                  log_setup "  ✓ Checked out branch: $ISSUE_BRANCH"
+                else
+                  log_setup "✗ Failed to check out branch $ISSUE_BRANCH — aborting setup"
+                  SETUP_FAILED=true
+                fi
               fi
             fi
-            if [ "$SETUP_FAILED" != "true" ] && [ -n "$ISSUE_BRANCH" ]; then
-              log_setup "Checking out issue branch: $ISSUE_BRANCH"
-              if git -C "$REPOS_DIR" checkout -b "$ISSUE_BRANCH" "issue/$ISSUE_BRANCH" >> "$SETUP_LOG" 2>&1 || \
-                 git -C "$REPOS_DIR" checkout "$ISSUE_BRANCH" >> "$SETUP_LOG" 2>&1; then
-                log_setup "  ✓ Checked out branch: $ISSUE_BRANCH"
+          else
+            # Non-main version without issue fork: fetch + checkout branch from origin
+            git -C "$REPOS_DIR" fetch --all --prune >> "$SETUP_LOG" 2>&1 || true
+            # Resolve 10.x placeholder to actual latest remote minor (e.g. 10.6.x)
+            if [ "$DRUPAL_BRANCH" = "10.x" ]; then
+              _r=$(git -C "$REPOS_DIR" branch -r 2>/dev/null | grep -oE "10\.[0-9]+\.x" | sort -V | tail -1 || echo "")
+              [ -n "$_r" ] && { DRUPAL_BRANCH="$_r"; log_setup "  Resolved Drupal 10 branch → $DRUPAL_BRANCH"; }
+            fi
+            CURRENT_BRANCH=$(git -C "$REPOS_DIR" branch --show-current 2>/dev/null || echo "")
+            if [ "$CURRENT_BRANCH" = "$DRUPAL_BRANCH" ]; then
+              log_setup "✓ Already on $DRUPAL_BRANCH"
+            else
+              log_setup "Checking out $DRUPAL_BRANCH from origin..."
+              if git -C "$REPOS_DIR" checkout -b "$DRUPAL_BRANCH" "origin/$DRUPAL_BRANCH" >> "$SETUP_LOG" 2>&1 || \
+                 git -C "$REPOS_DIR" checkout "$DRUPAL_BRANCH" >> "$SETUP_LOG" 2>&1; then
+                log_setup "  ✓ Checked out $DRUPAL_BRANCH"
               else
-                log_setup "✗ Failed to check out branch $ISSUE_BRANCH — aborting setup"
+                log_setup "✗ Failed to check out $DRUPAL_BRANCH — aborting setup"
                 SETUP_FAILED=true
               fi
             fi
@@ -745,10 +844,10 @@ WELCOME_STATIC
           # joachim-n/drupal-core-development-project:dev-main uses "*" for all drupal/*
           # root constraints and includes repos/drupal/composer/Plugin/* as a glob path repo
           # (so RecipeUnpack is covered). However, transitive constraints BETWEEN path repo
-          # packages still need Fix 1+2 for 10.x/11.x: e.g. drupal/core-recommended requires
-          # drupal/core 11.x-dev but a branch with alias 11.3.x-dev can't satisfy that without
-          # an inline alias. For 12.x the 12.x-dev alias = dev-main on Packagist, which
-          # satisfies all transitive requirements naturally.
+          # issue fork branches need Fix 1+2: e.g. drupal/core-recommended requires drupal/core
+          # 11.x-dev but an issue fork presents as dev-ISSUEBRANCH, requiring an inline alias.
+          # Named release branches (10.6.x, 11.x) present at 10.6.x-dev naturally and need no
+          # fix. For 12.x the 12.x-dev alias = dev-main on Packagist — also no fix needed.
           if [ "$SETUP_FAILED" = "true" ]; then
             log_setup "✗ Skipping composer.json fixes due to branch checkout failure"
           else
@@ -769,13 +868,14 @@ WELCOME_STATIC
             ACTUAL_DRUPAL_MAJOR="$DRUPAL_VERSION"
           fi
 
-          # Fix 1+2 (10.x/11.x only): inline alias so path repo packages satisfy each other's
-          # N.x-dev constraints. drupal/* sub-packages use self.version; aliasing them in the
-          # root makes the path repo versions resolve as N.x-dev for transitive deps.
-          # Pin drupal/drupal to dev-$BRANCH so Packagist's version cannot pull in remote code.
-          # 12.x branches are excluded: their 12.x-dev alias = dev-main on Packagist, which
-          # satisfies all transitive requirements naturally.
-          if [ "$ACTUAL_DRUPAL_MAJOR" != "12" ]; then
+          # Fix 1+2 (issue forks on 10.x/11.x only): inline alias so path repo packages
+          # satisfy each other's N.x-dev constraints. Issue fork branches present as
+          # dev-ISSUEBRANCH which doesn't satisfy drupal/core-recommended's N.x-dev
+          # requirement — the inline alias bridges this gap.
+          # Named release branches (10.6.x, 11.x) already present at 10.6.x-dev / 11.x-dev
+          # matching what core-recommended requires, so the original "*" constraints work fine.
+          # 12.x also needs no fix (12.x-dev = dev-main on Packagist).
+          if [ "$ACTUAL_DRUPAL_MAJOR" != "12" ] && [ "$USING_ISSUE_FORK" = "true" ]; then
             jq --arg val "dev-$CHECKED_OUT_BRANCH as $TARGET_ALIAS" \
               '.require |= with_entries(if (.key | startswith("drupal/")) and .key != "drupal/drupal" then .value = $val else . end)' \
               composer.json > composer.json.tmp && mv composer.json.tmp composer.json
@@ -809,6 +909,8 @@ WELCOME_STATIC
           if [ "$_composer_exit" = "0" ]; then
             log_setup "✓ Composer update complete ($((SECONDS - _t))s)"
             update_status "✓ Composer update for issue branch: Success"
+            # Write stamp so "already present" restarts know vendor is valid for this branch
+            echo "$DRUPAL_BRANCH" > "$DRUPAL_DIR/.vendor-branch"
           else
             log_setup "✗ Composer update failed (exit $_composer_exit, $((SECONDS - _t))s) — skipping remaining setup"
             update_status "✗ Composer update for issue branch: Failed"
@@ -875,7 +977,7 @@ WELCOME_STATIC
       if ddev drush status 2>/dev/null | grep -q "Drupal bootstrap.*Successful"; then
         log_setup "✓ Drupal already installed"
         update_status "✓ Drupal install: Already present"
-      elif [ "$USING_ISSUE_FORK" = "false" ] && [ "$INSTALL_PROFILE" = "demo_umami" ] && [ -f "$CACHE_SEED/.tarballs/db.sql.gz" ]; then
+      elif [ "$USING_ISSUE_FORK" = "false" ] && [ "$DRUPAL_BRANCH" = "main" ] && [ "$INSTALL_PROFILE" = "demo_umami" ] && [ -f "$CACHE_SEED/.tarballs/db.sql.gz" ]; then
         _t=$SECONDS
         log_setup "Importing database from cache (fast path)..."
         update_status "⏳ Drupal install: Importing cached database..."
