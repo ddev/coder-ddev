@@ -639,9 +639,11 @@ WELCOME_STATIC
       echo "✓ Created Drupal-specific welcome message"
     fi
 
-    # Step 4: Set up Drupal core project — use seed cache when available (fast path)
-    # Issue forks skip the cache: the seed composer.json requires "drupal/core: dev-main" and
-    # vendor is resolved for PHP 8.5/drupal12, both incompatible with non-main issue branches.
+    # Step 4: Set up Drupal core project — use seed cache for main branch only (fast path)
+    # Issue forks and non-main plain versions (10.x, 11.x) skip the cache: the seed
+    # composer.json has "drupal/core: dev-main" and vendor is resolved for PHP 8.5/drupal12,
+    # both incompatible with non-main branches. The else branch handles those with a fresh
+    # composer create-project (and supplements git objects from the seed for speed).
     if [ -f "composer.json" ] && [ -d "repos/drupal/.git" ]; then
       log_setup "✓ Drupal core project already present — skipping setup"
       update_status "✓ Setup: Already present"
@@ -676,7 +678,7 @@ WELCOME_STATIC
           DRUPAL_SETUP_NEEDED=true
         fi
       fi
-    elif [ "$USING_ISSUE_FORK" = "false" ] && [ -f "$CACHE_SEED/composer.json" ] && [ -d "$CACHE_SEED/repos/drupal/.git" ]; then
+    elif [ "$USING_ISSUE_FORK" = "false" ] && [ "$DRUPAL_BRANCH" = "main" ] && [ -f "$CACHE_SEED/composer.json" ] && [ -d "$CACHE_SEED/repos/drupal/.git" ]; then
       _t=$SECONDS
       log_setup "Cache hit: seeding project from host cache (fast path)..."
       update_status "⏳ DDEV setup: Seeding from cache..."
