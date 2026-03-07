@@ -85,15 +85,6 @@ data "coder_parameter" "issue_branch" {
   order        = 2
 }
 
-data "coder_parameter" "issue_url" {
-  name         = "issue_url"
-  display_name = "Issue URL"
-  description  = "Drupal.org issue page (auto-populated by the picker)."
-  type         = "string"
-  default      = ""
-  mutable      = true
-  order        = 5
-}
 
 data "coder_parameter" "drupal_version" {
   name         = "drupal_version"
@@ -158,7 +149,7 @@ locals {
   # Sysbox Strategy: Use standard /home/coder
   workspace_home   = "/home/coder"
   issue_fork_clean = trimprefix(data.coder_parameter.issue_fork.value, "drupal-")
-  issue_url        = data.coder_parameter.issue_url.value != "" ? data.coder_parameter.issue_url.value : (local.issue_fork_clean != "" ? "https://www.drupal.org/project/drupal/issues/${local.issue_fork_clean}" : "")
+  issue_url        = local.issue_fork_clean != "" ? "https://www.drupal.org/project/drupal/issues/${local.issue_fork_clean}" : ""
 }
 
 locals {
