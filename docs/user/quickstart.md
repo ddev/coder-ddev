@@ -64,7 +64,26 @@ ddev ssh
 
 ---
 
-## First contribution workflow
+## Working on a Drupal issue
+
+The fastest way: use the **[Drupal Issue Picker](https://start.coder.ddev.com/drupal-issue)**. Paste a drupal.org issue URL or bare issue number — it fetches the available branches, lets you pick one, and opens a pre-configured workspace with the issue branch already checked out and all Composer dependencies resolved for that branch.
+
+To push your changes back:
+
+```bash
+cd ~/drupal-core/repos/drupal
+
+# ... make changes ...
+
+# Push to the issue fork (remote is already added by the setup)
+git push issue HEAD
+```
+
+Then create or update the merge request on [drupal.org](https://www.drupal.org/project/drupal).
+
+## First contribution workflow (manual)
+
+If you prefer to set up manually:
 
 ```bash
 # In the workspace terminal:

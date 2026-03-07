@@ -11,8 +11,9 @@ Automated Coder workspace for Drupal core development using [joachim-n/drupal-co
 - **Professional Setup**: Uses the drupal-core-development-project template
 - **Clean Git Clone**: Drupal core in `repos/drupal/` directory
 - **Proper Structure**: Web root at `web/` with Composer management
-- **Demo Site**: Umami demo profile pre-installed
-- **Full DDEV**: Complete DDEV environment with PHP 8.5, Drupal 12 config
+- **Demo Site**: Umami demo profile pre-installed (configurable)
+- **Full DDEV**: Complete DDEV environment with automatic PHP version selection
+- **Issue Fork Support**: Check out any Drupal.org issue branch, with automatic Composer dependency resolution
 - **VS Code**: Opens directly to Drupal core project root
 - **Port Forwarding**: HTTP (80)
 - **Custom Launch Command**: `ddev launch` shows Coder-specific instructions
@@ -32,12 +33,22 @@ Subsequent starts are fast (< 1 minute) as everything is already present.
 
 ## Quick Start
 
+**Standard Drupal core workspace:**
 ```bash
-# Create workspace
 coder create --template drupal-core my-drupal-dev
-
-# Wait for setup to complete (monitor in Coder UI logs)
 # Then access via Coder dashboard "DDEV Web" app
+```
+
+**Working on a specific issue:**
+
+Use the **[Drupal Issue Picker](https://start.coder.ddev.com/drupal-issue)** — enter an issue URL or number and it opens a pre-configured workspace with the issue branch already checked out and composer dependencies resolved.
+
+Or manually via CLI:
+```bash
+coder create --template drupal-core my-issue-3568144 \
+  --parameter issue_fork=3568144 \
+  --parameter issue_branch=3568144-editorfilterxss-11.x \
+  --parameter drupal_version=11
 ```
 
 ## Access
@@ -135,17 +146,13 @@ ddev drush si -y demo_umami --account-pass=admin
 ## Customization
 
 ### Change Drupal Profile
-Edit the startup script in `template.tf` and change:
+Set the `install_profile` parameter when creating the workspace:
 ```bash
-ddev drush si -y demo_umami --account-pass=admin
+coder create --template drupal-core my-workspace --parameter install_profile=standard
 ```
-To use `minimal`, `standard`, or other profiles.
+Options: `demo_umami` (default), `minimal`, `standard`.
 
-### Change PHP Version
-Edit DDEV config command in `template.tf`:
-```bash
-ddev config --project-type=drupal12 --docroot=web --php-version=8.4
-```
+Note: issue fork workspaces always run a full site install regardless of profile; `demo_umami` only uses the cached DB snapshot for standard workspaces.
 
 ### Add Custom Commands
 Create scripts in `~/.ddev/commands/host/` or `.ddev/commands/web/`
