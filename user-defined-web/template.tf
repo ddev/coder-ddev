@@ -289,6 +289,18 @@ resource "coder_agent" "main" {
     # FIX: Remove stale GIT_SSH_COMMAND from .bashrc if present (from older versions)
     sed -i '/export GIT_SSH_COMMAND=/d' ~/.bashrc || true
 
+    # Add git branch to bash prompt
+    if ! grep -q "git_prompt()" ~/.bashrc; then
+      echo '' >> ~/.bashrc
+      echo '# Git branch in prompt' >> ~/.bashrc
+      echo 'git_prompt() {' >> ~/.bashrc
+      echo '    local branch' >> ~/.bashrc
+      echo '    branch="$(git symbolic-ref HEAD 2>/dev/null | cut -d/ -f3-)"' >> ~/.bashrc
+      echo '    [ -n "$branch" ] && echo " ($branch)"' >> ~/.bashrc
+      echo '}' >> ~/.bashrc
+      echo 'PS1='\''\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]$(git_prompt)\$ '\''' >> ~/.bashrc
+    fi
+
     # Node.js, TypeScript, and DDEV are now pre-installed in the Docker image (v3.0.30+)
 
 
