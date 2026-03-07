@@ -28,7 +28,7 @@ TEMPLATE_VARS_freeform         := --variable workspace_image_registry=index.dock
 # (coder templates push only supports --name, not --description)
 TEMPLATE_EDIT_user-defined-web := --display-name "DDEV Web Workspace"
 TEMPLATE_EDIT_drupal-core      := --display-name "Drupal Core Development" \
-                                   --description "Drupal core dev environment: full DDEV stack, core clone, Umami demo site. Ready in ~30 seconds."
+                                   --description "Drupal core dev environment: full DDEV stack, core clone, Umami demo site. Ready in about a minute."
 TEMPLATE_EDIT_freeform         := --display-name "DDEV Freeform (Traefik)"
 
 # Shared recipe for pushing any template (call with template name as argument)
