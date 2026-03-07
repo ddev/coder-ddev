@@ -457,8 +457,11 @@
               // Verify the response is actually a valid node (not a redirect or error page)
               let nodeData;
               try { nodeData = await checkResp.json(); } catch (_) { nodeData = null; }
+              const projectName = nodeData && nodeData.field_project && nodeData.field_project.machine_name;
               if (!nodeData || String(nodeData.nid) !== String(nid)) {
                 setStatus('Issue #' + nid + ' does not exist on drupal.org. Check the issue number and try again.', 'error');
+              } else if (projectName && projectName !== 'drupal') {
+                setStatus('Issue #' + nid + ' is a ' + projectName + ' issue, not a Drupal core issue. This picker only supports Drupal core.', 'error');
               } else {
                 setStatus('No issue fork exists for #' + nid + ' yet. To work on this issue, visit the issue page on drupal.org and click "Get push access" to create a fork, then come back here.', 'info');
               }
