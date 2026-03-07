@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Drupal Issue Picker — DDEV Coder Workspaces</title>
+  <title>Drupal Core Issue Picker — DDEV Coder Workspaces</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -274,11 +274,11 @@
   <header>
     <a href="/">DDEV Coder Workspaces</a>
     <span class="sep">/</span>
-    <span class="title">Drupal Issue Picker</span>
+    <span class="title">Drupal Core Issue Picker</span>
   </header>
 
   <div class="page">
-    <h1>Drupal Issue Picker</h1>
+    <h1>Drupal Core Issue Picker</h1>
     <p class="subtitle">Enter a Drupal.org issue URL or number to launch a pre-configured workspace.</p>
 
     <div class="input-row">
@@ -461,7 +461,7 @@
               if (!nodeData || String(nodeData.nid) !== String(nid)) {
                 setStatus('Issue #' + nid + ' does not exist on drupal.org. Check the issue number and try again.', 'error');
               } else if (projectName && projectName !== 'drupal') {
-                setStatus('Issue #' + nid + ' is a ' + projectName + ' issue, not a Drupal core issue. This picker only supports Drupal core.', 'error');
+                setStatus('Issue #' + nid + ' is a ' + projectName + ' issue, not a Drupal core issue. At this time this picker only supports Drupal core.', 'error');
               } else {
                 setStatus('No issue fork exists for #' + nid + ' yet. To work on this issue, visit the issue page on drupal.org and click "Get push access" to create a fork, then come back here.', 'info');
               }
