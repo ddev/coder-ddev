@@ -305,6 +305,7 @@ module "vscode-web" {
   agent_id       = coder_agent.main.id
   folder         = "/home/coder/${data.coder_workspace.me.name}"
   accept_license = true
+  order          = 2
   extensions     = [
     "xdebug.php-debug",
     "bmewburn.vscode-intelephense-client",
@@ -325,6 +326,7 @@ resource "coder_app" "ddev-web" {
   agent_id     = coder_agent.main.id
   slug         = data.coder_workspace.me.name
   display_name = "DDEV Web"
+  order        = 1
   url          = "http://localhost:80"
   icon         = "https://raw.githubusercontent.com/ddev/ddev/main/docs/content/developers/logos/SVG/Logo.svg"
   subdomain    = true
