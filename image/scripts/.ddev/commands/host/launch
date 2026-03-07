@@ -48,7 +48,7 @@ fi
 
 echo ""
 echo "Coder URLs for project '${PROJECT}':"
-echo "  Web:     https://${WORKSPACE}--${WORKSPACE}--${OWNER}.${DOMAIN}${PATH_SUFFIX}"
+echo "  Web:     https://80--${AGENT}--${WORKSPACE}--${OWNER}.${DOMAIN}${PATH_SUFFIX}"
 echo "  Mailpit: https://mailpit--${WORKSPACE}--${OWNER}.${DOMAIN}"
 
 # Show addon services from the generated coder-routes.yaml.
