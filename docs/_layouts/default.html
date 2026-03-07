@@ -112,13 +112,35 @@
     }
 
     img { max-width: 100%; }
+
+    /* Skip link — visually hidden until focused; lets keyboard users bypass the site nav.
+       WCAG 2.4.1 Bypass Blocks (Level A) */
+    .skip-link {
+      position: absolute;
+      top: -100%;
+      left: 1rem;
+      background: #7c5af0;
+      color: #fff;
+      padding: 0.5rem 1rem;
+      border-radius: 0 0 6px 6px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-decoration: none;
+      z-index: 999;
+    }
+    .skip-link:focus { top: 0; }
   </style>
 </head>
 <body>
-  <nav>
+  <!-- WCAG 2.4.1 Bypass Blocks (Level A): skip link lets keyboard users jump past the site nav -->
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <!-- aria-label distinguishes this nav landmark when multiple <nav> elements exist on a page.
+       WCAG 2.4.6 Headings and Labels (Level AA) -->
+  <nav aria-label="Site">
     <a href="/">← DDEV Coder Workspaces</a>
   </nav>
-  <main>
+  <!-- id="main-content" is the skip link target (WCAG 2.4.1) -->
+  <main id="main-content">
     {{ content }}
   </main>
 </body>
