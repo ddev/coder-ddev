@@ -1339,10 +1339,33 @@ resource "coder_app" "ddev-web" {
   subdomain    = true
   share        = "owner"
 
+  # Healthy when ddev is running and the web server responds (any 2xx/3xx).
+  # Lights up as soon as `ddev start` completes, before Drupal is installed.
   healthcheck {
     url       = "http://localhost:80"
     interval  = 10
     threshold = 30
+  }
+}
+
+resource "coder_app" "drupal-site" {
+  agent_id     = coder_agent.main.id
+  slug         = "drupal-site"
+  display_name = "Drupal Site"
+  order        = 2
+  url          = "http://localhost:80"
+  icon         = "https://api.iconify.design/heroicons:check-circle.svg?color=white"
+  subdomain    = true
+  share        = "owner"
+
+  # Healthy only when Drupal returns 200. /user/login returns 500 when the
+  # database isn't set up (before drush si) and 200 when Drupal is fully
+  # installed — giving a "site is actually working" indicator distinct from
+  # "web server is up".
+  healthcheck {
+    url       = "http://localhost:80/user/login"
+    interval  = 10
+    threshold = 3
   }
 }
 
