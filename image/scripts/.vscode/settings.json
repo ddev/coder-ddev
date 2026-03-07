@@ -5,5 +5,13 @@
       "path": "/bin/bash",
       "args": ["--login"]
     }
-  }
+  },
+  "explorer.openEditors.visible": 0,
+  "explorer.compactFolders": false,
+  "explorer.confirmDragAndDrop": false,
+  "workbench.startupEditor": "none",
+  "workbench.editor.tabSizing": "shrink",
+  "editor.cursorSurroundingLines": 6,
+  "diffEditor.ignoreTrimWhitespace": false,
+  "redhat.telemetry.enabled": false
 }
