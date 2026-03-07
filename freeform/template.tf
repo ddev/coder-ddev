@@ -305,6 +305,17 @@ module "vscode-web" {
   agent_id       = coder_agent.main.id
   folder         = "/home/coder/${data.coder_workspace.me.name}"
   accept_license = true
+  extensions     = [
+    "xdebug.php-debug",
+    "bmewburn.vscode-intelephense-client",
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "sanderronde.phpstan-vscode",
+    "streetsidesoftware.code-spell-checker",
+    "stylelint.vscode-stylelint",
+    "valeryanm.vscode-phpsab",
+    "biati.ddev-manager",
+  ]
 }
 
 # Slug matches the workspace name, which is also the DDEV project name.
@@ -386,13 +397,6 @@ resource "coder_script" "ddev_shutdown" {
     ddev poweroff || true
     echo "ddev poweroff complete"
   EOT
-}
-
-module "coder-login" {
-  count    = data.coder_workspace.me.start_count
-  source   = "registry.coder.com/coder/coder-login/coder"
-  version  = "~> 1.0"
-  agent_id = coder_agent.main.id
 }
 
 resource "docker_container" "workspace" {
