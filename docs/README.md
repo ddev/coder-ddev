@@ -26,10 +26,12 @@ System administrators and DevOps teams managing Coder infrastructure and the DDE
 
 Developers and users creating and working with DDEV workspaces.
 
+- **[Drupal Core Quickstart](./user/quickstart.md)** - Get a Drupal core workspace running in minutes; issue fork support
 - **[Getting Started Guide](./user/getting-started.md)** - First-time setup, creating your first workspace, basic verification
 - **[Using Workspaces](./user/using-workspaces.md)** - Daily workflows, VS Code for Web, DDEV projects, Git, port forwarding
 
-**Start here:** [Getting Started Guide](./user/getting-started.md)
+**Drupal core contributors:** [Quickstart](./user/quickstart.md)
+**New to Coder:** [Getting Started Guide](./user/getting-started.md)
 
 ### For DDEV Experts
 

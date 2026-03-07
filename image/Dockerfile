@@ -12,6 +12,7 @@ RUN apt-get update && \
   ca-certificates \
   curl \
   direnv \
+  file \
   git \
   gnupg \
   httpie \

@@ -118,15 +118,17 @@ coder create --template user-defined-web my-workspace
 ```
 
 ### drupal-core (Drupal Core Development)
-Fully automated Drupal core development environment.
+Fully automated Drupal core development environment, including issue fork support.
 
-- **Setup**: Automatic (Drupal core cloned and installed)
-- **Use Case**: Drupal core development, contribution, testing
+- **Setup**: Automatic (Drupal core cloned and installed, ~30s with seed cache)
+- **Use Case**: Drupal core development, contribution, patch testing
 - **Template Directory**: `drupal-core/`
+- **Issue Picker**: [start.coder.ddev.com/drupal-issue](https://start.coder.ddev.com/drupal-issue) — paste any drupal.org issue URL to launch a workspace with the issue branch pre-checked-out
 - **Includes**:
-  - Pre-cloned Drupal core main branch (shallow clone, 50 commits depth)
-  - Configured DDEV (PHP 8.5, Drupal HEAD/main config, port 80)
-  - Installed demo_umami site
+  - Pre-cloned Drupal core (main branch by default)
+  - Issue fork checkout with automatic Composer dependency resolution (Drupal 10, 11, and 12/main)
+  - Configured DDEV with automatic PHP version selection
+  - Installed demo_umami site (or standard/minimal via parameter)
   - Admin account (admin/admin)
 
 **Create workspace:**

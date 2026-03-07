@@ -15,10 +15,17 @@ This project provides a Coder v2+ template for DDEV-based development environmen
 
 **Note:** User-facing documentation has moved to `/docs/`. This file focuses on developer/contributor guidance.
 
+## Tool Preferences
+
+- Use `jq` (not `python3 -m json.tool`) for JSON pretty-printing and querying
+
 ## Essential Commands
 
 ### Template Management
 ```bash
+# Deploy or update the drupal-core template (no image build needed)
+make push-template-drupal-core
+
 # Deploy or update template (example: user-defined-web)
 coder templates push --directory user-defined-web user-defined-web --yes
 

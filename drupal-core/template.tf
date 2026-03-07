@@ -64,6 +64,71 @@ variable "cache_path" {
   default     = "/home/rfay/cache/drupal-core-seed"
 }
 
+# Per-workspace user parameters (shown in workspace creation UI, pre-fillable via ?param.name=value URL)
+data "coder_parameter" "issue_fork" {
+  name         = "issue_fork"
+  display_name = "Issue Fork"
+  description  = "Drupal.org issue number or fork name (e.g., 3568144 or drupal-3568144). Leave empty for standard Drupal core development."
+  type         = "string"
+  default      = ""
+  mutable      = true
+  order        = 1
+}
+
+data "coder_parameter" "issue_branch" {
+  name         = "issue_branch"
+  display_name = "Issue Branch"
+  description  = "Issue branch to check out (e.g., 3568144-editorfilterxss-11.x). Leave empty for HEAD."
+  type         = "string"
+  default      = ""
+  mutable      = true
+  order        = 2
+}
+
+data "coder_parameter" "drupal_version" {
+  name         = "drupal_version"
+  display_name = "Drupal Version"
+  description  = "Major Drupal version — sets DDEV project type. Match the version of the issue you are working on."
+  type         = "string"
+  default      = "12"
+  mutable      = true
+  order        = 4
+  option {
+    name  = "12.x (HEAD / upcoming)"
+    value = "12"
+  }
+  option {
+    name  = "11.x (stable)"
+    value = "11"
+  }
+  option {
+    name  = "10.x (stable)"
+    value = "10"
+  }
+}
+
+data "coder_parameter" "install_profile" {
+  name         = "install_profile"
+  display_name = "Install Profile"
+  description  = "Drupal install profile. demo_umami uses a pre-built database snapshot; other profiles run a full site install. Issue fork workspaces always run a full install."
+  type         = "string"
+  default      = "demo_umami"
+  mutable      = true
+  order        = 3
+  option {
+    name  = "demo_umami"
+    value = "demo_umami"
+  }
+  option {
+    name  = "minimal"
+    value = "minimal"
+  }
+  option {
+    name  = "standard"
+    value = "standard"
+  }
+}
+
 
 
 # Workspace data source
@@ -417,37 +482,44 @@ STATUS_HEADER
     cd "$DRUPAL_DIR" || exit 1
 
     # Step 2: Configure DDEV (must be done before composer create)
-    if [ ! -f ".ddev/config.yaml" ]; then
-      log_setup "Configuring DDEV for Drupal HEAD with PHP 8.5 and docroot=web..."
-      update_status "⏳ DDEV config: In progress..."
+    # Derive project type from the Drupal major version parameter (let DDEV pick default PHP version)
+    DRUPAL_VERSION="${data.coder_parameter.drupal_version.value}"
+    case "$DRUPAL_VERSION" in
+      10) DDEV_PROJECT_TYPE="drupal10" ;;
+      11) DDEV_PROJECT_TYPE="drupal11" ;;
+      *)  DDEV_PROJECT_TYPE="drupal12" ;;
+    esac
 
-      if ddev config --project-type=drupal12 --php-version=8.5 --docroot=web --host-webserver-port=80 >> "$SETUP_LOG" 2>&1; then
-        log_setup "✓ DDEV configured successfully with web/ as docroot"
-        update_status "✓ DDEV config: Success"
-      else
-        log_setup "✗ Failed to configure DDEV"
-        log_setup "Check $SETUP_LOG for details"
-        update_status "✗ DDEV config: Failed"
-        update_status ""
-        update_status "Manual recovery:"
-        update_status "  cd $DRUPAL_DIR"
-        update_status "  ddev config --project-type=drupal12 --php-version=8.5 --docroot=web --host-webserver-port=80"
-      fi
+    # Always regenerate .ddev/config.yaml from scratch so DDEV picks its own defaults
+    # for the project type (e.g. correct PHP version). Preserving an old config.yaml
+    # would leave stale fields like php_version untouched even when project-type changes.
+    rm -f .ddev/config.yaml
+    log_setup "Configuring DDEV for Drupal $DRUPAL_VERSION ($DDEV_PROJECT_TYPE)..."
+    update_status "⏳ DDEV config: In progress..."
 
-      # Configure DDEV global settings (omit router)
-      log_setup "Configuring DDEV global settings..."
-      update_status "⏳ DDEV global config: In progress..."
-
-      if ddev config global --omit-containers=ddev-router >> "$SETUP_LOG" 2>&1; then
-        log_setup "✓ DDEV global config applied (router omitted)"
-        update_status "✓ DDEV global config: Success"
-      else
-        log_setup "⚠ Warning: Failed to set DDEV global config (non-critical)"
-        update_status "⚠ DDEV global config: Warning (non-critical)"
-      fi
+    if ddev config --project-type="$DDEV_PROJECT_TYPE" --docroot=web --host-webserver-port=80 >> "$SETUP_LOG" 2>&1; then
+      log_setup "✓ DDEV configured (project-type=$DDEV_PROJECT_TYPE docroot=web)"
+      update_status "✓ DDEV config: Success"
     else
-      log_setup "✓ DDEV already configured"
-      update_status "✓ DDEV config: Already present"
+      log_setup "✗ Failed to configure DDEV"
+      log_setup "Check $SETUP_LOG for details"
+      update_status "✗ DDEV config: Failed"
+      update_status ""
+      update_status "Manual recovery:"
+      update_status "  cd $DRUPAL_DIR"
+      update_status "  ddev config --project-type=$DDEV_PROJECT_TYPE --docroot=web --host-webserver-port=80"
+    fi
+
+    # Configure DDEV global settings (omit router)
+    log_setup "Configuring DDEV global settings..."
+    update_status "⏳ DDEV global config: In progress..."
+
+    if ddev config global --omit-containers=ddev-router >> "$SETUP_LOG" 2>&1; then
+      log_setup "✓ DDEV global config applied (router omitted)"
+      update_status "✓ DDEV global config: Success"
+    else
+      log_setup "⚠ Warning: Failed to set DDEV global config (non-critical)"
+      update_status "⚠ DDEV global config: Warning (non-critical)"
     fi
 
     # Step 3: Start DDEV
@@ -475,6 +547,7 @@ STATUS_HEADER
 
     CACHE_SEED="/home/coder-cache-seed"
     DRUPAL_SETUP_NEEDED=false
+    ISSUE_FORK_CHECKOUT_DONE=false
     SETUP_START=$SECONDS
 
     # Diagnostic: report what the cache mount contains
@@ -495,11 +568,25 @@ STATUS_HEADER
       log_setup "  .tarballs/db.sql.gz: MISSING"
     fi
 
+    # Issue fork / install profile parameters (baked in at template evaluation)
+    ISSUE_FORK="${data.coder_parameter.issue_fork.value}"
+    ISSUE_FORK="$${ISSUE_FORK#drupal-}"  # strip leading "drupal-" if user provided it
+    ISSUE_BRANCH="${data.coder_parameter.issue_branch.value}"
+    INSTALL_PROFILE="${data.coder_parameter.install_profile.value}"
+    USING_ISSUE_FORK=false
+    SETUP_FAILED=false
+    if [ -n "$ISSUE_FORK" ] || [ -n "$ISSUE_BRANCH" ]; then
+      USING_ISSUE_FORK=true
+      log_setup "Issue fork mode: ISSUE_FORK=$ISSUE_FORK  ISSUE_BRANCH=$ISSUE_BRANCH  INSTALL_PROFILE=$INSTALL_PROFILE"
+    fi
+
     # Step 4: Set up Drupal core project — use seed cache when available (fast path)
+    # Issue forks skip the cache: the seed composer.json requires "drupal/core: dev-main" and
+    # vendor is resolved for PHP 8.5/drupal12, both incompatible with non-main issue branches.
     if [ -f "composer.json" ] && [ -d "repos/drupal/.git" ]; then
       log_setup "✓ Drupal core project already present — skipping setup"
       update_status "✓ Setup: Already present"
-    elif [ -f "$CACHE_SEED/composer.json" ] && [ -d "$CACHE_SEED/repos/drupal/.git" ]; then
+    elif [ "$USING_ISSUE_FORK" = "false" ] && [ -f "$CACHE_SEED/composer.json" ] && [ -d "$CACHE_SEED/repos/drupal/.git" ]; then
       _t=$SECONDS
       log_setup "Cache hit: seeding project from host cache (fast path)..."
       update_status "⏳ DDEV setup: Seeding from cache..."
@@ -510,9 +597,9 @@ STATUS_HEADER
         _t=$SECONDS
         git -C "$DRUPAL_DIR/repos/drupal" fetch --all --prune >> "$SETUP_LOG" 2>&1 || true
         log_setup "  git fetch complete ($((SECONDS - _t))s)"
-        # Ensure vendor matches current composer.lock (no-op when lock is unchanged)
+        # Sync vendor with the (unchanged main-branch) lock file
         _t=$SECONDS
-        ddev composer install >> "$SETUP_LOG" 2>&1 || true
+        ddev composer install >> "$SETUP_LOG" 2>&1
         log_setup "  composer install complete ($((SECONDS - _t))s)"
         log_setup "✓ Cache seed complete ($((SECONDS - SETUP_START))s total so far)"
         update_status "✓ DDEV composer create: Seeded from cache"
@@ -520,44 +607,240 @@ STATUS_HEADER
       else
         log_setup "✗ Failed to seed from cache ($((SECONDS - _t))s), falling back to full setup..."
         update_status "⚠ Cache seed failed, running full setup..."
-        ddev composer create joachim-n/drupal-core-development-project --no-interaction >> "$SETUP_LOG" 2>&1 || true
+        ddev composer create joachim-n/drupal-core-development-project --no-interaction >> "$SETUP_LOG" 2>&1
         DRUPAL_SETUP_NEEDED=true
       fi
     else
       _t=$SECONDS
-      log_setup "No cache available, running full composer create (this takes 5-10 minutes)..."
-      log_setup "This creates a proper dev environment with:"
-      log_setup "  - Drupal core git clone at repos/drupal/"
-      log_setup "  - Web root at web/"
-      log_setup "  - Composer dependency management"
-      update_status "⏳ DDEV composer create: In progress (this takes 5-10 minutes)..."
-
-      if ddev composer create joachim-n/drupal-core-development-project --no-interaction >> "$SETUP_LOG" 2>&1; then
-        log_setup "✓ Drupal core development project created ($((SECONDS - _t))s)"
-        update_status "✓ DDEV composer create: Success"
-        DRUPAL_SETUP_NEEDED=true
+      if [ "$USING_ISSUE_FORK" = "true" ]; then
+        # Issue fork: create project structure WITHOUT installing dependencies.
+        # We must checkout the issue branch before composer install so that vendor
+        # is resolved for the correct branch, not for main/drupal12.
+        log_setup "Issue fork: creating project structure (dependencies installed after branch checkout)..."
+        update_status "⏳ DDEV composer create-project: In progress..."
+        if ddev composer create-project --no-install --no-interaction joachim-n/drupal-core-development-project . >> "$SETUP_LOG" 2>&1; then
+          log_setup "✓ Project structure created ($((SECONDS - _t))s)"
+          update_status "✓ DDEV composer create-project: Success"
+          DRUPAL_SETUP_NEEDED=true
+          # Supplement git objects from seed cache so issue-branch fetch only downloads the delta
+          if [ -d "$CACHE_SEED/repos/drupal/.git/objects" ]; then
+            log_setup "Supplementing git objects from seed cache..."
+            rsync -a "$CACHE_SEED/repos/drupal/.git/objects/" "$DRUPAL_DIR/repos/drupal/.git/objects/" >> "$SETUP_LOG" 2>&1 || true
+            log_setup "  git objects supplement complete"
+          fi
+        else
+          log_setup "✗ Failed to create project structure ($((SECONDS - _t))s)"
+          log_setup "Check $SETUP_LOG for details"
+          update_status "✗ DDEV composer create-project: Failed"
+          update_status ""
+          update_status "Manual recovery:"
+          update_status "  cd $DRUPAL_DIR && ddev composer create-project --no-install joachim-n/drupal-core-development-project ."
+        fi
       else
-        log_setup "✗ Failed to create Drupal core development project ($((SECONDS - _t))s)"
-        log_setup "Check $SETUP_LOG for details"
-        update_status "✗ DDEV composer create: Failed"
-        update_status ""
-        update_status "Manual recovery:"
-        update_status "  cd $DRUPAL_DIR && ddev composer create joachim-n/drupal-core-development-project"
+        log_setup "No cache available, running full composer create (this takes 5-10 minutes)..."
+        update_status "⏳ DDEV composer create: In progress (this takes 5-10 minutes)..."
+        if ddev composer create joachim-n/drupal-core-development-project --no-interaction >> "$SETUP_LOG" 2>&1; then
+          log_setup "✓ Drupal core development project created ($((SECONDS - _t))s)"
+          update_status "✓ DDEV composer create: Success"
+          DRUPAL_SETUP_NEEDED=true
+        else
+          log_setup "✗ Failed to create Drupal core development project ($((SECONDS - _t))s)"
+          log_setup "Check $SETUP_LOG for details"
+          update_status "✗ DDEV composer create: Failed"
+          update_status ""
+          update_status "Manual recovery:"
+          update_status "  cd $DRUPAL_DIR && ddev composer create joachim-n/drupal-core-development-project"
+        fi
       fi
     fi
 
     # Steps 5-7: run whenever project files are present — inner checks handle idempotency
     if [ -f "composer.json" ] && [ -d "repos/drupal" ]; then
-      # Step 5: Ensure Drush is available (skip if already present from cache)
+      # Step 4.5: Issue fork — checkout branch, fix composer.json, run composer install.
+      # For issue forks the project was created with --no-install so no vendor exists yet.
+      # We must checkout the issue branch BEFORE composer install so that vendor is
+      # resolved for the correct Drupal version, not for main/drupal12.
+      if [ "$USING_ISSUE_FORK" = "true" ] && [ "$ISSUE_FORK_CHECKOUT_DONE" = "false" ]; then
+        REPOS_DIR="$DRUPAL_DIR/repos/drupal"
+        if [ -d "$REPOS_DIR/.git" ]; then
+          CURRENT_BRANCH=$(git -C "$REPOS_DIR" branch --show-current 2>/dev/null || echo "")
+          if [ -n "$ISSUE_BRANCH" ] && [ "$CURRENT_BRANCH" = "$ISSUE_BRANCH" ]; then
+            log_setup "✓ Already on issue branch: $ISSUE_BRANCH"
+          else
+            if [ -n "$ISSUE_FORK" ]; then
+              log_setup "Adding issue fork remote and fetching: $ISSUE_FORK"
+              git -C "$REPOS_DIR" remote remove issue 2>/dev/null || true
+              git -C "$REPOS_DIR" remote add issue "https://git.drupalcode.org/issue/drupal-$ISSUE_FORK.git"
+              if git -C "$REPOS_DIR" fetch issue >> "$SETUP_LOG" 2>&1; then
+                log_setup "  ✓ Fetched from issue remote"
+              else
+                log_setup "✗ Failed to fetch from issue remote $ISSUE_FORK — aborting setup"
+                SETUP_FAILED=true
+              fi
+            fi
+            if [ "$SETUP_FAILED" != "true" ] && [ -n "$ISSUE_BRANCH" ]; then
+              log_setup "Checking out issue branch: $ISSUE_BRANCH"
+              if git -C "$REPOS_DIR" checkout -b "$ISSUE_BRANCH" "issue/$ISSUE_BRANCH" >> "$SETUP_LOG" 2>&1 || \
+                 git -C "$REPOS_DIR" checkout "$ISSUE_BRANCH" >> "$SETUP_LOG" 2>&1; then
+                log_setup "  ✓ Checked out branch: $ISSUE_BRANCH"
+              else
+                log_setup "✗ Failed to check out branch $ISSUE_BRANCH — aborting setup"
+                SETUP_FAILED=true
+              fi
+            fi
+          fi
+
+          # Apply composer.json fixes so ddev composer install resolves correctly.
+          # Root composer.json hardcodes "drupal/core: dev-main" which conflicts with
+          # non-main issue branches in the canonical path repos.
+          if [ "$SETUP_FAILED" = "true" ]; then
+            log_setup "✗ Skipping composer.json fixes due to branch checkout failure"
+          else
+          log_setup "Applying composer.json fixes for Drupal $DRUPAL_VERSION issue branch..."
+          # Detect actual Drupal major version from CoreRecommended's constraint on disk
+          # (e.g. "10.5.x-dev" → "10", "11.x-dev" → "11") rather than trusting the
+          # user-selected DRUPAL_VERSION — users sometimes select the wrong version.
+          CHECKED_OUT_BRANCH=$(git -C "$REPOS_DIR" branch --show-current 2>/dev/null || echo "")
+          TARGET_ALIAS=$(jq -r '.require["drupal/core"]' \
+            "$REPOS_DIR/composer/Metapackage/CoreRecommended/composer.json" 2>/dev/null || echo "")
+          ACTUAL_DRUPAL_MAJOR=$(echo "$TARGET_ALIAS" | grep -oE '^[0-9]+' || echo "$DRUPAL_VERSION")
+          if [ -n "$TARGET_ALIAS" ] && [ -n "$CHECKED_OUT_BRANCH" ]; then
+            log_setup "  Detected Drupal $ACTUAL_DRUPAL_MAJOR.x (CoreRecommended requires $TARGET_ALIAS)"
+            if [ "$ACTUAL_DRUPAL_MAJOR" != "$DRUPAL_VERSION" ]; then
+              log_setup "  ⚠ Drupal version mismatch: user selected $DRUPAL_VERSION but branch is actually $ACTUAL_DRUPAL_MAJOR.x"
+            fi
+          else
+            log_setup "  ⚠ Could not detect Drupal version (CHECKED_OUT_BRANCH='$CHECKED_OUT_BRANCH' TARGET_ALIAS='$TARGET_ALIAS')"
+            ACTUAL_DRUPAL_MAJOR="$DRUPAL_VERSION"
+          fi
+
+          # Fix 1 + Fix 2: set version constraints to use path repos for the checked-out branch.
+          #
+          # For 10.x / 11.x: use inline alias "dev-$BRANCH as N.x-dev" on drupal/core and all
+          # drupal/* sub-packages (except drupal/drupal). drupal/core uses self.version for
+          # sub-packages; with the alias self.version = N.x-dev. Sub-packages must also be aliased
+          # so path repos satisfy that constraint. Packagist has no N.x-dev alias for sub-packages
+          # on these versions, so there is no conflict.
+          # Pin drupal/drupal to dev-$BRANCH so Packagist's version cannot pull in remote packages.
+          #
+          # For 12.x/main: inline alias CANNOT be used. With "dev-$BRANCH as 12.x-dev", Composer
+          # puts both dev-$BRANCH AND 12.x-dev in the resolution pool; both emit self.version
+          # requirements (dev-$BRANCH and 12.x-dev) for sub-packages, which conflict. Packagist
+          # defines 12.x-dev = dev-main for every sub-package, blocking a second inline alias.
+          # Solution: temporarily add "dev-$BRANCH": "12.x-dev" to the branch-alias in
+          # repos/drupal/composer.json (drupal/drupal) and repos/drupal/core/composer.json
+          # (drupal/core). Path repos then satisfy 12.x-dev natively. Root drupal/core is changed
+          # from "dev-main" to "12.x-dev" so path repo wins over Packagist. drupal/drupal's
+          # self.version becomes 12.x-dev, consistent with drupal/core — sub-packages come from
+          # Packagist at 12.x-dev = dev-main (same code). After composer update the repos/drupal
+          # files are restored with git checkout, keeping the git checkout clean.
+          if [ "$ACTUAL_DRUPAL_MAJOR" != "12" ]; then
+            # 10.x / 11.x: inline alias for drupal/core and all drupal/* sub-packages
+            jq --arg val "dev-$CHECKED_OUT_BRANCH as $TARGET_ALIAS" \
+              '.require |= with_entries(if (.key | startswith("drupal/")) and .key != "drupal/drupal" then .value = $val else . end)' \
+              composer.json > composer.json.tmp && mv composer.json.tmp composer.json
+            log_setup "  Set inline alias for all drupal/* packages: dev-$CHECKED_OUT_BRANCH as $TARGET_ALIAS"
+            # Pin drupal/drupal to path repo
+            jq --arg branch "dev-$CHECKED_OUT_BRANCH" \
+              '.require["drupal/drupal"] = $branch' \
+              composer.json > composer.json.tmp && mv composer.json.tmp composer.json
+            log_setup "  Pinned drupal/drupal to path repo: dev-$CHECKED_OUT_BRANCH"
+          else
+            # 12.x: add temporary branch-alias to path repo files, set root to 12.x-dev
+            for _repo_file in composer.json core/composer.json; do
+              jq --arg b "dev-$CHECKED_OUT_BRANCH" '.extra["branch-alias"][$b] = "12.x-dev"' \
+                "$REPOS_DIR/$_repo_file" > "$REPOS_DIR/$_repo_file.tmp" \
+                && mv "$REPOS_DIR/$_repo_file.tmp" "$REPOS_DIR/$_repo_file"
+            done
+            log_setup "  Added temporary branch-alias dev-$CHECKED_OUT_BRANCH=12.x-dev to path repos"
+            # Change root drupal/core from "dev-main" to "12.x-dev" so path repo (with alias) wins
+            jq --arg alias "$TARGET_ALIAS" \
+              '.require["drupal/core"] = $alias' \
+              composer.json > composer.json.tmp && mv composer.json.tmp composer.json
+            log_setup "  Set root drupal/core to: $TARGET_ALIAS (path repo with branch-alias will satisfy this)"
+          fi
+
+          # Fix 3: drupal/core-dev on some branches (10.x, 11.2.x, ...) requires
+          # justinrainbow/json-schema ^5.2, but composer 2.9.x requires ^6.5.1 — conflict.
+          # Detect from the actual path repo rather than assuming by major version.
+          # See https://www.drupal.org/project/drupal/issues/3557585
+          _core_dev_json_schema=$(jq -r '.require["justinrainbow/json-schema"] // ""' \
+            "$REPOS_DIR/composer/Metapackage/DevDependencies/composer.json" 2>/dev/null || echo "")
+          if echo "$_core_dev_json_schema" | grep -q '^\^5'; then
+            jq '.require["composer/composer"] = "~2.8.1" | .config.audit["block-insecure"] = false' \
+              composer.json > composer.json.tmp && mv composer.json.tmp composer.json
+            log_setup "  Applied composer/composer pin to ~2.8.1 (json-schema conflict detected)"
+          fi
+
+          # Fix 4 (ALL versions if directory exists): drupal/drupal on 11.x+ requires
+          # drupal/core-recipe-unpack at self.version. It is not in the joachim-n path repos
+          # list, so we add it. Gated on directory existence so it is safe on 10.x branches
+          # that don't have it. MUST be universal — not gated on DRUPAL_VERSION — because a
+          # user may select "10" while the actual issue branch is 11.x code.
+          if [ -d "$REPOS_DIR/composer/Plugin/RecipeUnpack" ]; then
+            jq '.repositories += [{"type":"path","url":"repos/drupal/composer/Plugin/RecipeUnpack"}]' \
+              composer.json > composer.json.tmp && mv composer.json.tmp composer.json
+            log_setup "  Added RecipeUnpack path repo"
+          fi
+
+          # Now resolve dependencies for the checked-out issue branch.
+          # Use 'update -W' (not 'install') so composer re-solves the full dependency graph
+          # with the new composer.json constraints rather than trying to honour a stale lock file.
+          log_setup "Running composer update -W for issue branch..."
+          update_status "⏳ Composer update for issue branch: In progress..."
+          _t=$SECONDS
+          ddev composer update -W 2>&1 | tee -a "$SETUP_LOG"
+          _composer_exit=$${PIPESTATUS[0]}
+          if [ "$_composer_exit" = "0" ]; then
+            log_setup "✓ Composer update complete ($((SECONDS - _t))s)"
+            update_status "✓ Composer update for issue branch: Success"
+          else
+            log_setup "✗ Composer update failed (exit $_composer_exit, $((SECONDS - _t))s) — skipping remaining setup"
+            update_status "✗ Composer update for issue branch: Failed"
+            update_status ""
+            update_status "Manual recovery:"
+            update_status "  cd $DRUPAL_DIR && ddev composer update -W"
+            SETUP_FAILED=true
+          fi
+
+          # For 12.x, restore the temporarily modified path repo files so git checkout stays clean.
+          if [ "$ACTUAL_DRUPAL_MAJOR" = "12" ]; then
+            git -C "$REPOS_DIR" checkout -- composer.json core/composer.json >> "$SETUP_LOG" 2>&1 \
+              && log_setup "  Restored repos/drupal path repo files (12.x branch-alias cleanup)" \
+              || log_setup "  ⚠ Could not restore repos/drupal files — check git status in repos/drupal"
+          fi
+          fi # end SETUP_FAILED (branch checkout) guard
+        fi
+      fi
+
+      # Step 4.9: Restore repos/drupal/vendor symlink if missing.
+      # This symlink (repos/drupal/vendor -> ../../vendor) is created by joachim-n's
+      # post-install scripts. It can be absent when a previous workspace attempt failed
+      # before composer install completed.
+      if [ -d "repos/drupal/.git" ] && [ ! -e "repos/drupal/vendor" ] && [ ! -L "repos/drupal/vendor" ]; then
+        log_setup "Restoring missing repos/drupal/vendor symlink..."
+        ln -s ../../vendor repos/drupal/vendor && log_setup "  symlink restored" || log_setup "  symlink restore failed (non-critical)"
+      elif [ -d "repos/drupal/.git" ] && [ -L "repos/drupal/vendor" ] && [ ! -e "repos/drupal/vendor" ]; then
+        log_setup "Fixing broken repos/drupal/vendor symlink..."
+        ln -sf ../../vendor repos/drupal/vendor && log_setup "  symlink fixed" || log_setup "  symlink fix failed (non-critical)"
+      fi
+
+      # Steps 5 and 6 are skipped if an earlier step (e.g. composer update) failed.
+      if [ "$SETUP_FAILED" = "true" ]; then
+        log_setup "⚠ Skipping Drush and Drupal install due to earlier failure"
+        update_status "⚠ Setup incomplete — see drupal-setup.log for details"
+      else
+
+      # Step 5: Ensure Drush is available (skip if already present from cache or pre-checkout install)
       if [ -f "vendor/bin/drush" ]; then
         log_setup "✓ Drush already present"
         update_status "✓ Drush install: Already present"
       else
         _t=$SECONDS
-        log_setup "Adding Drush to composer require..."
+        log_setup "Adding Drush..."
         update_status "⏳ Drush install: In progress..."
 
-        if ddev composer require drush/drush >> "$SETUP_LOG" 2>&1; then
+        if ddev composer require drush/drush -W >> "$SETUP_LOG" 2>&1; then
           log_setup "✓ Drush configured ($((SECONDS - _t))s)"
           update_status "✓ Drush install: Success"
         else
@@ -567,10 +850,14 @@ STATUS_HEADER
       fi
 
       # Step 6: Install or import Drupal database
+      # Fast path (DB cache import) is only used when:
+      #   - No issue fork (issue code may differ from cached DB)
+      #   - Install profile is demo_umami (cache was built with that profile)
+      #   - Cache tarball exists
       if ddev drush status 2>/dev/null | grep -q "Drupal bootstrap.*Successful"; then
         log_setup "✓ Drupal already installed"
         update_status "✓ Drupal install: Already present"
-      elif [ -f "$CACHE_SEED/.tarballs/db.sql.gz" ]; then
+      elif [ "$USING_ISSUE_FORK" = "false" ] && [ "$INSTALL_PROFILE" = "demo_umami" ] && [ -f "$CACHE_SEED/.tarballs/db.sql.gz" ]; then
         _t=$SECONDS
         log_setup "Importing database from cache (fast path)..."
         update_status "⏳ Drupal install: Importing cached database..."
@@ -587,7 +874,7 @@ STATUS_HEADER
           log_setup "⚠ DB import failed ($((SECONDS - _t))s), falling back to full site install..."
           update_status "⚠ DB import failed, running full install..."
           _t=$SECONDS
-          if ddev drush si -y demo_umami --account-pass=admin >> "$SETUP_LOG" 2>&1; then
+          if ddev drush si -y "$INSTALL_PROFILE" --account-pass=admin >> "$SETUP_LOG" 2>&1; then
             log_setup "✓ Drupal installed successfully (fallback, $((SECONDS - _t))s)"
             update_status "✓ Drupal install: Success (fallback)"
           else
@@ -597,10 +884,14 @@ STATUS_HEADER
         fi
       else
         _t=$SECONDS
-        log_setup "Installing Drupal with demo_umami profile (this will take 2-3 minutes)..."
+        if [ "$USING_ISSUE_FORK" = "true" ]; then
+          log_setup "Installing Drupal with $INSTALL_PROFILE profile (issue fork: full install required)..."
+        else
+          log_setup "Installing Drupal with $INSTALL_PROFILE profile (this will take 2-3 minutes)..."
+        fi
         update_status "⏳ Drupal install: In progress..."
 
-        if ddev drush si -y demo_umami --account-pass=admin >> "$SETUP_LOG" 2>&1; then
+        if ddev drush si -y "$INSTALL_PROFILE" --account-pass=admin >> "$SETUP_LOG" 2>&1; then
           log_setup "✓ Drupal installed ($((SECONDS - _t))s)"
           log_setup ""
           log_setup "   Admin Credentials:"
@@ -615,8 +906,25 @@ STATUS_HEADER
           update_status ""
           update_status "Manual recovery:"
           update_status "  cd $DRUPAL_DIR"
-          update_status "  ddev drush si -y demo_umami --account-pass=admin"
+          update_status "  ddev drush si -y $INSTALL_PROFILE --account-pass=admin"
         fi
+      fi
+      fi # end SETUP_FAILED guard
+
+      # Step 6.5: Cache rebuild — ensures a clean state after any setup path
+      log_setup "Running cache rebuild..."
+      ddev drush cr >> "$SETUP_LOG" 2>&1 || true
+
+      # Step 6.6: Set up phpunit.xml for running core tests
+      if [ ! -f "phpunit.xml" ] && [ -f "phpunit-ddev.xml" ]; then
+        cp phpunit-ddev.xml phpunit.xml
+        # Replace PROJECT_NAME.ddev.site placeholder with actual workspace URL
+        if [ -n "$VSCODE_PROXY_URI" ] && [ -n "$CODER_WORKSPACE_OWNER_NAME" ]; then
+          CODER_DOMAIN=$(echo "$VSCODE_PROXY_URI" | sed -E 's|https?://[^.]+\.(.+?)(/.*)?$|\1|')
+          SITE_URL="https://80--$${CODER_WORKSPACE_NAME}--$${CODER_WORKSPACE_OWNER_NAME}.$${CODER_DOMAIN}"
+          sed -i "s|PROJECT_NAME\.ddev\.site|$${SITE_URL#https://}|" phpunit.xml
+        fi
+        log_setup "✓ phpunit.xml configured (run tests with: ddev exec vendor/bin/phpunit web/core/tests/...)"
       fi
 
       # Step 7: Install custom DDEV launch command
