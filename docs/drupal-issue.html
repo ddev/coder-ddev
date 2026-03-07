@@ -454,10 +454,17 @@
             if (!checkResp.ok) {
               setStatus('Issue #' + nid + ' does not exist on drupal.org. Check the issue number and try again.', 'error');
             } else {
-              setStatus('No issue fork exists for #' + nid + ' yet. To work on this issue, visit the issue page on drupal.org and click "Get push access" to create a fork, then come back here.', 'info');
+              // Verify the response is actually a valid node (not a redirect or error page)
+              let nodeData;
+              try { nodeData = await checkResp.json(); } catch (_) { nodeData = null; }
+              if (!nodeData || String(nodeData.nid) !== String(nid)) {
+                setStatus('Issue #' + nid + ' does not exist on drupal.org. Check the issue number and try again.', 'error');
+              } else {
+                setStatus('No issue fork exists for #' + nid + ' yet. To work on this issue, visit the issue page on drupal.org and click "Get push access" to create a fork, then come back here.', 'info');
+              }
             }
           } catch (_) {
-            setStatus('No issue fork exists for #' + nid + ' yet. To work on this issue, visit the issue page on drupal.org and click "Get push access" to create a fork, then come back here.', 'info');
+            setStatus('Issue #' + nid + ' does not appear to exist on drupal.org. Check the issue number and try again.', 'error');
           }
           document.getElementById('load-btn').disabled = false;
           return;
