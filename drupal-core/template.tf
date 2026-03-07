@@ -642,7 +642,7 @@ WELCOME_STATIC
         # is resolved for the correct branch, not for main/drupal12.
         log_setup "Issue fork: creating project structure (dependencies installed after branch checkout)..."
         update_status "⏳ DDEV composer create-project: In progress..."
-        if ddev composer create-project --no-install --no-interaction joachim-n/drupal-core-development-project . >> "$SETUP_LOG" 2>&1; then
+        if ddev composer create-project --no-install --no-interaction "joachim-n/drupal-core-development-project:dev-main" . >> "$SETUP_LOG" 2>&1; then
           log_setup "✓ Project structure created ($((SECONDS - _t))s)"
           update_status "✓ DDEV composer create-project: Success"
           DRUPAL_SETUP_NEEDED=true
@@ -658,7 +658,7 @@ WELCOME_STATIC
           update_status "✗ DDEV composer create-project: Failed"
           update_status ""
           update_status "Manual recovery:"
-          update_status "  cd $DRUPAL_DIR && ddev composer create-project --no-install joachim-n/drupal-core-development-project ."
+          update_status "  cd $DRUPAL_DIR && ddev composer create-project --no-install \"joachim-n/drupal-core-development-project:dev-main\" ."
         fi
       else
         log_setup "No cache available, running full composer create (this takes 5-10 minutes)..."
