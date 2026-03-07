@@ -1,6 +1,6 @@
 # Quickstart: Drupal Core Development on coder.ddev.com
 
-Cloud-hosted DDEV workspaces for Drupal core development. Full environment — Drupal core clone, running site, drush — ready in ~30 seconds.
+Cloud-hosted DDEV workspaces for Drupal core development. Full environment — Drupal core clone, running site, drush — ready in about a minute.
 
 [![Open in Coder](https://coder.ddev.com/open-in-coder.svg)](https://coder.ddev.com/templates/coder/drupal-core/workspace?mode=manual)
 
@@ -16,7 +16,7 @@ Go to **[coder.ddev.com](https://coder.ddev.com)** and sign in with GitHub.
 
 Click the button above, or go to **Create Workspace** → select the **drupal-core** template → click **Create Workspace**.
 
-Wait ~30 seconds for the startup script to complete. Watch progress in the **Logs** tab.
+Wait about a minute for the startup script to complete. Watch progress in the **Logs** tab.
 
 ---
 
@@ -114,7 +114,7 @@ Then create a merge request on [drupal.org](https://www.drupal.org/project/drupa
 | Action | Effect |
 |--------|--------|
 | **Stop** workspace | Containers stop; your files persist on disk |
-| **Start** workspace | DDEV resumes in ~15 seconds; no reinstall needed |
+| **Start** workspace | Ready in about a minute; no reinstall needed |
 | **Delete** workspace | All data deleted permanently |
 
 ---

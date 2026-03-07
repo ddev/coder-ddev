@@ -458,7 +458,7 @@ make deploy-user-defined-web
 
 ## Step 8: Set Up the Drupal Core Seed Cache (optional, highly recommended)
 
-The `drupal-core` template can provision a fully configured Drupal core development environment on new workspaces using a **seed cache** on the host. Without the cache, first-time workspace setup downloads a full git clone and all composer dependencies (~10-13 minutes). With the cache, that drops to ~15 seconds.
+The `drupal-core` template can provision a fully configured Drupal core development environment on new workspaces using a **seed cache** on the host. Without the cache, first-time workspace setup downloads a full git clone and all composer dependencies (~10-13 minutes). With the cache, the install phase drops to ~15 seconds, and total workspace startup is about a minute.
 
 The cache is a standing DDEV project on the host that is periodically refreshed. New workspaces copy the git checkout, vendor directory, and a pre-built database snapshot from it.
 

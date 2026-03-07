@@ -610,6 +610,13 @@ WELCOME_STATIC
     if [ -f "composer.json" ] && [ -d "repos/drupal/.git" ]; then
       log_setup "✓ Drupal core project already present — skipping setup"
       update_status "✓ Setup: Already present"
+      # For HEAD workspaces (non-issue-fork), keep the drupal repo current on every start
+      if [ "$USING_ISSUE_FORK" = "false" ]; then
+        _t=$SECONDS
+        git -C "$DRUPAL_DIR/repos/drupal" fetch --all --prune >> "$SETUP_LOG" 2>&1 || true
+        git -C "$DRUPAL_DIR/repos/drupal" merge --ff-only origin/main >> "$SETUP_LOG" 2>&1 || true
+        log_setup "  git fetch+merge complete ($((SECONDS - _t))s)"
+      fi
     elif [ "$USING_ISSUE_FORK" = "false" ] && [ -f "$CACHE_SEED/composer.json" ] && [ -d "$CACHE_SEED/repos/drupal/.git" ]; then
       _t=$SECONDS
       log_setup "Cache hit: seeding project from host cache (fast path)..."
