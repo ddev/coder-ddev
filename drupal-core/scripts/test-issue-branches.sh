@@ -103,12 +103,19 @@ for PAIR in "${TESTS[@]}"; do
     log "Already on branch: $BRANCH"
   fi
 
-  # --- Detect actual Drupal major version from CoreRecommended ---
+  # --- Apply composer.json fixes ---
+  # joachim-n/drupal-core-development-project:dev-main uses "*" for all drupal/* constraints
+  # in the root and includes repos/drupal/composer/Plugin/* as a glob (so RecipeUnpack is
+  # covered). However, transitive constraints between path repo packages still need Fix 1+2
+  # for 10.x/11.x: packages like drupal/core-recommended require drupal/core 11.x-dev, but
+  # a branch with alias 11.3.x-dev can't satisfy that without an inline alias. For 12.x,
+  # the 12.x-dev branch-alias = dev-main on Packagist, so no fix is needed.
+  cd "$PROJECT_DIR"
+
   CHECKED_OUT_BRANCH=$(git -C "$REPOS_DIR" branch --show-current 2>/dev/null || echo "")
   TARGET_ALIAS=$(jq -r '.require["drupal/core"]' \
     "$REPOS_DIR/composer/Metapackage/CoreRecommended/composer.json" 2>/dev/null || echo "")
   ACTUAL_DRUPAL_MAJOR=$(echo "$TARGET_ALIAS" | grep -oE '^[0-9]+' || echo "11")
-
   if [ -z "$TARGET_ALIAS" ]; then
     log "WARNING: could not read TARGET_ALIAS from CoreRecommended; defaulting to 11.x-dev"
     ACTUAL_DRUPAL_MAJOR="11"
@@ -116,12 +123,9 @@ for PAIR in "${TESTS[@]}"; do
   fi
   log "Detected Drupal $ACTUAL_DRUPAL_MAJOR.x (CoreRecommended requires: $TARGET_ALIAS)"
 
-  # --- Apply composer.json fixes ---
-  log "Applying composer.json fixes..."
-  cd "$PROJECT_DIR"
-
+  # Fix 1+2 (10.x/11.x only): inline alias so path repo packages satisfy each other's N.x-dev
+  # constraints. 12.x branches work without this (12.x-dev = dev-main on Packagist).
   if [ "$ACTUAL_DRUPAL_MAJOR" != "12" ]; then
-    # Fix 1+2 for 10.x/11.x: inline alias for all drupal/* packages
     jq --arg val "dev-$CHECKED_OUT_BRANCH as $TARGET_ALIAS" \
       '.require |= with_entries(if (.key | startswith("drupal/")) and .key != "drupal/drupal" then .value = $val else . end)' \
       composer.json > composer.json.tmp && mv composer.json.tmp composer.json
@@ -129,19 +133,11 @@ for PAIR in "${TESTS[@]}"; do
       '.require["drupal/drupal"] = $branch' \
       composer.json > composer.json.tmp && mv composer.json.tmp composer.json
     log "  Inline alias: dev-$CHECKED_OUT_BRANCH as $TARGET_ALIAS; drupal/drupal pinned"
-  else
-    # Fix 1+2 for 12.x: temporary branch-alias in path repo files, change root constraint
-    for _repo_file in composer.json core/composer.json; do
-      jq --arg b "dev-$CHECKED_OUT_BRANCH" '.extra["branch-alias"][$b] = "12.x-dev"' \
-        "$REPOS_DIR/$_repo_file" > "$REPOS_DIR/$_repo_file.tmp" \
-        && mv "$REPOS_DIR/$_repo_file.tmp" "$REPOS_DIR/$_repo_file"
-    done
-    jq --arg alias "$TARGET_ALIAS" '.require["drupal/core"] = $alias' \
-      composer.json > composer.json.tmp && mv composer.json.tmp composer.json
-    log "  Temp branch-alias in repos/drupal; root drupal/core => $TARGET_ALIAS"
   fi
 
   # Fix 3: pin composer/composer when json-schema conflict present
+  # drupal/core-dev on some branches (10.x, 11.2.x) requires justinrainbow/json-schema ^5.2,
+  # but composer 2.9.x requires ^6.5.1 — conflict. See https://www.drupal.org/project/drupal/issues/3557585
   _core_dev_json_schema=$(jq -r '.require["justinrainbow/json-schema"] // ""' \
     "$REPOS_DIR/composer/Metapackage/DevDependencies/composer.json" 2>/dev/null || echo "")
   if echo "$_core_dev_json_schema" | grep -q '^\^5'; then
@@ -150,24 +146,10 @@ for PAIR in "${TESTS[@]}"; do
     log "  Pinned composer/composer ~2.8.1 (json-schema conflict detected)"
   fi
 
-  # Fix 4: RecipeUnpack path repo (11.x+)
-  if [ -d "$REPOS_DIR/composer/Plugin/RecipeUnpack" ]; then
-    jq '.repositories += [{"type":"path","url":"repos/drupal/composer/Plugin/RecipeUnpack"}]' \
-      composer.json > composer.json.tmp && mv composer.json.tmp composer.json
-    log "  Added RecipeUnpack path repo"
-  fi
-
   # --- Run composer update -W ---
   log "Running ddev composer update -W..."
   COMPOSER_EXIT=0
   ddev composer update -W 2>&1 || COMPOSER_EXIT=$?
-
-  # Restore temporarily modified path repo files for 12.x
-  if [ "$ACTUAL_DRUPAL_MAJOR" = "12" ]; then
-    git -C "$REPOS_DIR" checkout -- composer.json core/composer.json 2>/dev/null \
-      && log "  Restored repos/drupal files (12.x cleanup)" \
-      || log "  WARNING: could not restore repos/drupal files"
-  fi
 
   # --- Record result ---
   ELAPSED=$((SECONDS - START))

@@ -714,13 +714,17 @@ WELCOME_STATIC
             fi
           fi
 
-          # Apply composer.json fixes so ddev composer install resolves correctly.
-          # Root composer.json hardcodes "drupal/core: dev-main" which conflicts with
-          # non-main issue branches in the canonical path repos.
+          # Apply composer.json fixes so ddev composer update resolves correctly.
+          # joachim-n/drupal-core-development-project:dev-main uses "*" for all drupal/*
+          # root constraints and includes repos/drupal/composer/Plugin/* as a glob path repo
+          # (so RecipeUnpack is covered). However, transitive constraints BETWEEN path repo
+          # packages still need Fix 1+2 for 10.x/11.x: e.g. drupal/core-recommended requires
+          # drupal/core 11.x-dev but a branch with alias 11.3.x-dev can't satisfy that without
+          # an inline alias. For 12.x the 12.x-dev alias = dev-main on Packagist, which
+          # satisfies all transitive requirements naturally.
           if [ "$SETUP_FAILED" = "true" ]; then
             log_setup "✗ Skipping composer.json fixes due to branch checkout failure"
           else
-          log_setup "Applying composer.json fixes for Drupal $DRUPAL_VERSION issue branch..."
           # Detect actual Drupal major version from CoreRecommended's constraint on disk
           # (e.g. "10.5.x-dev" → "10", "11.x-dev" → "11") rather than trusting the
           # user-selected DRUPAL_VERSION — users sometimes select the wrong version.
@@ -738,50 +742,21 @@ WELCOME_STATIC
             ACTUAL_DRUPAL_MAJOR="$DRUPAL_VERSION"
           fi
 
-          # Fix 1 + Fix 2: set version constraints to use path repos for the checked-out branch.
-          #
-          # For 10.x / 11.x: use inline alias "dev-$BRANCH as N.x-dev" on drupal/core and all
-          # drupal/* sub-packages (except drupal/drupal). drupal/core uses self.version for
-          # sub-packages; with the alias self.version = N.x-dev. Sub-packages must also be aliased
-          # so path repos satisfy that constraint. Packagist has no N.x-dev alias for sub-packages
-          # on these versions, so there is no conflict.
-          # Pin drupal/drupal to dev-$BRANCH so Packagist's version cannot pull in remote packages.
-          #
-          # For 12.x/main: inline alias CANNOT be used. With "dev-$BRANCH as 12.x-dev", Composer
-          # puts both dev-$BRANCH AND 12.x-dev in the resolution pool; both emit self.version
-          # requirements (dev-$BRANCH and 12.x-dev) for sub-packages, which conflict. Packagist
-          # defines 12.x-dev = dev-main for every sub-package, blocking a second inline alias.
-          # Solution: temporarily add "dev-$BRANCH": "12.x-dev" to the branch-alias in
-          # repos/drupal/composer.json (drupal/drupal) and repos/drupal/core/composer.json
-          # (drupal/core). Path repos then satisfy 12.x-dev natively. Root drupal/core is changed
-          # from "dev-main" to "12.x-dev" so path repo wins over Packagist. drupal/drupal's
-          # self.version becomes 12.x-dev, consistent with drupal/core — sub-packages come from
-          # Packagist at 12.x-dev = dev-main (same code). After composer update the repos/drupal
-          # files are restored with git checkout, keeping the git checkout clean.
+          # Fix 1+2 (10.x/11.x only): inline alias so path repo packages satisfy each other's
+          # N.x-dev constraints. drupal/* sub-packages use self.version; aliasing them in the
+          # root makes the path repo versions resolve as N.x-dev for transitive deps.
+          # Pin drupal/drupal to dev-$BRANCH so Packagist's version cannot pull in remote code.
+          # 12.x branches are excluded: their 12.x-dev alias = dev-main on Packagist, which
+          # satisfies all transitive requirements naturally.
           if [ "$ACTUAL_DRUPAL_MAJOR" != "12" ]; then
-            # 10.x / 11.x: inline alias for drupal/core and all drupal/* sub-packages
             jq --arg val "dev-$CHECKED_OUT_BRANCH as $TARGET_ALIAS" \
               '.require |= with_entries(if (.key | startswith("drupal/")) and .key != "drupal/drupal" then .value = $val else . end)' \
               composer.json > composer.json.tmp && mv composer.json.tmp composer.json
             log_setup "  Set inline alias for all drupal/* packages: dev-$CHECKED_OUT_BRANCH as $TARGET_ALIAS"
-            # Pin drupal/drupal to path repo
             jq --arg branch "dev-$CHECKED_OUT_BRANCH" \
               '.require["drupal/drupal"] = $branch' \
               composer.json > composer.json.tmp && mv composer.json.tmp composer.json
             log_setup "  Pinned drupal/drupal to path repo: dev-$CHECKED_OUT_BRANCH"
-          else
-            # 12.x: add temporary branch-alias to path repo files, set root to 12.x-dev
-            for _repo_file in composer.json core/composer.json; do
-              jq --arg b "dev-$CHECKED_OUT_BRANCH" '.extra["branch-alias"][$b] = "12.x-dev"' \
-                "$REPOS_DIR/$_repo_file" > "$REPOS_DIR/$_repo_file.tmp" \
-                && mv "$REPOS_DIR/$_repo_file.tmp" "$REPOS_DIR/$_repo_file"
-            done
-            log_setup "  Added temporary branch-alias dev-$CHECKED_OUT_BRANCH=12.x-dev to path repos"
-            # Change root drupal/core from "dev-main" to "12.x-dev" so path repo (with alias) wins
-            jq --arg alias "$TARGET_ALIAS" \
-              '.require["drupal/core"] = $alias' \
-              composer.json > composer.json.tmp && mv composer.json.tmp composer.json
-            log_setup "  Set root drupal/core to: $TARGET_ALIAS (path repo with branch-alias will satisfy this)"
           fi
 
           # Fix 3: drupal/core-dev on some branches (10.x, 11.2.x, ...) requires
@@ -794,17 +769,6 @@ WELCOME_STATIC
             jq '.require["composer/composer"] = "~2.8.1" | .config.audit["block-insecure"] = false' \
               composer.json > composer.json.tmp && mv composer.json.tmp composer.json
             log_setup "  Applied composer/composer pin to ~2.8.1 (json-schema conflict detected)"
-          fi
-
-          # Fix 4 (ALL versions if directory exists): drupal/drupal on 11.x+ requires
-          # drupal/core-recipe-unpack at self.version. It is not in the joachim-n path repos
-          # list, so we add it. Gated on directory existence so it is safe on 10.x branches
-          # that don't have it. MUST be universal — not gated on DRUPAL_VERSION — because a
-          # user may select "10" while the actual issue branch is 11.x code.
-          if [ -d "$REPOS_DIR/composer/Plugin/RecipeUnpack" ]; then
-            jq '.repositories += [{"type":"path","url":"repos/drupal/composer/Plugin/RecipeUnpack"}]' \
-              composer.json > composer.json.tmp && mv composer.json.tmp composer.json
-            log_setup "  Added RecipeUnpack path repo"
           fi
 
           # Now resolve dependencies for the checked-out issue branch.
@@ -825,13 +789,6 @@ WELCOME_STATIC
             update_status "Manual recovery:"
             update_status "  cd $DRUPAL_DIR && ddev composer update -W"
             SETUP_FAILED=true
-          fi
-
-          # For 12.x, restore the temporarily modified path repo files so git checkout stays clean.
-          if [ "$ACTUAL_DRUPAL_MAJOR" = "12" ]; then
-            git -C "$REPOS_DIR" checkout -- composer.json core/composer.json >> "$SETUP_LOG" 2>&1 \
-              && log_setup "  Restored repos/drupal path repo files (12.x branch-alias cleanup)" \
-              || log_setup "  ⚠ Could not restore repos/drupal files — check git status in repos/drupal"
           fi
           fi # end SETUP_FAILED (branch checkout) guard
         fi
