@@ -448,7 +448,17 @@
           'https://git.drupalcode.org/api/v4/projects/' + encodedProject + '/repository/branches?per_page=100'
         );
         if (branchResp.status === 404) {
-          setStatus('No issue fork exists for #' + nid + ' yet. To work on this issue, visit the issue page on drupal.org and click "Get push access" to create a fork, then come back here.', 'info');
+          // Distinguish: issue doesn't exist vs. issue exists but no fork yet
+          try {
+            const checkResp = await fetch('https://www.drupal.org/api-d7/node/' + nid + '.json');
+            if (!checkResp.ok) {
+              setStatus('Issue #' + nid + ' does not exist on drupal.org. Check the issue number and try again.', 'error');
+            } else {
+              setStatus('No issue fork exists for #' + nid + ' yet. To work on this issue, visit the issue page on drupal.org and click "Get push access" to create a fork, then come back here.', 'info');
+            }
+          } catch (_) {
+            setStatus('No issue fork exists for #' + nid + ' yet. To work on this issue, visit the issue page on drupal.org and click "Get push access" to create a fork, then come back here.', 'info');
+          }
           document.getElementById('load-btn').disabled = false;
           return;
         }
@@ -486,8 +496,15 @@
         const preferred = branches.find(b => b.name.startsWith(nid + '-'));
         if (preferred) branchSelect.value = preferred.name;
 
-        // Set issue title
-        document.getElementById('issue-title-text').textContent = '#' + nid + ': ' + title;
+        // Set issue title with clickable link
+        const titleEl = document.getElementById('issue-title-text');
+        titleEl.innerHTML = '';
+        const issueLink = document.createElement('a');
+        issueLink.href = 'https://www.drupal.org/project/drupal/issues/' + nid;
+        issueLink.target = '_blank';
+        issueLink.textContent = '#' + nid + ': ' + title;
+        issueLink.style.cssText = 'color: inherit; text-decoration: underline;';
+        titleEl.appendChild(issueLink);
 
         // Store and display detected Drupal version
         currentDrupalMajor = drupalMajor;
@@ -512,7 +529,7 @@
       document.getElementById('load-btn').disabled = false;
     }
 
-    function buildCoderUrl(issueFork, issueBranch, installProfile, drupalVersion, workspaceName) {
+    function buildCoderUrl(issueFork, issueBranch, installProfile, drupalVersion, workspaceName, issueUrl) {
       const base = CODER_BASE + '/templates/' + CODER_TEMPLATE + '/workspace';
       const params = new URLSearchParams({
         mode: 'manual',
@@ -521,6 +538,7 @@
         'param.issue_branch': issueBranch,
         'param.install_profile': installProfile,
         'param.drupal_version': drupalVersion,
+        'param.issue_url': issueUrl || '',
       });
       return base + '?' + params.toString();
     }
@@ -536,7 +554,8 @@
         return;
       }
 
-      const url = buildCoderUrl(currentIssueFork, branch, profile, drupalVersion, wsName);
+      const issueUrl = 'https://www.drupal.org/project/drupal/issues/' + currentNid;
+      const url = buildCoderUrl(currentIssueFork, branch, profile, drupalVersion, wsName, issueUrl);
       window.open(url, '_blank');
     }
 
@@ -552,7 +571,10 @@
         return;
       }
 
-      const url = buildCoderUrl(fork, branch, profile, drupalVersion, wsName);
+      // For manual form, derive issue number from fork name (strip drupal- prefix)
+      const issueNum = fork.replace(/^drupal-/, '');
+      const issueUrl = issueNum ? 'https://www.drupal.org/project/drupal/issues/' + issueNum : '';
+      const url = buildCoderUrl(fork, branch, profile, drupalVersion, wsName, issueUrl);
       window.open(url, '_blank');
     }
 

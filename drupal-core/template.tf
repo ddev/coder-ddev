@@ -85,6 +85,16 @@ data "coder_parameter" "issue_branch" {
   order        = 2
 }
 
+data "coder_parameter" "issue_url" {
+  name         = "issue_url"
+  display_name = "Issue URL"
+  description  = "Drupal.org issue page (auto-populated by the picker)."
+  type         = "string"
+  default      = ""
+  mutable      = true
+  order        = 5
+}
+
 data "coder_parameter" "drupal_version" {
   name         = "drupal_version"
   display_name = "Drupal Version"
@@ -146,7 +156,9 @@ data "coder_workspace_owner" "me" {}
 locals {
   # Determine workspace home path
   # Sysbox Strategy: Use standard /home/coder
-  workspace_home = "/home/coder"
+  workspace_home   = "/home/coder"
+  issue_fork_clean = trimprefix(data.coder_parameter.issue_fork.value, "drupal-")
+  issue_url        = data.coder_parameter.issue_url.value != "" ? data.coder_parameter.issue_url.value : (local.issue_fork_clean != "" ? "https://www.drupal.org/project/drupal/issues/${local.issue_fork_clean}" : "")
 }
 
 locals {
@@ -310,62 +322,7 @@ resource "coder_agent" "main" {
     # Copy files from /home/coder-files to /home/coder
     # The volume mount at /home/coder overrides image contents, but /home/coder-files is outside the mount
     echo "Copying files from /home/coder-files to ~/..."
-    if [ -d /home/coder-files ]; then
-
-      
-      # Create Drupal-specific welcome message
-      if [ ! -f ~/WELCOME.txt ]; then
-        cat > ~/WELCOME.txt << 'WELCOME_EOF'
-╔═══════════════════════════════════════════════════════════════╗
-║          Welcome to Drupal Core Development                 ║
-╚═══════════════════════════════════════════════════════════════╝
-
-This workspace uses joachim-n/drupal-core-development-project
-for a professional Drupal core development setup.
-
-🌐 ACCESS YOUR SITE
-   Click "DDEV Web" in the Coder dashboard
-   Or run: ddev launch
-
-🔐 ADMIN CREDENTIALS
-   Username: admin
-   Password: admin
-   One-time link: ddev drush uli
-
-📁 PROJECT STRUCTURE
-   /home/coder/drupal-core       # Project root
-   /home/coder/drupal-core/repos/drupal  # Drupal core git clone
-   /home/coder/drupal-core/web   # Web docroot
-
-🛠️  USEFUL COMMANDS
-   ddev drush status         # Check Drupal status
-   ddev drush uli            # Get admin login link
-   ddev logs                 # View container logs
-   ddev ssh                  # SSH into web container
-   ddev describe             # Show project details
-   ddev composer require ... # Add dependencies
-
-📚 DOCUMENTATION
-   Quickstart: https://github.com/ddev/coder-ddev/blob/main/docs/user/quickstart.md
-   DDEV: https://docs.ddev.com/
-   Drupal: https://www.drupal.org/docs
-   Drupal API: https://api.drupal.org/
-   Project Template: https://github.com/joachim-n/drupal-core-development-project
-
-📋 SETUP STATUS
-   ~/SETUP_STATUS.txt        # Setup completion status
-   /tmp/drupal-setup.log     # Detailed setup logs
-
-💡 TROUBLESHOOTING
-   If setup failed, check the status and log files above.
-   You can manually run setup steps from the log.
-
-Good luck with your Drupal core development!
-WELCOME_EOF
-        chown coder:coder ~/WELCOME.txt 2>/dev/null || true
-        echo "✓ Created Drupal-specific welcome message"
-      fi
-    else
+    if [ ! -d /home/coder-files ]; then
       echo "Warning: /home/coder-files not found in image"
     fi
 
@@ -573,11 +530,87 @@ STATUS_HEADER
     ISSUE_FORK="$${ISSUE_FORK#drupal-}"  # strip leading "drupal-" if user provided it
     ISSUE_BRANCH="${data.coder_parameter.issue_branch.value}"
     INSTALL_PROFILE="${data.coder_parameter.install_profile.value}"
+
+    # Fetch issue title from drupal.org API at runtime (best-effort; empty string on failure)
+    ISSUE_TITLE=""
+    if [ -n "$ISSUE_FORK" ]; then
+      ISSUE_TITLE=$(curl -sf "https://www.drupal.org/api-d7/node/$${ISSUE_FORK}.json" 2>/dev/null | jq -r '.title // ""' 2>/dev/null || echo "")
+    fi
     USING_ISSUE_FORK=false
     SETUP_FAILED=false
     if [ -n "$ISSUE_FORK" ] || [ -n "$ISSUE_BRANCH" ]; then
       USING_ISSUE_FORK=true
       log_setup "Issue fork mode: ISSUE_FORK=$ISSUE_FORK  ISSUE_BRANCH=$ISSUE_BRANCH  INSTALL_PROFILE=$INSTALL_PROFILE"
+    fi
+
+    # Log issue link early so it's visible at the top of the agent logs
+    if [ -n "$ISSUE_FORK" ]; then
+      log_setup "🔗 Issue: https://www.drupal.org/project/drupal/issues/$ISSUE_FORK"
+      if [ -n "$ISSUE_TITLE" ]; then
+        log_setup "   Title: $ISSUE_TITLE"
+      fi
+    fi
+
+    # Create Drupal-specific welcome message (first run only, now that issue info is available)
+    if [ ! -f ~/WELCOME.txt ]; then
+      {
+        cat << 'WELCOME_STATIC'
+╔═══════════════════════════════════════════════════════════════╗
+║          Welcome to Drupal Core Development                 ║
+╚═══════════════════════════════════════════════════════════════╝
+
+This workspace uses joachim-n/drupal-core-development-project
+for a professional Drupal core development setup.
+
+🌐 ACCESS YOUR SITE
+   Click "DDEV Web" in the Coder dashboard
+   Or run: ddev launch
+
+🔐 ADMIN CREDENTIALS
+   Username: admin
+   Password: admin
+   One-time link: ddev drush uli
+
+📁 PROJECT STRUCTURE
+   /home/coder/drupal-core       # Project root
+   /home/coder/drupal-core/repos/drupal  # Drupal core git clone
+   /home/coder/drupal-core/web   # Web docroot
+
+🛠️  USEFUL COMMANDS
+   ddev drush status         # Check Drupal status
+   ddev drush uli            # Get admin login link
+   ddev logs                 # View container logs
+   ddev ssh                  # SSH into web container
+   ddev describe             # Show project details
+   ddev composer require ... # Add dependencies
+
+📚 DOCUMENTATION
+   Quickstart: https://github.com/ddev/coder-ddev/blob/main/docs/user/quickstart.md
+   DDEV: https://docs.ddev.com/
+   Drupal: https://www.drupal.org/docs
+   Drupal API: https://api.drupal.org/
+   Project Template: https://github.com/joachim-n/drupal-core-development-project
+
+📋 SETUP STATUS
+   ~/SETUP_STATUS.txt        # Setup completion status
+   /tmp/drupal-setup.log     # Detailed setup logs
+
+💡 TROUBLESHOOTING
+   If setup failed, check the status and log files above.
+   You can manually run setup steps from the log.
+
+Good luck with your Drupal core development!
+WELCOME_STATIC
+
+        if [ -n "$ISSUE_FORK" ]; then
+          echo ""
+          echo "🐛 WORKING ON ISSUE"
+          echo "   #$${ISSUE_FORK}: $${ISSUE_TITLE}"
+          echo "   https://www.drupal.org/project/drupal/issues/$${ISSUE_FORK}"
+        fi
+      } > ~/WELCOME.txt
+      chown coder:coder ~/WELCOME.txt 2>/dev/null || true
+      echo "✓ Created Drupal-specific welcome message"
     fi
 
     # Step 4: Set up Drupal core project — use seed cache when available (fast path)
@@ -854,6 +887,16 @@ STATUS_HEADER
       #   - No issue fork (issue code may differ from cached DB)
       #   - Install profile is demo_umami (cache was built with that profile)
       #   - Cache tarball exists
+
+      # Compute site name for drush si (used when running a full install)
+      if [ -n "$ISSUE_FORK" ] && [ -n "$ISSUE_TITLE" ]; then
+        SITE_NAME="#$${ISSUE_FORK}: $${ISSUE_TITLE}"
+      elif [ -n "$ISSUE_FORK" ]; then
+        SITE_NAME="Issue #$${ISSUE_FORK}"
+      else
+        SITE_NAME="Drupal Core Development"
+      fi
+
       if ddev drush status 2>/dev/null | grep -q "Drupal bootstrap.*Successful"; then
         log_setup "✓ Drupal already installed"
         update_status "✓ Drupal install: Already present"
@@ -874,7 +917,7 @@ STATUS_HEADER
           log_setup "⚠ DB import failed ($((SECONDS - _t))s), falling back to full site install..."
           update_status "⚠ DB import failed, running full install..."
           _t=$SECONDS
-          if ddev drush si -y "$INSTALL_PROFILE" --account-pass=admin >> "$SETUP_LOG" 2>&1; then
+          if ddev drush si -y "$INSTALL_PROFILE" --account-pass=admin --site-name="$SITE_NAME" >> "$SETUP_LOG" 2>&1; then
             log_setup "✓ Drupal installed successfully (fallback, $((SECONDS - _t))s)"
             update_status "✓ Drupal install: Success (fallback)"
           else
@@ -891,7 +934,7 @@ STATUS_HEADER
         fi
         update_status "⏳ Drupal install: In progress..."
 
-        if ddev drush si -y "$INSTALL_PROFILE" --account-pass=admin >> "$SETUP_LOG" 2>&1; then
+        if ddev drush si -y "$INSTALL_PROFILE" --account-pass=admin --site-name="$SITE_NAME" >> "$SETUP_LOG" 2>&1; then
           log_setup "✓ Drupal installed ($((SECONDS - _t))s)"
           log_setup ""
           log_setup "   Admin Credentials:"
@@ -1361,6 +1404,14 @@ resource "coder_metadata" "workspace_info" {
   item {
     key   = "image"
     value = "${docker_image.workspace_image.name} (version: ${local.image_version})"
+  }
+  item {
+    key   = "issue"
+    value = local.issue_fork_clean != "" ? "#${local.issue_fork_clean}" : "(standard workspace)"
+  }
+  item {
+    key   = "issue_url"
+    value = local.issue_url
   }
 }
 
