@@ -117,28 +117,46 @@ coder stop my-first-workspace my-second-workspace
 https://coder.example.com/@me/my-workspace/apps/code
 ```
 
-### Initial Setup
+### Pre-installed Extensions
 
-**Install essential extensions:**
-1. Open Extensions panel (Ctrl+Shift+X or Cmd+Shift+X)
-2. Search and install:
-   - **PHP** - Language support for PHP
-   - **ESLint** - JavaScript/TypeScript linting
-   - **Prettier** - Code formatting
-   - **GitLens** - Enhanced Git features
-   - **Docker** - Docker container management
-   - **Live Share** - Real-time collaboration (optional)
+All workspaces come with these extensions automatically installed at workspace start:
 
-**Configure settings:**
-```json
-// Settings → Open Settings (JSON)
-{
-  "editor.formatOnSave": true,
-  "editor.tabSize": 2,
-  "files.autoSave": "afterDelay",
-  "terminal.integrated.defaultProfile.linux": "bash"
-}
-```
+| Extension | Purpose |
+|-----------|---------|
+| **PHP Debug** (`xdebug.php-debug`) | Xdebug step debugging |
+| **PHP Intelephense** (`bmewburn.vscode-intelephense-client`) | PHP IntelliSense, go-to-definition, autocomplete |
+| **ESLint** (`dbaeumer.vscode-eslint`) | JavaScript/TypeScript linting |
+| **Prettier** (`esbenp.prettier-vscode`) | Code formatting |
+| **PHPStan** (`sanderronde.phpstan-vscode`) | PHP static analysis |
+| **Code Spell Checker** (`streetsidesoftware.code-spell-checker`) | Spell checking in code and comments |
+| **Stylelint** (`stylelint.vscode-stylelint`) | CSS/SCSS linting |
+| **PHP Sniffer & Beautifier** (`valeryanm.vscode-phpsab`) | PHPCS/PHPCBF integration |
+| **DDEV Manager** (`biati.ddev-manager`) | DDEV control panel: start/stop/Xdebug toggle/etc. |
+
+### Installing Additional Extensions
+
+Extensions are installed from the **[Open VSX Registry](https://open-vsx.org/)** — the open-source alternative to the Microsoft Marketplace used by VS Code Server and other non-Microsoft VS Code deployments.
+
+**To install an extension manually:**
+1. Open Extensions panel (`Ctrl+Shift+X`)
+2. Search for the extension by name
+3. Click Install
+
+**Important:** Not all extensions on the Microsoft Marketplace are available on Open VSX. Authors must publish to both registries independently. Some notable extensions that are **only** on the Microsoft Marketplace (and therefore unavailable here) include Pylance and GitHub Copilot.
+
+If an extension you need is missing, check if it exists on [open-vsx.org](https://open-vsx.org) first. If the author hasn't published there, you can request it via the extension's issue tracker.
+
+### Adding Extensions to All Workspaces
+
+Admins can pre-install additional extensions for all users by adding extension IDs to the `extensions` list in the template's `vscode-web` module. See the [server setup guide](../admin/server-setup.md) for details.
+
+### Future IDE Possibilities
+
+The current setup uses **VS Code for Web** (browser-based VS Code Server). Other IDE options are possible:
+
+- **VS Code Desktop** — Connect your locally-installed VS Code to the workspace via the Coder CLI (`coder ssh`). Requires the Coder CLI on your machine.
+- **JetBrains IDEs** (PhpStorm, GoLand, WebStorm, etc.) — Connect via JetBrains Gateway with the Coder plugin. Full native IDE with remote execution. Currently supported by the Coder platform but not configured in these templates by default.
+- **Neovim / terminal editors** — Available in any SSH session via `coder ssh`.
 
 ### Terminal in VS Code
 
@@ -202,16 +220,19 @@ ddev npm run dev
 VS Code supports debugging for most languages:
 
 **PHP (with Xdebug via DDEV):**
-```bash
-# Enable Xdebug
-ddev xdebug on
 
-# In VS Code:
-# 1. Install PHP Debug extension
-# 2. Add breakpoint (click left of line number)
-# 3. F5 to start debugging
-# 4. Refresh browser to trigger breakpoint
+The **DDEV Manager** extension provides a UI panel for toggling Xdebug. Alternatively, use the terminal:
+
+```bash
+ddev xdebug on   # Enable Xdebug
+ddev xdebug off  # Disable when done (improves performance)
 ```
+
+Then in VS Code:
+1. Add a breakpoint (click left of line number — should appear solid red)
+2. Press **F5** → select "Listen for Xdebug"
+3. Refresh your browser to trigger the breakpoint
+4. The bottom bar turns orange when the debug session is active
 
 **Node.js:**
 ```json
@@ -228,22 +249,16 @@ Press **F5** to start debugging.
 
 ### Extensions for DDEV Projects
 
-**PHP projects:**
-- PHP Intelephense
-- PHP DocBlocker
-- PHPUnit Test Explorer
+Beyond the pre-installed set, these are useful additions for specific project types (search Open VSX by name):
+
+**Drupal:**
+- Drupal Smart Snippets
 
 **WordPress:**
 - WordPress Snippets
-- WordPress Hooks Intellisense
-
-**Drupal:**
-- Drupal 8/9 Snippets
-- Drupal Smart Snippets
 
 **Laravel:**
 - Laravel Blade Snippets
-- Laravel Extra Intellisense
 
 **Node.js:**
 - npm Intellisense
