@@ -68,6 +68,12 @@ ddev ssh
 
 The fastest way: use the **[Drupal Issue Picker](https://start.coder.ddev.com/drupal-issue)**. Paste a drupal.org issue URL or bare issue number — it fetches the available branches, lets you pick one, and opens a pre-configured workspace with the issue branch already checked out and all Composer dependencies resolved for that branch.
 
+When working on an issue, the workspace surfaces issue info in several places:
+
+- **Workspace resource page** — the `issue_url` metadata item links directly to the drupal.org issue
+- **`~/WELCOME.txt`** — shows the issue number, title, and URL
+- **Drupal site name** — set to `#NNNN: issue title` during install (visible in the site header)
+
 To push your changes back:
 
 ```bash
