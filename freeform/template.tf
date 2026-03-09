@@ -405,6 +405,7 @@ resource "docker_container" "workspace" {
   count        = data.coder_workspace.me.start_count
   image        = docker_image.workspace_image.image_id
   name         = "coder-${data.coder_workspace.me.id}"
+  hostname     = "${data.coder_workspace.me.name}-${data.coder_workspace_owner.me.name}"
   user         = "coder"
   group_add    = [tostring(var.docker_gid)]
   stop_timeout = 180

@@ -551,8 +551,9 @@ resource "coder_script" "ddev_shutdown" {
 resource "docker_container" "workspace" {
   count = data.coder_workspace.me.start_count
   image = docker_image.workspace_image.image_id
-  name  = "coder-${data.coder_workspace.me.id}"
-  user  = "coder"
+  name     = "coder-${data.coder_workspace.me.id}"
+  hostname = "${data.coder_workspace.me.name}-${data.coder_workspace_owner.me.name}"
+  user     = "coder"
   # Add docker group so coder user can access Docker socket
   # GID must match host Docker group (default 988, configurable via docker_gid variable)
   group_add = [tostring(var.docker_gid)]
