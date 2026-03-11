@@ -38,7 +38,7 @@ web_environment:
   - VSCODE_PROXY_URI=${VSCODE_PROXY_URI:-}
 hooks:
   post-start:
-    - exec-host: ~/.ddev/commands/host/coder-routes
+    - exec-host: ddev coder-routes
 EOF
 echo "✓ Wrote .ddev/config.coder.yaml"
 

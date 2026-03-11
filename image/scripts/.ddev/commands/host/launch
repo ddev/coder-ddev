@@ -6,7 +6,7 @@
 ## Flags: [{"Name":"mailpit","Shorthand":"m","Usage":"ddev launch -m shows the Mailpit URL"}]
 
 # Outside a Coder workspace fall back to a basic URL print (no browser available in DinD)
-if [ -z "${CODER_WORKSPACE_NAME:-}" ] || [ -z "${VSCODE_PROXY_URI:-}" ]; then
+if [ -z "${CODER_WORKSPACE_NAME:-}" ] || ([ -z "${VSCODE_PROXY_URI:-}" ] && [ -z "${CODER_AGENT_URL:-}" ]); then
   echo "Primary URL: ${DDEV_PRIMARY_URL:-unknown}"
   echo "(Not running in a Coder workspace; cannot open a browser.)"
   exit 0
@@ -14,7 +14,11 @@ fi
 
 WORKSPACE="${CODER_WORKSPACE_NAME}"
 OWNER="${CODER_WORKSPACE_OWNER_NAME}"
-DOMAIN=$(echo "${VSCODE_PROXY_URI}" | sed -E 's|https?://[^.]+\.(.+?)(/.*)?$|\1|')
+if [ -n "${VSCODE_PROXY_URI:-}" ]; then
+  DOMAIN=$(echo "${VSCODE_PROXY_URI}" | sed -E 's|https?://[^.]+\.(.+?)(/.*)?$|\1|')
+else
+  DOMAIN=$(echo "${CODER_AGENT_URL}" | sed -E 's|https?://(.+?)(/.*)?$|\1|')
+fi
 
 # DDEV_SITENAME is the DDEV project name (may differ from the Coder workspace name).
 # Coder URLs always use WORKSPACE (= CODER_WORKSPACE_NAME); PROJECT is only used

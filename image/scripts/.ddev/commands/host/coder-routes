@@ -13,6 +13,8 @@ OWNER="${CODER_WORKSPACE_OWNER_NAME:-}"
 DOMAIN=""
 if [ -n "${VSCODE_PROXY_URI:-}" ]; then
   DOMAIN=$(echo "$VSCODE_PROXY_URI" | sed -E 's|https?://[^.]+\.(.+?)(/.*)?$|\1|')
+elif [ -n "${CODER_AGENT_URL:-}" ]; then
+  DOMAIN=$(echo "$CODER_AGENT_URL" | sed -E 's|https?://(.+?)(/.*)?$|\1|')
 fi
 
 if [ -z "$DDEV_PROJECT" ] || [ -z "$OWNER" ] || [ -z "$DOMAIN" ]; then

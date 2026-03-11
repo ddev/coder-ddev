@@ -202,7 +202,7 @@ resource "coder_agent" "main" {
     # DDEV post-start hooks and interactive shells (DDEV exec-host inherits the
     # shell environment, which sources ~/.bashrc for login shells).
     # Use printenv to avoid $${!var} indirect expansion which Terraform parses.
-    for _var in VSCODE_PROXY_URI CODER_WORKSPACE_NAME CODER_WORKSPACE_OWNER_NAME CODER_WORKSPACE_OWNER_EMAIL; do
+    for _var in CODER_AGENT_URL VSCODE_PROXY_URI CODER_WORKSPACE_NAME CODER_WORKSPACE_OWNER_NAME CODER_WORKSPACE_OWNER_EMAIL; do
       _val=$(printenv "$_var" 2>/dev/null || true)
       if [ -n "$_val" ]; then
         sed -i "/^export $_var=/d" ~/.bashrc || true
