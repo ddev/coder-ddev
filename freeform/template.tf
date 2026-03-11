@@ -387,7 +387,7 @@ resource "coder_app" "mailpit" {
   slug         = "mailpit"
   display_name = "Mailpit"
   url          = "http://localhost:8025"
-  icon         = "/icon/mailhog.svg"
+  icon         = "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/mailpit.svg"
   subdomain    = true
   share        = "owner"
 

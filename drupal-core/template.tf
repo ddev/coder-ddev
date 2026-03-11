@@ -1426,7 +1426,7 @@ resource "coder_app" "mailpit" {
   display_name = "Mailpit"
   order        = 3
   url          = "http://localhost:8025"
-  icon         = "https://raw.githubusercontent.com/axllent/mailpit/develop/server/ui/public/favicon.svg"
+  icon         = "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/mailpit.svg"
   subdomain    = true
   share        = "owner"
 
