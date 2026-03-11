@@ -440,6 +440,21 @@ BASHPROFILE_WELCOME
       printf '\n# Source system-wide settings (bash_completion etc.) for login shells\nif [ -f /etc/bash.bashrc ]; then\n  . /etc/bash.bashrc\nfi\n' >> ~/.bash_profile
     fi
 
+    # Ensure bash_completion is loaded for non-login interactive shells (e.g. VS Code terminal)
+    # Login shells get it via /etc/profile.d/bash_completion.sh; non-login shells need it in ~/.bashrc
+    if ! grep -q 'bash_completion' ~/.bashrc 2>/dev/null; then
+      cat >> ~/.bashrc << 'BASHCOMP'
+# Bash completion (for non-login interactive shells)
+if ! shopt -oq posix; then
+  if [ -f /usr/share/bash-completion/bash_completion ]; then
+    . /usr/share/bash-completion/bash_completion
+  elif [ -f /etc/bash_completion ]; then
+    . /etc/bash_completion
+  fi
+fi
+BASHCOMP
+    fi
+
     # Set up npm global directory in home to persist packages
     mkdir -p ~/.npm-global
     npm config set prefix "~/.npm-global"
