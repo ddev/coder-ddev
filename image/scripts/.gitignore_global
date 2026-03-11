@@ -1,0 +1,15 @@
+# DDEV Coder integration
+config.coder.yaml
+
+# macOS
+.DS_Store
+
+# Editor artifacts
+*.orig
+.idea/
+*.swp
+*.swo
+
+# Environment files (may contain secrets)
+.env.local
+.env.*.local

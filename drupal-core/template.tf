@@ -325,6 +325,22 @@ resource "coder_agent" "main" {
       echo "Warning: /home/coder-files not found in image"
     fi
 
+    # Git configuration: copy defaults on first run, set identity from Coder owner
+    if [ ! -f "$HOME/.gitconfig" ] && [ -f /home/coder-files/.gitconfig ]; then
+      cp /home/coder-files/.gitconfig "$HOME/.gitconfig"
+    fi
+    if [ ! -f "$HOME/.gitignore_global" ] && [ -f /home/coder-files/.gitignore_global ]; then
+      cp /home/coder-files/.gitignore_global "$HOME/.gitignore_global"
+    elif [ -f "$HOME/.gitignore_global" ]; then
+      grep -qxF 'config.coder.yaml' "$HOME/.gitignore_global" || \
+        echo 'config.coder.yaml' >> "$HOME/.gitignore_global"
+    fi
+    if [ -n "$CODER_WORKSPACE_OWNER_NAME" ]; then
+      git config --global user.name "$CODER_WORKSPACE_OWNER_NAME"
+    fi
+    if [ -n "$CODER_WORKSPACE_OWNER_EMAIL" ]; then
+      git config --global user.email "$CODER_WORKSPACE_OWNER_EMAIL"
+    fi
 
     # Install Docker CLI (Required for DDEV DooD)
     # Docker CLI is now pre-installed in the Docker image (v3.0.29+)
@@ -1214,7 +1230,12 @@ LAUNCH_EOF
     if [ ! -f ~/.bash_profile ]; then
       # Create .bash_profile and source .bashrc for non-login shells
       cat > ~/.bash_profile << 'BASHPROFILE'
-# Source .bashrc for non-login shells
+# Source system-wide settings (bash_completion etc.) for login shells
+if [ -f /etc/bash.bashrc ]; then
+  . /etc/bash.bashrc
+fi
+
+# Source user .bashrc
 if [ -f ~/.bashrc ]; then
   . ~/.bashrc
 fi
@@ -1235,6 +1256,25 @@ if [ -f ~/WELCOME.txt ]; then
   echo ""
 fi
 BASHPROFILE_WELCOME
+    fi
+    # Ensure /etc/bash.bashrc is sourced for bash_completion in login shells
+    if ! grep -q 'etc/bash.bashrc' ~/.bash_profile 2>/dev/null; then
+      printf '\n# Source system-wide settings (bash_completion etc.) for login shells\nif [ -f /etc/bash.bashrc ]; then\n  . /etc/bash.bashrc\nfi\n' >> ~/.bash_profile
+    fi
+
+    # Ensure bash_completion is loaded for non-login interactive shells (e.g. VS Code terminal)
+    # Login shells get it via /etc/profile.d/bash_completion.sh; non-login shells need it in ~/.bashrc
+    if ! grep -q 'bash_completion' ~/.bashrc 2>/dev/null; then
+      cat >> ~/.bashrc << 'BASHCOMP'
+# Bash completion (for non-login interactive shells)
+if ! shopt -oq posix; then
+  if [ -f /usr/share/bash-completion/bash_completion ]; then
+    . /usr/share/bash-completion/bash_completion
+  elif [ -f /etc/bash_completion ]; then
+    . /etc/bash_completion
+  fi
+fi
+BASHCOMP
     fi
 
     # Set up npm global directory in home to persist packages
@@ -1285,7 +1325,8 @@ BASHPROFILE_WELCOME
     # DOCKER_HOST                = var.docker_host
     CODER_WORKSPACE_ID         = data.coder_workspace.me.id
     CODER_WORKSPACE_NAME       = data.coder_workspace.me.name
-    CODER_WORKSPACE_OWNER_NAME = data.coder_workspace_owner.me.name
+    CODER_WORKSPACE_OWNER_NAME  = data.coder_workspace_owner.me.name
+    CODER_WORKSPACE_OWNER_EMAIL = data.coder_workspace_owner.me.email
     # Force HOME to /home/coder (Standard Home Strategy)
     HOME = "/home/coder"
   }
