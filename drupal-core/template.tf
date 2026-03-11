@@ -1230,7 +1230,12 @@ LAUNCH_EOF
     if [ ! -f ~/.bash_profile ]; then
       # Create .bash_profile and source .bashrc for non-login shells
       cat > ~/.bash_profile << 'BASHPROFILE'
-# Source .bashrc for non-login shells
+# Source system-wide settings (bash_completion etc.) for login shells
+if [ -f /etc/bash.bashrc ]; then
+  . /etc/bash.bashrc
+fi
+
+# Source user .bashrc
 if [ -f ~/.bashrc ]; then
   . ~/.bashrc
 fi
@@ -1251,6 +1256,10 @@ if [ -f ~/WELCOME.txt ]; then
   echo ""
 fi
 BASHPROFILE_WELCOME
+    fi
+    # Ensure /etc/bash.bashrc is sourced for bash_completion in login shells
+    if ! grep -q 'etc/bash.bashrc' ~/.bash_profile 2>/dev/null; then
+      printf '\n# Source system-wide settings (bash_completion etc.) for login shells\nif [ -f /etc/bash.bashrc ]; then\n  . /etc/bash.bashrc\nfi\n' >> ~/.bash_profile
     fi
 
     # Set up npm global directory in home to persist packages

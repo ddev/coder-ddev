@@ -258,6 +258,10 @@ resource "coder_agent" "main" {
     # bash_profile for SSH logins
     if [ ! -f ~/.bash_profile ]; then
       cat > ~/.bash_profile << 'BASHPROFILE'
+# Source system-wide settings (bash_completion etc.) for login shells
+if [ -f /etc/bash.bashrc ]; then
+  . /etc/bash.bashrc
+fi
 if [ -f ~/.bashrc ]; then
   . ~/.bashrc
 fi
@@ -267,6 +271,10 @@ if [ -f ~/WELCOME.txt ]; then
 fi
 BASHPROFILE
       chmod 644 ~/.bash_profile
+    fi
+    # Ensure /etc/bash.bashrc is sourced for bash_completion in login shells
+    if ! grep -q 'etc/bash.bashrc' ~/.bash_profile 2>/dev/null; then
+      printf '\n# Source system-wide settings (bash_completion etc.) for login shells\nif [ -f /etc/bash.bashrc ]; then\n  . /etc/bash.bashrc\nfi\n' >> ~/.bash_profile
     fi
 
     # npm global directory
