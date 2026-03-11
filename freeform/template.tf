@@ -172,6 +172,23 @@ resource "coder_agent" "main" {
       fi
     fi
 
+    # Git configuration: copy defaults on first run, set identity from Coder owner
+    if [ ! -f "$HOME/.gitconfig" ] && [ -f /home/coder-files/.gitconfig ]; then
+      cp /home/coder-files/.gitconfig "$HOME/.gitconfig"
+    fi
+    if [ ! -f "$HOME/.gitignore_global" ] && [ -f /home/coder-files/.gitignore_global ]; then
+      cp /home/coder-files/.gitignore_global "$HOME/.gitignore_global"
+    elif [ -f "$HOME/.gitignore_global" ]; then
+      grep -qxF 'config.coder.yaml' "$HOME/.gitignore_global" || \
+        echo 'config.coder.yaml' >> "$HOME/.gitignore_global"
+    fi
+    if [ -n "$CODER_WORKSPACE_OWNER_NAME" ]; then
+      git config --global user.name "$CODER_WORKSPACE_OWNER_NAME"
+    fi
+    if [ -n "$CODER_WORKSPACE_OWNER_EMAIL" ]; then
+      git config --global user.email "$CODER_WORKSPACE_OWNER_EMAIL"
+    fi
+
     # Locale
     export LANG=en_US.UTF-8
     export LC_ALL=en_US.UTF-8
@@ -185,7 +202,7 @@ resource "coder_agent" "main" {
     # DDEV post-start hooks and interactive shells (DDEV exec-host inherits the
     # shell environment, which sources ~/.bashrc for login shells).
     # Use printenv to avoid $${!var} indirect expansion which Terraform parses.
-    for _var in VSCODE_PROXY_URI CODER_WORKSPACE_NAME CODER_WORKSPACE_OWNER_NAME; do
+    for _var in VSCODE_PROXY_URI CODER_WORKSPACE_NAME CODER_WORKSPACE_OWNER_NAME CODER_WORKSPACE_OWNER_EMAIL; do
       _val=$(printenv "$_var" 2>/dev/null || true)
       if [ -n "$_val" ]; then
         sed -i "/^export $_var=/d" ~/.bashrc || true
@@ -281,8 +298,9 @@ BASHPROFILE
     CODER_AGENT_FORCE_UPDATE   = "1"
     CODER_WORKSPACE_ID         = data.coder_workspace.me.id
     CODER_WORKSPACE_NAME       = data.coder_workspace.me.name
-    CODER_WORKSPACE_OWNER_NAME = data.coder_workspace_owner.me.name
-    HOME                       = "/home/coder"
+    CODER_WORKSPACE_OWNER_NAME  = data.coder_workspace_owner.me.name
+    CODER_WORKSPACE_OWNER_EMAIL = data.coder_workspace_owner.me.email
+    HOME                        = "/home/coder"
   }
 
   metadata {

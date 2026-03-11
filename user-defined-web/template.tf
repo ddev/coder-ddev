@@ -267,6 +267,24 @@ resource "coder_agent" "main" {
       echo "Warning: /home/coder-files not found in image"
     fi
 
+    # Git configuration: copy defaults on first run, set identity from Coder owner
+    if [ ! -f "$HOME/.gitconfig" ] && [ -f /home/coder-files/.gitconfig ]; then
+      cp /home/coder-files/.gitconfig "$HOME/.gitconfig"
+      echo "✓ Copied default .gitconfig"
+    fi
+    if [ ! -f "$HOME/.gitignore_global" ] && [ -f /home/coder-files/.gitignore_global ]; then
+      cp /home/coder-files/.gitignore_global "$HOME/.gitignore_global"
+      echo "✓ Copied default .gitignore_global"
+    elif [ -f "$HOME/.gitignore_global" ]; then
+      grep -qxF 'config.coder.yaml' "$HOME/.gitignore_global" || \
+        echo 'config.coder.yaml' >> "$HOME/.gitignore_global"
+    fi
+    if [ -n "$CODER_WORKSPACE_OWNER_NAME" ]; then
+      git config --global user.name "$CODER_WORKSPACE_OWNER_NAME"
+    fi
+    if [ -n "$CODER_WORKSPACE_OWNER_EMAIL" ]; then
+      git config --global user.email "$CODER_WORKSPACE_OWNER_EMAIL"
+    fi
 
     # Install Docker CLI (Required for DDEV DooD)
     # Docker CLI is now pre-installed in the Docker image (v3.0.29+)
@@ -455,7 +473,8 @@ BASHPROFILE_WELCOME
     # DOCKER_HOST                = var.docker_host
     CODER_WORKSPACE_ID         = data.coder_workspace.me.id
     CODER_WORKSPACE_NAME       = data.coder_workspace.me.name
-    CODER_WORKSPACE_OWNER_NAME = data.coder_workspace_owner.me.name
+    CODER_WORKSPACE_OWNER_NAME  = data.coder_workspace_owner.me.name
+    CODER_WORKSPACE_OWNER_EMAIL = data.coder_workspace_owner.me.email
     # Force HOME to /home/coder (Standard Home Strategy)
     HOME = "/home/coder"
   }
