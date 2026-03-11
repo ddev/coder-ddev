@@ -131,6 +131,7 @@ All workspaces come with these extensions automatically installed at workspace s
 | **Code Spell Checker** (`streetsidesoftware.code-spell-checker`) | Spell checking in code and comments |
 | **Stylelint** (`stylelint.vscode-stylelint`) | CSS/SCSS linting |
 | **PHP Sniffer & Beautifier** (`valeryanm.vscode-phpsab`) | PHPCS/PHPCBF integration |
+| **GitHub Pull Requests** (`GitHub.vscode-pull-request-github`) | Pull request and issue provider for GitHub |
 | **DDEV Manager** (`biati.ddev-manager`) | DDEV control panel: start/stop/Xdebug toggle/etc. |
 
 ### Installing Additional Extensions
