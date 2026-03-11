@@ -11,25 +11,35 @@ RUN apt-get update && \
   build-essential \
   ca-certificates \
   curl \
+  default-mysql-client \
   direnv \
+  dnsutils \
   file \
   git \
   gnupg \
+  htop \
   httpie \
   inetutils-ping \
   less \
   locales \
   lsb-release \
+  lsof \
   make \
   nano \
+  net-tools \
+  netcat-openbsd \
   openssh-client \
   passwd \
+  postgresql-client \
   rsync \
   software-properties-common \
   sudo \
+  telnet \
+  traceroute \
   unzip \
   vim \
-  wget && \
+  wget \
+  zip && \
   # Generate locale
   locale-gen en_US.UTF-8 && \
   rm -rf /var/lib/apt/lists/* && \
@@ -115,6 +125,27 @@ RUN mkdir -p /etc/apt/keyrings && \
     > /etc/apt/sources.list.d/github-cli.list && \
   apt-get update && \
   DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends gh && \
+  rm -rf /var/lib/apt/lists/*
+
+# Install ngrok
+# https://ngrok.com/download/linux
+RUN curl -fsSL https://ngrok-agent.s3.amazonaws.com/ngrok.asc \
+    -o /etc/apt/keyrings/ngrok.asc && \
+  echo "deb [signed-by=/etc/apt/keyrings/ngrok.asc] https://ngrok-agent.s3.amazonaws.com buster main" \
+    > /etc/apt/sources.list.d/ngrok.list && \
+  apt-get update && \
+  DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ngrok && \
+  rm -rf /var/lib/apt/lists/*
+
+# Install cloudflared
+# https://pkg.cloudflare.com/
+RUN mkdir -p /usr/share/keyrings && \
+  curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg \
+    -o /usr/share/keyrings/cloudflare-main.gpg && \
+  echo "deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared noble main" \
+    > /etc/apt/sources.list.d/cloudflared.list && \
+  apt-get update && \
+  DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends cloudflared && \
   rm -rf /var/lib/apt/lists/*
 
 # Install DDEV using official package installation method
