@@ -13,3 +13,11 @@ config.coder.yaml
 # Environment files (may contain secrets)
 .env.local
 .env.*.local
+
+# Drupal site instance files
+vendor
+simpletest
+sites/*/files
+sites/simpletest
+sites/*/settings*.php
+sites/*/services*.yml
