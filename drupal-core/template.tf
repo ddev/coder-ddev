@@ -965,9 +965,20 @@ WELCOME_STATIC
 
       # Step 5: Ensure Drush is available (skip if already present from cache or pre-checkout install)
       if [ -f "vendor/bin/drush" ]; then
-        log_setup "✓ Drush already present"
-        update_status "✓ Drush install: Already present"
-      else
+        # @todo Remove this logic when drush is working or core CLI is working.
+        if [ "$DRUPAL_BRANCH" = "main" ]; then
+          if ddev composer remove drush/drush >> "$SETUP_LOG" 2>&1; then
+            log_setup "⚠ Warning: Removing incompatible release of Drush."
+            update_status "⚠ Drush install: Warning"
+          else
+            log_setup "⚠ Warning: Failed to remove incompatible release of Drush"
+            update_status "⚠ Drush install: Success"
+          fi
+        else
+          log_setup "✓ Drush already present"
+          update_status "✓ Drush install: Already present"
+        fi
+      elif [ "$DRUPAL_BRANCH" != "main ]; then
         _t=$SECONDS
         log_setup "Adding Drush..."
         update_status "⏳ Drush install: In progress..."
