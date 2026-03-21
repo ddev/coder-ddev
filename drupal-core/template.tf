@@ -488,7 +488,7 @@ STATUS_HEADER
     log_setup "Configuring DDEV for Drupal $DRUPAL_VERSION ($DDEV_PROJECT_TYPE)..."
     update_status "⏳ DDEV config: In progress..."
 
-    if ddev config --project-type="$DDEV_PROJECT_TYPE" --docroot=web --host-webserver-port=80 >> "$SETUP_LOG" 2>&1; then
+    if ddev config --project-type="$DDEV_PROJECT_TYPE" --docroot=web >> "$SETUP_LOG" 2>&1; then
       log_setup "✓ DDEV configured (project-type=$DDEV_PROJECT_TYPE docroot=web)"
       update_status "✓ DDEV config: Success"
     else
@@ -498,7 +498,7 @@ STATUS_HEADER
       update_status ""
       update_status "Manual recovery:"
       update_status "  cd $DRUPAL_DIR"
-      update_status "  ddev config --project-type=$DDEV_PROJECT_TYPE --docroot=web --host-webserver-port=80"
+      update_status "  ddev config --project-type=$DDEV_PROJECT_TYPE --docroot=web"
     fi
 
     # Configure DDEV global settings (omit router)
@@ -529,6 +529,7 @@ STATUS_HEADER
 # Sets project_tld so 'ddev describe' shows the Coder domain rather than ddev.site.
 project_tld: "$${CODER_WORKSPACE_NAME}--$${CODER_WORKSPACE_OWNER_NAME}.$${CODER_DOMAIN}"
 use_dns_when_possible: false
+host_webserver_port: "80"
 # Bind mailpit directly to workspace localhost (ddev-router is omitted in this template).
 # Without this, mailpit is only reachable inside the DDEV web container.
 host_mailpit_port: "8025"
