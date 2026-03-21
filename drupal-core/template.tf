@@ -613,6 +613,7 @@ COMPOSE_EOF
     fi
     USING_ISSUE_FORK=false
     SETUP_FAILED=false
+    MANUAL_INSTALL_NEEDED=false
     if [ -n "$ISSUE_FORK" ] || [ -n "$ISSUE_BRANCH" ]; then
       USING_ISSUE_FORK=true
       log_setup "Issue fork mode: ISSUE_FORK=$ISSUE_FORK  ISSUE_BRANCH=$ISSUE_BRANCH  INSTALL_PROFILE=$INSTALL_PROFILE"
@@ -803,6 +804,19 @@ WELCOME_STATIC
 
     # Steps 5-7: run whenever project files are present — inner checks handle idempotency
     if [ -f "composer.json" ] && [ -d "repos/drupal" ]; then
+      # Step 4.1: Remove drush/drush on main branch — not yet compatible with Drupal HEAD.
+      # Must run before any composer update/install so the dependency graph is clean.
+      if [ "$DRUPAL_BRANCH" = "main" ] && grep -q '"drush/drush"' composer.json; then
+        log_setup "Removing drush/drush (not yet compatible with Drupal main branch)..."
+        if ddev composer remove drush/drush >> "$SETUP_LOG" 2>&1; then
+          log_setup "✓ drush/drush removed"
+          update_status "⚠ Drush: Removed (not compatible with main branch)"
+        else
+          log_setup "⚠ Failed to remove drush/drush"
+          update_status "⚠ Drush: Removal failed (see drupal-setup.log)"
+        fi
+      fi
+
       # Step 4.5: Branch checkout, composer.json fixes, and composer update.
       # Applies to: (a) issue forks, and (b) non-main versions (10.x/11.x) without an issue fork.
       # In both cases the project was created with --no-install so no vendor exists yet.
@@ -963,32 +977,22 @@ WELCOME_STATIC
         update_status "⚠ Setup incomplete — see drupal-setup.log for details"
       else
 
-      # Step 5: Ensure Drush is available (skip if already present from cache or pre-checkout install)
-      if [ -f "vendor/bin/drush" ]; then
-        # @todo Remove this logic when drush is working or core CLI is working.
-        if [ "$DRUPAL_BRANCH" = "main" ]; then
-          if ddev composer remove drush/drush >> "$SETUP_LOG" 2>&1; then
-            log_setup "⚠ Warning: Removing incompatible release of Drush."
-            update_status "⚠ Drush install: Warning"
-          else
-            log_setup "⚠ Warning: Failed to remove incompatible release of Drush"
-            update_status "⚠ Drush install: Success"
-          fi
-        else
+      # Step 5: Ensure Drush is available (not applicable to main branch — removed in Step 4.1)
+      if [ "$DRUPAL_BRANCH" != "main" ]; then
+        if [ -f "vendor/bin/drush" ]; then
           log_setup "✓ Drush already present"
           update_status "✓ Drush install: Already present"
-        fi
-      elif [ "$DRUPAL_BRANCH" != "main ]; then
-        _t=$SECONDS
-        log_setup "Adding Drush..."
-        update_status "⏳ Drush install: In progress..."
-
-        if ddev composer require drush/drush -W >> "$SETUP_LOG" 2>&1; then
-          log_setup "✓ Drush configured ($((SECONDS - _t))s)"
-          update_status "✓ Drush install: Success"
         else
-          log_setup "⚠ Warning: Failed to configure Drush ($((SECONDS - _t))s)"
-          update_status "⚠ Drush install: Warning"
+          _t=$SECONDS
+          log_setup "Adding Drush..."
+          update_status "⏳ Drush install: In progress..."
+          if ddev composer require drush/drush -W >> "$SETUP_LOG" 2>&1; then
+            log_setup "✓ Drush configured"
+            update_status "✓ Drush install: Success"
+          else
+            log_setup "⚠ Warning: Failed to configure Drush"
+            update_status "⚠ Drush install: Warning"
+          fi
         fi
       fi
 
@@ -1016,7 +1020,7 @@ WELCOME_STATIC
         update_status "⏳ Drupal install: Importing cached database..."
 
         if ddev import-db --file="$CACHE_SEED/.tarballs/db.sql.gz" >> "$SETUP_LOG" 2>&1; then
-          log_setup "✓ Database imported from cache ($((SECONDS - _t))s)"
+          log_setup "✓ Database imported from cache"
           log_setup ""
           log_setup "   Admin Credentials:"
           log_setup "      Username: admin"
@@ -1024,51 +1028,99 @@ WELCOME_STATIC
           log_setup ""
           update_status "✓ Drupal install: Imported from cache"
         else
-          log_setup "⚠ DB import failed ($((SECONDS - _t))s), falling back to full site install..."
-          update_status "⚠ DB import failed, running full install..."
-          _t=$SECONDS
-          if ddev drush si -y "$INSTALL_PROFILE" --account-pass=admin --site-name="$SITE_NAME" >> "$SETUP_LOG" 2>&1; then
-            log_setup "✓ Drupal installed successfully (fallback, $((SECONDS - _t))s)"
-            update_status "✓ Drupal install: Success (fallback)"
+          log_setup "⚠ DB import failed..."
+          update_status "⚠ DB import failed..."
+          if [ "$DRUPAL_BRANCH" = "main" ]; then
+            log_setup "⚠ Drupal main branch: skipping drush si (not yet compatible). Manual install required."
+            update_status "⚠ Drupal install: Manual install required (see WELCOME.txt)"
+            MANUAL_INSTALL_NEEDED=true
           else
-            log_setup "✗ Failed to install Drupal ($((SECONDS - _t))s)"
-            update_status "✗ Drupal install: Failed"
+            log_setup "Falling back to full site install..."
+            update_status "⚠ DB import failed, running full install..."
+            _t=$SECONDS
+            if ddev drush si -y "$INSTALL_PROFILE" --account-pass=admin --site-name="$SITE_NAME" >> "$SETUP_LOG" 2>&1; then
+              log_setup "✓ Drupal installed successfully"
+              update_status "✓ Drupal install: Success (fallback)"
+            else
+              log_setup "✗ Failed to install Drupal"
+              update_status "✗ Drupal install: Failed"
+            fi
           fi
         fi
       else
-        _t=$SECONDS
-        if [ "$USING_ISSUE_FORK" = "true" ]; then
-          log_setup "Installing Drupal with $INSTALL_PROFILE profile (issue fork: full install required)..."
+        if [ "$DRUPAL_BRANCH" = "main" ]; then
+          log_setup "⚠ Drupal main branch: skipping drush si (not yet compatible). Manual install required."
+          update_status "⚠ Drupal install: Manual install required (see WELCOME.txt)"
+          MANUAL_INSTALL_NEEDED=true
         else
-          log_setup "Installing Drupal with $INSTALL_PROFILE profile (this will take 2-3 minutes)..."
-        fi
-        update_status "⏳ Drupal install: In progress..."
+          _t=$SECONDS
+          if [ "$USING_ISSUE_FORK" = "true" ]; then
+            log_setup "Installing Drupal with $INSTALL_PROFILE profile (issue fork: full install required)..."
+          else
+            log_setup "Installing Drupal with $INSTALL_PROFILE profile (this will take 2-3 minutes)..."
+          fi
+          update_status "⏳ Drupal install: In progress..."
 
-        if ddev drush si -y "$INSTALL_PROFILE" --account-pass=admin --site-name="$SITE_NAME" >> "$SETUP_LOG" 2>&1; then
-          log_setup "✓ Drupal installed ($((SECONDS - _t))s)"
-          log_setup ""
-          log_setup "   Admin Credentials:"
-          log_setup "      Username: admin"
-          log_setup "      Password: admin"
-          log_setup ""
-          update_status "✓ Drupal install: Success"
-        else
-          log_setup "✗ Failed to install Drupal ($((SECONDS - _t))s)"
-          log_setup "Check $SETUP_LOG for details"
-          update_status "✗ Drupal install: Failed"
-          update_status ""
-          update_status "Manual recovery:"
-          update_status "  cd $DRUPAL_DIR"
-          update_status "  ddev drush si -y $INSTALL_PROFILE --account-pass=admin"
+          if ddev drush si -y "$INSTALL_PROFILE" --account-pass=admin --site-name="$SITE_NAME" >> "$SETUP_LOG" 2>&1; then
+            log_setup "✓ Drupal installed"
+            log_setup ""
+            log_setup "   Admin Credentials:"
+            log_setup "      Username: admin"
+            log_setup "      Password: admin"
+            log_setup ""
+            update_status "✓ Drupal install: Success"
+          else
+            log_setup "✗ Failed to install Drupal"
+            log_setup "Check $SETUP_LOG for details"
+            update_status "✗ Drupal install: Failed"
+            update_status ""
+            update_status "Manual recovery:"
+            update_status "  cd $DRUPAL_DIR"
+            update_status "  ddev drush si -y $INSTALL_PROFILE --account-pass=admin"
+          fi
         fi
       fi
       fi # end SETUP_FAILED guard
 
-      # Step 6.5: Cache rebuild — ensures a clean state after any setup path
-      log_setup "Running cache rebuild..."
-      ddev drush cr >> "$SETUP_LOG" 2>&1 || true
+      # Step 6.5: Append manual install instructions to WELCOME.txt when drush si was skipped
+      if [ "$MANUAL_INSTALL_NEEDED" = "true" ]; then
+        # Compute the site URL using the same domain logic as the launch command
+        _INSTALL_URL=""
+        if [ -n "$CODER_WORKSPACE_NAME" ]; then
+          if [ -n "$VSCODE_PROXY_URI" ]; then
+            _CODER_DOMAIN=$(echo "$VSCODE_PROXY_URI" | sed -E 's|https?://[^.]+\.(.+?)(/.*)?$|\1|')
+          elif [ -n "$CODER_AGENT_URL" ]; then
+            _CODER_DOMAIN=$(echo "$CODER_AGENT_URL" | sed -E 's|https?://(.+?)(/.*)?$|\1|')
+          fi
+          if [ -n "$${_CODER_DOMAIN:-}" ]; then
+            _SITE_URL="https://drupal-site--$${CODER_WORKSPACE_NAME}--$${CODER_WORKSPACE_OWNER_NAME}.$${_CODER_DOMAIN}"
+          fi
+        fi
+        {
+          echo ""
+          echo "⚠ MANUAL DRUPAL INSTALL REQUIRED"
+          echo "================================="
+          echo "drush site-install is not yet compatible with Drupal main branch."
+          echo "Composer and DDEV are fully set up. To finish, visit the site URL:"
+          echo ""
+          if [ -n "$${_SITE_URL:-}" ]; then
+            echo "  $_SITE_URL"
+          fi
+          echo ""
+          echo "Drupal will redirect you to the web installer on first visit."
+          echo "After install, run:  ddev launch  (shows site URL and admin login)"
+        } >> ~/WELCOME.txt
+        log_setup "⚠ Manual Drupal install required — instructions added to WELCOME.txt"
+        update_status "⚠ Setup complete — manual Drupal install required (see WELCOME.txt)"
+      fi
 
-      # Step 6.6: Set up phpunit.xml for running core tests
+      # Step 6.5: Cache rebuild — ensures a clean state after any setup path (skip if not installed)
+      if [ "$MANUAL_INSTALL_NEEDED" != "true" ]; then
+        log_setup "Running cache rebuild..."
+        ddev drush cr >> "$SETUP_LOG" 2>&1 || true
+      fi
+
+      # Step 6.6: Set up phpunit.xml for running core tests (numbered was originally 6.6, now follows 6.5)
       if [ ! -f "phpunit.xml" ] && [ -f "phpunit-ddev.xml" ]; then
         cp phpunit-ddev.xml phpunit.xml
         # Replace PROJECT_NAME.ddev.site placeholder with actual workspace URL
