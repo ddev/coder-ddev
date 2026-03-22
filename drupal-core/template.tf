@@ -745,7 +745,15 @@ WELCOME_STATIC
         # is resolved for the correct branch, not for main/drupal12.
         log_setup "Issue fork: creating project structure (dependencies installed after branch checkout)..."
         update_status "⏳ DDEV composer create-project: In progress..."
-        if ddev composer create-project --no-install --no-interaction "joachim-n/drupal-core-development-project:dev-main" . >> "$SETUP_LOG" 2>&1; then
+
+        # Use rfay/drupal-core-development-project for main branch (no drush/drush)
+        if [ "$DRUPAL_BRANCH" = "main" ]; then
+          COMPOSER_CMD='ddev composer create-project --repository='"'"'{"type":"vcs","url":"https://github.com/rfay/drupal-core-development-project"}'"'"' --no-install --stability=dev --no-interaction joachim-n/drupal-core-development-project .'
+        else
+          COMPOSER_CMD='ddev composer create-project --no-install --no-interaction "joachim-n/drupal-core-development-project:dev-main" .'
+        fi
+
+        if eval "$COMPOSER_CMD" >> "$SETUP_LOG" 2>&1; then
           log_setup "✓ Project structure created ($((SECONDS - _t))s)"
           update_status "✓ DDEV composer create-project: Success"
           DRUPAL_SETUP_NEEDED=true
@@ -761,7 +769,11 @@ WELCOME_STATIC
           update_status "✗ DDEV composer create-project: Failed"
           update_status ""
           update_status "Manual recovery:"
-          update_status "  cd $DRUPAL_DIR && ddev composer create-project --no-install \"joachim-n/drupal-core-development-project:dev-main\" ."
+          if [ "$DRUPAL_BRANCH" = "main" ]; then
+            update_status "  cd $DRUPAL_DIR && ddev composer create-project --repository='{\"type\":\"vcs\",\"url\":\"https://github.com/rfay/drupal-core-development-project\"}' --no-install --stability=dev joachim-n/drupal-core-development-project ."
+          else
+            update_status "  cd $DRUPAL_DIR && ddev composer create-project --no-install \"joachim-n/drupal-core-development-project:dev-main\" ."
+          fi
         fi
       elif [ "$NEEDS_NONMAIN_CHECKOUT" = "true" ]; then
         # Non-main version (10.x/11.x) without cache: create project structure then checkout branch.
@@ -789,7 +801,15 @@ WELCOME_STATIC
       else
         log_setup "No cache available, running full composer create (this takes 5-10 minutes)..."
         update_status "⏳ DDEV composer create: In progress (this takes 5-10 minutes)..."
-        if ddev composer create joachim-n/drupal-core-development-project --no-interaction >> "$SETUP_LOG" 2>&1; then
+
+        # Use rfay/drupal-core-development-project for main branch (no drush/drush)
+        if [ "$DRUPAL_BRANCH" = "main" ]; then
+          COMPOSER_CMD='ddev composer create-project --repository='"'"'{"type":"vcs","url":"https://github.com/rfay/drupal-core-development-project"}'"'"' --stability=dev --no-interaction joachim-n/drupal-core-development-project'
+        else
+          COMPOSER_CMD='ddev composer create joachim-n/drupal-core-development-project --no-interaction'
+        fi
+
+        if eval "$COMPOSER_CMD" >> "$SETUP_LOG" 2>&1; then
           log_setup "✓ Drupal core development project created ($((SECONDS - _t))s)"
           update_status "✓ DDEV composer create: Success"
           DRUPAL_SETUP_NEEDED=true
@@ -799,26 +819,17 @@ WELCOME_STATIC
           update_status "✗ DDEV composer create: Failed"
           update_status ""
           update_status "Manual recovery:"
-          update_status "  cd $DRUPAL_DIR && ddev composer create joachim-n/drupal-core-development-project"
+          if [ "$DRUPAL_BRANCH" = "main" ]; then
+            update_status "  cd $DRUPAL_DIR && ddev composer create-project --repository='{\"type\":\"vcs\",\"url\":\"https://github.com/rfay/drupal-core-development-project\"}' --stability=dev joachim-n/drupal-core-development-project"
+          else
+            update_status "  cd $DRUPAL_DIR && ddev composer create joachim-n/drupal-core-development-project"
+          fi
         fi
       fi
     fi
 
     # Steps 5-7: run whenever project files are present — inner checks handle idempotency
     if [ -f "composer.json" ] && [ -d "repos/drupal" ]; then
-      # Step 4.1: Remove drush/drush on main branch — not yet compatible with Drupal HEAD.
-      # Must run before any composer update/install so the dependency graph is clean.
-      if [ "$DRUPAL_BRANCH" = "main" ] && grep -q '"drush/drush"' composer.json; then
-        log_setup "Removing drush/drush (not yet compatible with Drupal main branch)..."
-        if ddev composer remove drush/drush >> "$SETUP_LOG" 2>&1; then
-          log_setup "✓ drush/drush removed"
-          update_status "⚠ Drush: Removed (not compatible with main branch)"
-        else
-          log_setup "⚠ Failed to remove drush/drush"
-          update_status "⚠ Drush: Removal failed (see drupal-setup.log)"
-        fi
-      fi
-
       # Step 4.5: Branch checkout, composer.json fixes, and composer update.
       # Applies to: (a) issue forks, and (b) non-main versions (10.x/11.x) without an issue fork.
       # In both cases the project was created with --no-install so no vendor exists yet.
