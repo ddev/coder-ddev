@@ -1036,70 +1036,55 @@ WELCOME_STATIC
       if ddev drush status 2>/dev/null | grep -q "Drupal bootstrap.*Successful"; then
         log_setup "✓ Drupal already installed"
         update_status "✓ Drupal install: Already present"
-      elif [ "$USING_ISSUE_FORK" = "false" ] && [ "$DRUPAL_BRANCH" = "main" ] && [ "$INSTALL_PROFILE" = "demo_umami" ] && [ -f "$CACHE_SEED/.tarballs/db.sql.gz" ]; then
-        _t=$SECONDS
-        log_setup "Importing database from cache (fast path)..."
-        update_status "⏳ Drupal install: Importing cached database..."
-
-        if ddev import-db --file="$CACHE_SEED/.tarballs/db.sql.gz" >> "$SETUP_LOG" 2>&1; then
-          log_setup "✓ Database imported from cache"
-          log_setup ""
-          log_setup "   Admin Credentials:"
-          log_setup "      Username: admin"
-          log_setup "      Password: admin"
-          log_setup ""
-          update_status "✓ Drupal install: Imported from cache"
-        else
-          log_setup "⚠ DB import failed..."
-          update_status "⚠ DB import failed..."
-          if [ "$DRUPAL_BRANCH" = "main" ]; then
-            log_setup "⚠ Drupal main branch: skipping drush si (not yet compatible). Manual install required."
-            update_status "⚠ Drupal install: Manual install required (see WELCOME.txt)"
-            MANUAL_INSTALL_NEEDED=true
-          else
-            log_setup "Falling back to full site install..."
-            update_status "⚠ DB import failed, running full install..."
-            _t=$SECONDS
-            if ddev drush si -y "$INSTALL_PROFILE" --account-pass=admin --site-name="$SITE_NAME" >> "$SETUP_LOG" 2>&1; then
-              log_setup "✓ Drupal installed successfully"
-              update_status "✓ Drupal install: Success (fallback)"
-            else
-              log_setup "✗ Failed to install Drupal"
-              update_status "✗ Drupal install: Failed"
-            fi
-          fi
-        fi
-      else
-        if [ "$DRUPAL_BRANCH" = "main" ]; then
-          log_setup "⚠ Drupal main branch: skipping drush si (not yet compatible). Manual install required."
-          update_status "⚠ Drupal install: Manual install required (see WELCOME.txt)"
-          MANUAL_INSTALL_NEEDED=true
-        else
+      elif [ "$DRUPAL_BRANCH" = "main" ]; then
+        # main branch: drush si not yet compatible; load seed DB for all cases (issue fork or plain)
+        if [ -f "$CACHE_SEED/.tarballs/db.sql.gz" ]; then
           _t=$SECONDS
-          if [ "$USING_ISSUE_FORK" = "true" ]; then
-            log_setup "Installing Drupal with $INSTALL_PROFILE profile (issue fork: full install required)..."
-          else
-            log_setup "Installing Drupal with $INSTALL_PROFILE profile (this will take 2-3 minutes)..."
-          fi
-          update_status "⏳ Drupal install: In progress..."
-
-          if ddev drush si -y "$INSTALL_PROFILE" --account-pass=admin --site-name="$SITE_NAME" >> "$SETUP_LOG" 2>&1; then
-            log_setup "✓ Drupal installed"
+          log_setup "Loading seed database (main branch)..."
+          update_status "⏳ Drupal install: Loading seed database..."
+          if gzip -dc "$CACHE_SEED/.tarballs/db.sql.gz" | ddev mysql >> "$SETUP_LOG" 2>&1; then
+            log_setup "✓ Seed database loaded ($((SECONDS - _t))s)"
             log_setup ""
             log_setup "   Admin Credentials:"
             log_setup "      Username: admin"
             log_setup "      Password: admin"
             log_setup ""
-            update_status "✓ Drupal install: Success"
+            update_status "✓ Drupal install: Loaded from seed"
           else
-            log_setup "✗ Failed to install Drupal"
-            log_setup "Check $SETUP_LOG for details"
-            update_status "✗ Drupal install: Failed"
-            update_status ""
-            update_status "Manual recovery:"
-            update_status "  cd $DRUPAL_DIR"
-            update_status "  ddev drush si -y $INSTALL_PROFILE --account-pass=admin"
+            log_setup "⚠ Seed DB load failed ($((SECONDS - _t))s)..."
+            update_status "⚠ Drupal install: Seed DB load failed — manual install required"
+            MANUAL_INSTALL_NEEDED=true
           fi
+        else
+          log_setup "⚠ Drupal main branch: no seed DB available. Manual install required."
+          update_status "⚠ Drupal install: Manual install required (see WELCOME.txt)"
+          MANUAL_INSTALL_NEEDED=true
+        fi
+      else
+        _t=$SECONDS
+        if [ "$USING_ISSUE_FORK" = "true" ]; then
+          log_setup "Installing Drupal with $INSTALL_PROFILE profile (issue fork: full install required)..."
+        else
+          log_setup "Installing Drupal with $INSTALL_PROFILE profile (this will take 2-3 minutes)..."
+        fi
+        update_status "⏳ Drupal install: In progress..."
+
+        if ddev drush si -y "$INSTALL_PROFILE" --account-pass=admin --site-name="$SITE_NAME" >> "$SETUP_LOG" 2>&1; then
+          log_setup "✓ Drupal installed"
+          log_setup ""
+          log_setup "   Admin Credentials:"
+          log_setup "      Username: admin"
+          log_setup "      Password: admin"
+          log_setup ""
+          update_status "✓ Drupal install: Success"
+        else
+          log_setup "✗ Failed to install Drupal"
+          log_setup "Check $SETUP_LOG for details"
+          update_status "✗ Drupal install: Failed"
+          update_status ""
+          update_status "Manual recovery:"
+          update_status "  cd $DRUPAL_DIR"
+          update_status "  ddev drush si -y $INSTALL_PROFILE --account-pass=admin"
         fi
       fi
       fi # end SETUP_FAILED guard
@@ -1146,18 +1131,10 @@ WELCOME_STATIC
         update_status "⚠ Setup complete — manual Drupal install required (see WELCOME.txt)"
       fi
 
-      # Step 6.5: Cache rebuild — ensures a clean state after any setup path (skip if not installed)
-      if [ "$MANUAL_INSTALL_NEEDED" != "true" ]; then
-        if [ "$DRUPAL_BRANCH" = "main" ]; then
-          log_setup "Truncating cache tables (drush not available on main branch)..."
-          ddev mysql -N -B -e "show tables like '%cache%';" 2>/dev/null | while IFS= read -r TABLE; do
-            ddev mysql -e "TRUNCATE TABLE \`$TABLE\`;" >> "$SETUP_LOG" 2>&1 || true
-          done
-          log_setup "✓ Cache tables truncated"
-        else
-          log_setup "Running cache rebuild..."
-          ddev drush cr >> "$SETUP_LOG" 2>&1 || true
-        fi
+      # Step 6.5: Cache rebuild — non-main only (drush not available on main branch)
+      if [ "$MANUAL_INSTALL_NEEDED" != "true" ] && [ "$DRUPAL_BRANCH" != "main" ]; then
+        log_setup "Running cache rebuild..."
+        ddev drush cr >> "$SETUP_LOG" 2>&1 || true
       fi
 
       # Step 6.6: Set up phpunit.xml for running core tests (numbered was originally 6.6, now follows 6.5)
