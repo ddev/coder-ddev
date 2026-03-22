@@ -582,18 +582,49 @@
           }
         } catch (_) { /* title/version stay as fallback */ }
 
+        // Step 2.5: Try to get visible branches from Drupal.org issue page.
+        // The drupalorgBranchData settings key lists only non-hidden branches (those with MRs).
+        // Hidden branches exist in GitLab but are suppressed in the Drupal.org UI.
+        let visibleBranchNames = null;
+        try {
+          const pageResp = await fetch('https://www.drupal.org/project/drupal/issues/' + nid);
+          if (pageResp.ok) {
+            const html = await pageResp.text();
+            const settingsMatch = html.match(/<script[^>]+data-drupal-selector="drupal-settings-json"[^>]*>([\s\S]*?)<\/script>/);
+            if (settingsMatch) {
+              const settings = JSON.parse(settingsMatch[1]);
+              if (settings.drupalorgBranchData && Object.keys(settings.drupalorgBranchData).length > 0) {
+                visibleBranchNames = new Set(Object.keys(settings.drupalorgBranchData));
+              }
+            }
+          }
+        } catch (_) { /* CORS or parse error — fall through to prefix filter */ }
+
+        // Filter to visible branches only:
+        // - Primary: use Drupal.org's drupalorgBranchData (excludes hidden branches)
+        // - Fallback: branches matching the issue number prefix (excludes inherited upstream branches)
+        const issueBranches = visibleBranchNames
+          ? branches.filter(b => visibleBranchNames.has(b.name))
+          : branches.filter(b => b.name.startsWith(nid + '-'));
+
+        // Use filtered list, falling back to all branches only if filtering yields nothing
+        const displayBranches = issueBranches.length > 0 ? issueBranches : branches;
+
         // Populate branch selector
         const branchSelect = document.getElementById('branch-select');
         branchSelect.innerHTML = '';
-        branches.forEach(b => {
+        displayBranches.forEach(b => {
           const opt = document.createElement('option');
           opt.value = b.name;
           opt.textContent = b.name;
           branchSelect.appendChild(opt);
         });
 
-        // Pre-select branch that starts with the issue number
-        const preferred = branches.find(b => b.name.startsWith(nid + '-'));
+        // Pre-select the most recently committed branch (most actively worked on)
+        const preferred = displayBranches.reduce((best, b) => {
+          if (!best) return b;
+          return b.commit.committed_date > best.commit.committed_date ? b : best;
+        }, null);
         if (preferred) branchSelect.value = preferred.name;
 
         // Set issue title with clickable link
