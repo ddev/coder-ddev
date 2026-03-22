@@ -1148,8 +1148,16 @@ WELCOME_STATIC
 
       # Step 6.5: Cache rebuild — ensures a clean state after any setup path (skip if not installed)
       if [ "$MANUAL_INSTALL_NEEDED" != "true" ]; then
-        log_setup "Running cache rebuild..."
-        ddev drush cr >> "$SETUP_LOG" 2>&1 || true
+        if [ "$DRUPAL_BRANCH" = "main" ]; then
+          log_setup "Truncating cache tables (drush not available on main branch)..."
+          ddev mysql -N -B -e "show tables like '%cache%';" 2>/dev/null | while IFS= read -r TABLE; do
+            ddev mysql -e "TRUNCATE TABLE \`$TABLE\`;" >> "$SETUP_LOG" 2>&1 || true
+          done
+          log_setup "✓ Cache tables truncated"
+        else
+          log_setup "Running cache rebuild..."
+          ddev drush cr >> "$SETUP_LOG" 2>&1 || true
+        fi
       fi
 
       # Step 6.6: Set up phpunit.xml for running core tests (numbered was originally 6.6, now follows 6.5)
