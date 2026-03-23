@@ -168,6 +168,7 @@ RUN /home/linuxbrew/.linuxbrew/bin/brew tap bats-core/bats-core && \
   bats-support \
   bats-file \
   bats-assert \
+  claude-code \
   go \
   golangci-lint \
   yq
