@@ -152,7 +152,7 @@ The startup script is inline in `user-defined-web/template.tf` (inside the `code
 **Note:** VS Code for Web is managed by the official Coder module and starts automatically.
 
 ### Volume Strategy
-- **Home directory**: Host path `/home/coder/workspaces/<owner>-<workspace>` → Container `/home/coder`
+- **Home directory**: Host path `/coder-workspaces/<owner>-<workspace>` → Container `/home/coder`
 - **Docker cache**: Named volume `coder-<owner>-<workspace>-dind-cache` → `/var/lib/docker`
 - **Isolation**: Each workspace gets separate host directory and Docker volume
 

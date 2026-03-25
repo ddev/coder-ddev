@@ -459,7 +459,7 @@ resource "docker_container" "workspace" {
 
   volumes {
     container_path = local.workspace_home
-    host_path      = "/home/coder/workspaces/${data.coder_workspace_owner.me.name}-${data.coder_workspace.me.name}"
+    host_path      = "/coder-workspaces/${data.coder_workspace_owner.me.name}-${data.coder_workspace.me.name}"
     read_only      = false
   }
 

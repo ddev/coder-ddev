@@ -136,7 +136,7 @@ sysbox-runc --version
 
 # Check resource availability
 docker stats
-df -h /home/coder/workspaces/
+df -h /coder-workspaces/
 ```
 
 ### Startup Script Errors
@@ -155,7 +155,7 @@ df -h /home/coder/workspaces/
 ```hcl
 volume {
   container_path = "/home/coder"
-  host_path     = "/home/coder/workspaces/${data.coder_workspace_owner.me.name}-${data.coder_workspace.me.name}"
+  host_path     = "/coder-workspaces/${data.coder_workspace_owner.me.name}-${data.coder_workspace.me.name}"
 }
 ```
 
@@ -468,7 +468,7 @@ ls -la /home/coder
 id  # Should be UID 1000
 
 # Check volume ownership on host
-ls -la /home/coder/workspaces/<owner>-<workspace>
+ls -la /coder-workspaces/<owner>-<workspace>
 ```
 
 **Solution:**
@@ -478,7 +478,7 @@ ls -la /home/coder/workspaces/<owner>-<workspace>
 sudo chown -R coder:coder /home/coder
 
 # Or on host:
-chown -R 1000:1000 /home/coder/workspaces/<owner>-<workspace>
+chown -R 1000:1000 /coder-workspaces/<owner>-<workspace>
 ```
 
 ### Sudo Doesn't Work
@@ -519,7 +519,7 @@ sudo chown -R coder:coder /home/coder
 # Should have:
 # volume {
 #   container_path = "/home/coder"
-#   host_path      = "/home/coder/workspaces/${...}"
+#   host_path      = "/coder-workspaces/${...}"
 # }
 ```
 
@@ -853,7 +853,7 @@ coder restart my-workspace
 # On Coder host
 docker system prune -a --volumes -f
 df -h
-du -sh /home/coder/workspaces/* | sort -h
+du -sh /coder-workspaces/* | sort -h
 # Delete unused workspaces
 ```
 

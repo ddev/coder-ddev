@@ -278,14 +278,14 @@ coder templates push --directory user-defined-web user-defined-web --yes
 ### Workspace Data Backup
 
 Each workspace stores persistent data in:
-- **Home directory**: `/home/coder/workspaces/<owner>-<workspace>` on host
+- **Home directory**: `/coder-workspaces/<owner>-<workspace>` on host
 - **Docker volume**: Named volume `coder-<owner>-<workspace>-dind-cache`
 
 **Backup strategy:**
 
 ```bash
 # Backup home directory
-tar -czf workspace-backup.tar.gz /home/coder/workspaces/<owner>-<workspace>
+tar -czf workspace-backup.tar.gz /coder-workspaces/<owner>-<workspace>
 
 # Backup Docker volume
 docker run --rm \
@@ -337,7 +337,7 @@ coder ssh my-workspace -- ddev list
 docker stats coder-<workspace-id>
 
 # Check disk usage
-df -h /home/coder/workspaces/
+df -h /coder-workspaces/
 docker system df
 ```
 

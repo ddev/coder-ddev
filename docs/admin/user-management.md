@@ -285,7 +285,7 @@ variable "memory" {
 **Host-level disk quotas:**
 
 Each workspace uses:
-- Home directory: `/home/coder/workspaces/<owner>-<workspace>`
+- Home directory: `/coder-workspaces/<owner>-<workspace>`
 - Docker volume: `coder-<owner>-<workspace>-dind-cache`
 
 **Set filesystem quotas (Linux):**
@@ -301,7 +301,7 @@ setquota -u coder 50G 60G 0 0 /home
 **Monitor disk usage:**
 ```bash
 # Check workspace home directories
-du -sh /home/coder/workspaces/*
+du -sh /coder-workspaces/*
 
 # Check Docker volumes
 docker system df -v | grep coder
@@ -344,7 +344,7 @@ docker ps | grep coder
 docker stats $(docker ps --filter "name=coder" -q)
 
 # Check disk usage
-df -h /home/coder/workspaces/
+df -h /coder-workspaces/
 docker system df
 ```
 
@@ -377,7 +377,7 @@ When deleting a user:
 **Backup before deletion:**
 ```bash
 # Backup user workspace data
-tar -czf user-backup.tar.gz /home/coder/workspaces/<username>-*
+tar -czf user-backup.tar.gz /coder-workspaces/<username>-*
 
 # Backup Docker volumes
 docker volume ls | grep coder-<username>
