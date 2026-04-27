@@ -576,11 +576,12 @@ The initial admin account must be created with username/password via the web UI 
 
 **1. Create a GitHub OAuth App**
 
-Go to [GitHub Developer Settings → OAuth Apps → New OAuth App](https://github.com/settings/developers) and fill in:
+Create the app under your **GitHub organization**, not your personal account — apps created under a personal account show "by \<username\>" on the authorization screen instead of "by \<org\>". Go to **github.com/organizations/\<your-org\>/settings/applications → New OAuth App** and fill in:
 
 - **Application name**: `Coder (coder.ddev.com)` (or similar)
 - **Homepage URL**: `https://coder.ddev.com`
 - **Authorization callback URL**: `https://coder.ddev.com/api/v2/users/oauth2/github/callback`
+- **Enable Device Flow**: leave unchecked (see note below)
 
 After creating the app, generate a client secret. Note the **Client ID** and **Client Secret**.
 
@@ -600,6 +601,8 @@ CODER_OAUTH2_GITHUB_ALLOWED_ORGS=ddev
 # Or allow any GitHub user (not recommended for a shared server):
 # CODER_OAUTH2_GITHUB_ALLOW_EVERYONE=true
 ```
+
+> **Device Flow:** Do not set `CODER_OAUTH2_GITHUB_DEVICE_FLOW=true` when `CODER_OAUTH2_GITHUB_ALLOWED_ORGS` is set. Device flow routes all GitHub logins through a code-based flow that does not request `read:org` scope — org membership checks fail with a 403 and users cannot log in.
 
 **3. Restart Coder**
 
