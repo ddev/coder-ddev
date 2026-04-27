@@ -166,20 +166,28 @@ Docker must be installed from the official apt repository, **not** via snap (Sys
 ```bash
 # Install prerequisites
 sudo apt-get update
-sudo apt-get install -y ca-certificates curl gnupg
+sudo apt-get install -y ca-certificates curl
 
-# Add Docker's official GPG key and apt repo
+# Add Docker's GPG key and apt repo (DEB822 format)
 sudo install -m 0755 -d /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
-  sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-echo \
-  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
-  https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
-  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+  sudo tee /etc/apt/keyrings/docker.asc > /dev/null
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+printf "Types: deb\nURIs: https://download.docker.com/linux/ubuntu\nSuites: %s\nComponents: stable\nArch: %s\nSigned-By: /etc/apt/keyrings/docker.asc\n" \
+  "$(. /etc/os-release && echo "$VERSION_CODENAME")" \
+  "$(dpkg --print-architecture)" | \
+  sudo tee /etc/apt/sources.list.d/docker.sources > /dev/null
 
 # Install Docker
 sudo apt-get update
 sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+
+# Configure Docker to use /data as its data root
+sudo tee /etc/docker/daemon.json > /dev/null <<'EOF'
+{
+  "data-root": "/data/docker"
+}
+EOF
 
 # Verify
 docker --version
@@ -279,8 +287,14 @@ sudo apt-get install -y jq
 SYSBOX_VERSION=0.6.7
 wget https://downloads.nestybox.com/sysbox/releases/v${SYSBOX_VERSION}/sysbox-ce_${SYSBOX_VERSION}-0.linux_amd64.deb
 
+# The Sysbox installer restarts Docker — stop any running containers first
+sudo systemctl stop registry-mirror
+
 # Install (this will restart Docker)
 sudo apt-get install -y ./sysbox-ce_${SYSBOX_VERSION}-0.linux_amd64.deb
+
+# Restart the registry mirror
+sudo systemctl start registry-mirror
 
 # Verify
 sysbox-runc --version
@@ -402,7 +416,7 @@ sudo certbot certonly \
 
 ### Set up renewal with Coder restart
 
-Certbot installs a systemd timer for automatic renewal. Add a deploy hook that fixes certificate permissions and restarts Coder. This hook runs after every renewal — and you'll also run it manually right now to fix permissions on the freshly-issued cert.
+Certbot installs a systemd timer for automatic renewal. Add a deploy hook that fixes certificate permissions and restarts Coder after each renewal.
 
 ```bash
 sudo tee /etc/letsencrypt/renewal-hooks/deploy/restart-coder.sh > /dev/null <<'EOF'
@@ -426,17 +440,7 @@ EOF
 sudo chmod +x /etc/letsencrypt/renewal-hooks/deploy/restart-coder.sh
 ```
 
-Run the hook now to fix permissions on the cert you just issued:
-
-```bash
-sudo /etc/letsencrypt/renewal-hooks/deploy/restart-coder.sh
-```
-
-Test that automatic renewal will work:
-
-```bash
-sudo certbot renew --dry-run
-```
+> **Note:** The hook uses `chgrp coder`, which requires the `coder` system group to exist. That group is created when Coder is installed in Step 8. Run the hook and test renewal **after** completing Step 8 — see the "Fix cert permissions and test renewal" subsection there.
 
 ### DNS note
 
@@ -477,8 +481,14 @@ terraform --version
 
 ### Install the binary
 
+Download and install the latest release directly from GitHub. The `install.sh` convenience script exists but has had version-resolution failures — the direct `.deb` approach is more reliable:
+
 ```bash
-curl -L https://coder.com/install.sh | sh
+CODER_VERSION=$(curl -fsSL "https://api.github.com/repos/coder/coder/releases/latest" | \
+  jq -r '.tag_name' | tr -d v)
+curl -fsSL -o /tmp/coder.deb \
+  "https://github.com/coder/coder/releases/download/v${CODER_VERSION}/coder_${CODER_VERSION}_linux_amd64.deb"
+sudo apt-get install -y /tmp/coder.deb
 ```
 
 This installs the `coder` binary and a systemd service unit.
@@ -610,11 +620,27 @@ sudo systemctl restart coder
 
 There is also a toggle in the Coder admin UI at **Admin → Security** that can override the env var. Check that user sign-ups are not disabled there.
 
+### Fix cert permissions and test renewal
+
+Now that the `coder` system group exists, run the deploy hook you created in Step 6 to fix permissions on the certificate files:
+
+```bash
+sudo /etc/letsencrypt/renewal-hooks/deploy/restart-coder.sh
+```
+
+Then confirm that automatic renewal will work end-to-end:
+
+```bash
+sudo certbot renew --dry-run
+```
+
+A "Congratulations, all simulated renewals succeeded" message means the hook, DNS credentials, and timer are all wired up correctly.
+
 ---
 
-## Step 9: Deploy the DDEV Template
+## Step 9: Deploy the DDEV Templates
 
-With Coder running and the CLI authenticated, follow the [Operations Guide](./operations-guide.md) to build the Docker image and push the template.
+With Coder running and the CLI authenticated, follow the [Operations Guide](./operations-guide.md) to build the Docker image and push the templates.
 
 Quick summary:
 
@@ -623,9 +649,16 @@ Quick summary:
 git clone https://github.com/ddev/coder-ddev
 cd coder-ddev
 
-# Build and deploy
+# Build the image, push it, and deploy all three templates
 make deploy-user-defined-web
+make push-template-drupal-core
+make push-template-freeform
 ```
+
+This deploys three templates:
+- **user-defined-web** — general-purpose DDEV workspace; users configure their own project type
+- **freeform** — DDEV workspace using Traefik for more flexible routing
+- **drupal-core** — Drupal core development environment (see Step 10 for the recommended seed cache setup)
 
 ---
 
@@ -657,7 +690,7 @@ ddev config --project-type=drupal12 --php-version=8.5 --docroot=web \
 ddev start
 
 # Create the full drupal-core development project (takes 5-10 minutes)
-ddev composer create joachim-n/drupal-core-development-project --no-interaction
+ddev composer create-project joachim-n/drupal-core-development-project --no-interaction
 
 # Add Drush
 ddev composer require drush/drush
@@ -752,7 +785,7 @@ When a workspace starts for the first time:
 
 1. The startup script checks for a valid seed at `/home/coder-cache-seed` (the read-only bind mount of `cache_path`)
 2. **Cache hit:** `rsync` copies the project files (excluding `.ddev/`), `ddev composer install` ensures vendor is current, then `ddev import-db` loads the database dump (~15 seconds total)
-3. **Cache miss** (path absent or incomplete): falls back to full `ddev composer create` + `ddev drush si` — slower but always works
+3. **Cache miss** (path absent or incomplete): falls back to full `ddev composer create-project` + `ddev drush si` — slower but always works
 
 Check workspace startup logs in the Coder dashboard or at `/tmp/drupal-setup.log` inside the workspace to confirm which path was taken.
 
@@ -887,7 +920,11 @@ coder provisioner keys create my-provisioner-key --org default
 # Install Docker and Sysbox (same as Steps 2 and 4 above)
 
 # Install the Coder binary (provisioner daemon only — no server needed)
-curl -L https://coder.com/install.sh | sh
+CODER_VERSION=$(curl -fsSL "https://api.github.com/repos/coder/coder/releases/latest" | \
+  jq -r '.tag_name' | tr -d v)
+curl -fsSL -o /tmp/coder.deb \
+  "https://github.com/coder/coder/releases/download/v${CODER_VERSION}/coder_${CODER_VERSION}_linux_amd64.deb"
+sudo apt-get install -y /tmp/coder.deb
 
 # Set credentials
 export CODER_URL=https://coder.ddev.com
