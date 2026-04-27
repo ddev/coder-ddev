@@ -262,6 +262,32 @@ make deploy-user-defined-web
 # Users must rebuild workspaces to get new Docker image
 ```
 
+### Testing a Template Change Before Activating
+
+Push a new version without making it the default, test it on a single workspace, then promote it when satisfied. This lets you validate changes without affecting other users.
+
+```bash
+# 1. Push without activating
+make push-template-drupal-core ACTIVATE=false
+
+# 2. Find the new version name (top row, status "Unused")
+coder templates versions list drupal-core
+
+# 3. Create a test workspace pinned to that version
+coder create --template drupal-core --template-version <version-name> test-workspace --yes
+
+# 4. Verify — e.g. for drupal-core, check setup completed correctly
+coder ssh test-workspace -- grep -E "Drush|Drupal install" ~/drupal-core/drupal-setup.log
+
+# 5. Promote to active once satisfied
+coder templates versions promote drupal-core <version-name>
+
+# 6. Clean up test workspace
+coder delete test-workspace --yes
+```
+
+If you push again with `ACTIVATE=true` (the default) rather than using `promote`, that also activates the version — the `promote` step is only needed when you pushed with `ACTIVATE=false` and want to activate without re-pushing.
+
 ### Rolling Back
 
 ```bash

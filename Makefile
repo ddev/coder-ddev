@@ -12,7 +12,15 @@ TEMPLATES := user-defined-web drupal-core freeform
 # Host path to the drupal-core seed cache (bind-mounted read-only into workspaces).
 # This path is specific to the server where the template is deployed.
 # Override with: make push-template-drupal-core DRUPAL_CACHE_PATH=/other/path/drupal-core-seed
-DRUPAL_CACHE_PATH ?= /home/rfay/cache/drupal-core-seed
+DRUPAL_CACHE_PATH ?= /home/rfay/cache/drupal-core-seed ##v Host path to drupal-core seed cache; override per-server
+
+# Whether to activate the pushed template version immediately.
+# Set to false to push for testing before promoting:
+#   make push-template-drupal-core ACTIVATE=false
+#   coder templates versions list drupal-core          # grab the new version name
+#   coder create --template drupal-core --template-version <version> test-ws --yes
+#   coder templates versions promote drupal-core <version>
+ACTIVATE ?= true ##v Set to false to push a template version without activating it (test before promoting)
 
 # Full image tag
 IMAGE_TAG := $(IMAGE_NAME):$(VERSION)
@@ -36,7 +44,7 @@ define push_template
 	@echo "Syncing VERSION to $(1)..."
 	cp VERSION $(1)/VERSION
 	@echo "Pushing Coder template $(1)..."
-	coder templates push --directory $(1) $(1) --yes $(TEMPLATE_VARS_$(1))
+	coder templates push --directory $(1) $(1) --yes --activate=$(ACTIVATE) $(TEMPLATE_VARS_$(1))
 	@echo "Setting template metadata for $(1)..."
 	coder templates edit $(1) --yes $(TEMPLATE_EDIT_$(1))
 	@echo "Template $(1) push complete"
@@ -47,10 +55,13 @@ endef
 
 .PHONY: help
 help: ## Show this help message
-	@echo "Usage: make [target]"
+	@echo "Usage: make [target] [VAR=value ...]"
 	@echo ""
 	@echo "Targets:"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-42s %s\n", $$1, $$2}'
+	@echo ""
+	@echo "Variables (override on command line, e.g. make push-template-drupal-core ACTIVATE=false):"
+	@grep -E '^[A-Z_]+ \?=.*##v .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = " \\?=.*##v "}; {printf "  %-42s %s\n", $$1, $$2}'
 
 .PHONY: build
 build: ## Build Docker image with cache

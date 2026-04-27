@@ -669,7 +669,6 @@ COMPOSE_EOF
     fi
     USING_ISSUE_FORK=false
     SETUP_FAILED=false
-    MANUAL_INSTALL_NEEDED=false
     if [ -n "$ISSUE_FORK" ] || [ -n "$ISSUE_BRANCH" ]; then
       USING_ISSUE_FORK=true
       log_setup "Issue fork mode: ISSUE_FORK=$ISSUE_FORK  ISSUE_BRANCH=$ISSUE_BRANCH  INSTALL_PROFILE=$INSTALL_PROFILE"
@@ -800,14 +799,7 @@ WELCOME_STATIC
         log_setup "Issue fork: creating project structure (dependencies installed after branch checkout)..."
         update_status "⏳ DDEV composer create-project: In progress..."
 
-        # Use rfay/drupal-core-development-project for main branch (no drush/drush)
-        if [ "$DRUPAL_BRANCH" = "main" ]; then
-          COMPOSER_CMD='ddev composer create-project --repository='"'"'{"type":"vcs","url":"https://github.com/rfay/drupal-core-development-project"}'"'"' --no-install --stability=dev --no-interaction joachim-n/drupal-core-development-project .'
-        else
-          COMPOSER_CMD='ddev composer create-project --no-install --no-interaction "joachim-n/drupal-core-development-project:dev-main" .'
-        fi
-
-        if eval "$COMPOSER_CMD" >> "$SETUP_LOG" 2>&1; then
+        if ddev composer create-project --no-install --no-interaction "joachim-n/drupal-core-development-project:dev-main" . >> "$SETUP_LOG" 2>&1; then
           log_setup "✓ Project structure created ($((SECONDS - _t))s)"
           update_status "✓ DDEV composer create-project: Success"
           DRUPAL_SETUP_NEEDED=true
@@ -823,11 +815,7 @@ WELCOME_STATIC
           update_status "✗ DDEV composer create-project: Failed"
           update_status ""
           update_status "Manual recovery:"
-          if [ "$DRUPAL_BRANCH" = "main" ]; then
-            update_status "  cd $DRUPAL_DIR && ddev composer create-project --repository='{\"type\":\"vcs\",\"url\":\"https://github.com/rfay/drupal-core-development-project\"}' --no-install --stability=dev joachim-n/drupal-core-development-project ."
-          else
-            update_status "  cd $DRUPAL_DIR && ddev composer create-project --no-install \"joachim-n/drupal-core-development-project:dev-main\" ."
-          fi
+          update_status "  cd $DRUPAL_DIR && ddev composer create-project --no-install \"joachim-n/drupal-core-development-project:dev-main\" ."
         fi
       elif [ "$NEEDS_NONMAIN_CHECKOUT" = "true" ]; then
         # Non-main version (10.x/11.x) without cache: create project structure then checkout branch.
@@ -856,14 +844,7 @@ WELCOME_STATIC
         log_setup "No cache available, running full composer create (this takes 5-10 minutes)..."
         update_status "⏳ DDEV composer create: In progress (this takes 5-10 minutes)..."
 
-        # Use rfay/drupal-core-development-project for main branch (no drush/drush)
-        if [ "$DRUPAL_BRANCH" = "main" ]; then
-          COMPOSER_CMD='ddev composer create-project --repository='"'"'{"type":"vcs","url":"https://github.com/rfay/drupal-core-development-project"}'"'"' --stability=dev --no-interaction joachim-n/drupal-core-development-project'
-        else
-          COMPOSER_CMD='ddev composer create joachim-n/drupal-core-development-project --no-interaction'
-        fi
-
-        if eval "$COMPOSER_CMD" >> "$SETUP_LOG" 2>&1; then
+        if ddev composer create joachim-n/drupal-core-development-project --no-interaction >> "$SETUP_LOG" 2>&1; then
           log_setup "✓ Drupal core development project created ($((SECONDS - _t))s)"
           update_status "✓ DDEV composer create: Success"
           DRUPAL_SETUP_NEEDED=true
@@ -873,11 +854,7 @@ WELCOME_STATIC
           update_status "✗ DDEV composer create: Failed"
           update_status ""
           update_status "Manual recovery:"
-          if [ "$DRUPAL_BRANCH" = "main" ]; then
-            update_status "  cd $DRUPAL_DIR && ddev composer create-project --repository='{\"type\":\"vcs\",\"url\":\"https://github.com/rfay/drupal-core-development-project\"}' --stability=dev joachim-n/drupal-core-development-project"
-          else
-            update_status "  cd $DRUPAL_DIR && ddev composer create joachim-n/drupal-core-development-project"
-          fi
+          update_status "  cd $DRUPAL_DIR && ddev composer create joachim-n/drupal-core-development-project"
         fi
       fi
     fi
@@ -1044,22 +1021,20 @@ WELCOME_STATIC
         update_status "⚠ Setup incomplete — see drupal-setup.log for details"
       else
 
-      # Step 5: Ensure Drush is available (not applicable to main branch — removed in Step 4.1)
-      if [ "$DRUPAL_BRANCH" != "main" ]; then
-        if [ -f "vendor/bin/drush" ]; then
-          log_setup "✓ Drush already present"
-          update_status "✓ Drush install: Already present"
+      # Step 5: Ensure Drush is available
+      if [ -f "vendor/bin/drush" ]; then
+        log_setup "✓ Drush already present"
+        update_status "✓ Drush install: Already present"
+      else
+        _t=$SECONDS
+        log_setup "Adding Drush..."
+        update_status "⏳ Drush install: In progress..."
+        if ddev composer require drush/drush -W >> "$SETUP_LOG" 2>&1; then
+          log_setup "✓ Drush configured"
+          update_status "✓ Drush install: Success"
         else
-          _t=$SECONDS
-          log_setup "Adding Drush..."
-          update_status "⏳ Drush install: In progress..."
-          if ddev composer require drush/drush -W >> "$SETUP_LOG" 2>&1; then
-            log_setup "✓ Drush configured"
-            update_status "✓ Drush install: Success"
-          else
-            log_setup "⚠ Warning: Failed to configure Drush"
-            update_status "⚠ Drush install: Warning"
-          fi
+          log_setup "⚠ Warning: Failed to configure Drush"
+          update_status "⚠ Drush install: Warning"
         fi
       fi
 
@@ -1081,29 +1056,24 @@ WELCOME_STATIC
       if ddev drush status 2>/dev/null | grep -q "Drupal bootstrap.*Successful"; then
         log_setup "✓ Drupal already installed"
         update_status "✓ Drupal install: Already present"
-      elif [ "$DRUPAL_BRANCH" = "main" ]; then
-        # main branch: drush si not yet compatible; load seed DB for all cases (issue fork or plain)
-        if [ -f "$CACHE_SEED/.tarballs/db.sql.gz" ]; then
-          _t=$SECONDS
-          log_setup "Loading seed database (main branch)..."
-          update_status "⏳ Drupal install: Loading seed database..."
-          if gzip -dc "$CACHE_SEED/.tarballs/db.sql.gz" | ddev mysql >> "$SETUP_LOG" 2>&1; then
-            log_setup "✓ Seed database loaded ($((SECONDS - _t))s)"
-            log_setup ""
-            log_setup "   Admin Credentials:"
-            log_setup "      Username: admin"
-            log_setup "      Password: admin"
-            log_setup ""
-            update_status "✓ Drupal install: Loaded from seed"
-          else
-            log_setup "⚠ Seed DB load failed ($((SECONDS - _t))s)..."
-            update_status "⚠ Drupal install: Seed DB load failed — manual install required"
-            MANUAL_INSTALL_NEEDED=true
-          fi
+      elif [ "$USING_ISSUE_FORK" = "false" ] && [ -f "$CACHE_SEED/.tarballs/db.sql.gz" ]; then
+        # Fast path: load seed DB for non-issue-fork workspaces when cache is available.
+        # The seed was built with demo_umami + current main, so the schema matches.
+        _t=$SECONDS
+        log_setup "Loading seed database (fast path)..."
+        update_status "⏳ Drupal install: Loading seed database..."
+        if gzip -dc "$CACHE_SEED/.tarballs/db.sql.gz" | ddev mysql >> "$SETUP_LOG" 2>&1; then
+          log_setup "✓ Seed database loaded ($((SECONDS - _t))s)"
+          log_setup ""
+          log_setup "   Admin Credentials:"
+          log_setup "      Username: admin"
+          log_setup "      Password: admin"
+          log_setup ""
+          update_status "✓ Drupal install: Loaded from seed"
         else
-          log_setup "⚠ Drupal main branch: no seed DB available. Manual install required."
-          update_status "⚠ Drupal install: Manual install required (see WELCOME.txt)"
-          MANUAL_INSTALL_NEEDED=true
+          log_setup "⚠ Seed DB load failed ($((SECONDS - _t))s), falling back to drush si..."
+          update_status "⚠ Drupal install: Seed load failed, running drush si..."
+          ddev drush si -y "$INSTALL_PROFILE" --account-pass=admin --site-name="$SITE_NAME" >> "$SETUP_LOG" 2>&1 || true
         fi
       else
         _t=$SECONDS
@@ -1134,53 +1104,9 @@ WELCOME_STATIC
       fi
       fi # end SETUP_FAILED guard
 
-      # Step 6.5: Append manual install instructions to WELCOME.txt when drush si was skipped
-      if [ "$MANUAL_INSTALL_NEEDED" = "true" ]; then
-        # Compute the site URL using the same domain logic as the launch command
-        _INSTALL_URL=""
-        if [ -n "$CODER_WORKSPACE_NAME" ]; then
-          if [ -n "$VSCODE_PROXY_URI" ]; then
-            _CODER_DOMAIN=$(echo "$VSCODE_PROXY_URI" | sed -E 's|https?://[^.]+\.(.+?)(/.*)?$|\1|')
-          elif [ -n "$CODER_AGENT_URL" ]; then
-            _CODER_DOMAIN=$(echo "$CODER_AGENT_URL" | sed -E 's|https?://(.+?)(/.*)?$|\1|')
-          fi
-          if [ -n "$${_CODER_DOMAIN:-}" ]; then
-            _SITE_URL="https://drupal-site--$${CODER_WORKSPACE_NAME}--$${CODER_WORKSPACE_OWNER_NAME}.$${_CODER_DOMAIN}"
-          fi
-        fi
-        {
-          echo ""
-          echo "⚠ MANUAL DRUPAL INSTALL REQUIRED"
-          echo "================================="
-          echo "drush site-install is not yet compatible with Drupal main branch."
-          echo "Composer and DDEV are fully set up. To finish:"
-          echo ""
-          echo "1. Visit the site URL:"
-          if [ -n "$${_SITE_URL:-}" ]; then
-            echo "   $_SITE_URL"
-          fi
-          echo ""
-          echo "2. Drupal will redirect you to the web installer."
-          echo "   Follow the installation wizard."
-          echo ""
-          echo "3. On the database configuration page, use these settings:"
-          echo "   Database name: db"
-          echo "   Database user: db"
-          echo "   Database password: db"
-          echo "   Host: db"
-          echo "   (Leave port and table prefix as defaults)"
-          echo ""
-          echo "After install, run:  ddev launch  (shows site URL and admin login)"
-        } >> ~/WELCOME.txt
-        log_setup "⚠ Manual Drupal install required — instructions added to WELCOME.txt"
-        update_status "⚠ Setup complete — manual Drupal install required (see WELCOME.txt)"
-      fi
-
-      # Step 6.5: Cache rebuild — non-main only (drush not available on main branch)
-      if [ "$MANUAL_INSTALL_NEEDED" != "true" ] && [ "$DRUPAL_BRANCH" != "main" ]; then
-        log_setup "Running cache rebuild..."
-        ddev drush cr >> "$SETUP_LOG" 2>&1 || true
-      fi
+      # Step 6.5: Cache rebuild — ensures a clean state after any setup path
+      log_setup "Running cache rebuild..."
+      ddev drush cr >> "$SETUP_LOG" 2>&1 || true
 
       # Step 6.6: Set up phpunit.xml for running core tests (numbered was originally 6.6, now follows 6.5)
       if [ ! -f "phpunit.xml" ] && [ -f "phpunit-ddev.xml" ]; then
