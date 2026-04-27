@@ -1,22 +1,165 @@
 # Server Setup Guide
 
-This guide covers setting up a new Coder server with the DDEV template from scratch. It assumes a fresh Ubuntu 22.04 or 24.04 server.
+This guide covers setting up a new Coder server with the DDEV template from scratch. It assumes a fresh Ubuntu 24.04 LTS or higher LTS server. If you need to provision one on Hetzner, follow Step 1 below; otherwise skip to Step 2.
 
 ## Overview
 
 The full stack requires:
-1. Docker (non-snap) — for running workspace containers
-2. Registry mirror — pull-through cache to speed up workspace starts and avoid Docker Hub rate limits
-3. Sysbox — for safe nested Docker inside workspaces
-4. PostgreSQL — for Coder's database (required for multi-server HA)
-5. TLS certificate — via Let's Encrypt DNS challenge
-6. Terraform — required before installing Coder (workaround for a Coder install bug)
-7. Coder server — the control plane
-8. This template — deployed to Coder
+1. Provisioning the server (Hetzner) — if starting from bare metal; skip if you already have a fresh Ubuntu 24.04 LTS or higher LTS install
+2. Docker (non-snap) — for running workspace containers
+3. Registry mirror — pull-through cache to speed up workspace starts and avoid Docker Hub rate limits
+4. Sysbox — for safe nested Docker inside workspaces
+5. PostgreSQL — for Coder's database (required for multi-server HA)
+6. TLS certificate — via Let's Encrypt DNS challenge
+7. Terraform — required before installing Coder (workaround for a Coder install bug)
+8. Coder server — the control plane
+9. This template — deployed to Coder
 
 ---
 
-## Step 1: Install Docker
+## Step 1: Provision the Server (Hetzner)
+
+This section covers provisioning a fresh Ubuntu 24.04 LTS server on a Hetzner dedicated host. Skip it if you already have a clean Ubuntu 24.04 LTS or higher LTS install. The example matches the layout used for `staging-coder.ddev.com` (Intel i7-6700, 64 GB RAM, 2 × 512 GB NVMe), and scales unchanged to larger production hardware.
+
+The recommended layout uses LVM on the system disk and a plain ext4 partition on the second disk:
+
+| Mount | Source | Size (476 GiB disks) | Purpose |
+| --- | --- | --- | --- |
+| `/boot` | `/dev/nvme0n1p1` | 1 G | kernel and bootloader |
+| `/` | `vg0/root` | 40 G | root filesystem |
+| `/var` | `vg0/var` | 30 G | logs and packages |
+| `/data` | `vg0/data` | rest of disk 1 (~400 G) | Docker data root (Step 2) |
+| `/coder-workspaces` | `/dev/nvme1n1p1` | all of disk 2 (~470 G) | workspace files |
+
+LVM means any of `root`, `var`, or `data` can be grown later with `lvextend -r`. Sizes above are deliberately generous for staging and scale up automatically on prod-sized disks because `data` claims the rest of the volume group.
+
+> **Software RAID:** This guide uses `SWRAID 0` (no RAID) because the staging server has mismatched-purpose disks. For production with two matched disks, change to `SWRAID 1` with `SWRAIDLEVEL 1` and adjust the `PART` lines per Hetzner's installimage docs. RAID-1 across the system disk is recommended for prod; the second disk holding workspace files can be left out of the array if you intend to grow it independently.
+
+> **Boot mode:** Hetzner servers default to Legacy/BIOS boot, and Hetzner Robot does not expose a UEFI toggle when activating the rescue system. Switching to UEFI requires firmware-level access via vKVM or a support ticket. For most installs Legacy/BIOS is fine; this guide assumes it. If you do switch to UEFI, add `PART /boot/efi esp 256M` as the first partition.
+
+### Activate the rescue system
+
+In [Hetzner Robot](https://robot.hetzner.com), go to your server → **Rescue** tab. Select **Linux**, leave the public key empty (you'll log in with the password Robot emails you), keyboard `us`, and click **Activate rescue system**. Then trigger a hardware reset from the **Reset** tab. After ~60 seconds, SSH in:
+
+```bash
+ssh root@YOUR_SERVER_IP
+```
+
+Confirm the rescue has come up by checking the banner — it should report your hardware and "Rescue System (via Legacy/CSM) up since…".
+
+### Prepare the second-disk setup script
+
+The Hetzner installer (`installimage`) only partitions the first drive when `SWRAID 0` is set. The second disk is set up after the first reboot. Stage the script in the rescue system now so it's ready to copy after install:
+
+```bash
+cat > /root/setup-disk2.sh <<'EOF'
+#!/bin/bash
+set -euo pipefail
+
+DEV=/dev/nvme1n1
+parted -s "$DEV" mklabel gpt mkpart primary ext4 1MiB 100%
+
+udevadm settle
+PART="${DEV}p1"
+
+mkfs.ext4 -L coder-workspaces "$PART"
+mkdir -p /coder-workspaces
+
+UUID=$(blkid -s UUID -o value "$PART")
+echo "UUID=$UUID  /coder-workspaces  ext4  defaults,nofail  0 2" >> /etc/fstab
+EOF
+chmod +x /root/setup-disk2.sh
+```
+
+`nofail` ensures a future flaky disk doesn't drop the server into emergency mode on boot.
+
+### Write the installimage config file
+
+`installimage` has an interactive `mcedit`-based editor, but pasting through SSH into it mangles whitespace and silently breaks the config. Skip the editor and feed `installimage` a config file with `-a -c`. Write it as a heredoc:
+
+```bash
+cat > /tmp/install.conf <<'EOF'
+DRIVE1 /dev/nvme0n1
+DRIVE2 /dev/nvme1n1
+SWRAID 0
+BOOTLOADER grub
+HOSTNAME staging-coder.ddev.com
+
+IMAGE /root/.oldroot/nfs/install/../images/Ubuntu-2404-noble-amd64-base.tar.gz
+
+PART /boot  ext4  1G
+PART lvm    vg0   all
+
+LV vg0 root  /      ext4   40G
+LV vg0 var   /var   ext4   30G
+LV vg0 data  /data  ext4   all
+
+SSHKEYS_URL https://github.com/YOUR_GITHUB_USERNAME.keys
+EOF
+```
+
+Replace `staging-coder.ddev.com` with your hostname and `YOUR_GITHUB_USERNAME` with the GitHub account whose public keys should be installed on the new server.
+
+> **Hostname note:** The Coder server's hostname must not collide with the wildcard subdomain reserved for workspace app routing. `*.coder.ddev.com` is used for workspaces, so the Coder server itself is `coder.ddev.com` and a parallel staging server lives at `staging-coder.ddev.com` (with `*.staging-coder.ddev.com` for its workspaces).
+
+Verify the IMAGE filename actually exists in the rescue, since it changes occasionally:
+
+```bash
+ls /root/.oldroot/nfs/install/../images/ | grep -i ubuntu-2404
+```
+
+If the filename in `/tmp/install.conf` doesn't match, edit it before continuing.
+
+### Run installimage
+
+```bash
+installimage -a -c /tmp/install.conf
+```
+
+`-a` skips the interactive editor; `-c` reads the config from the given file. installimage runs a syntax check, asks once to confirm it will wipe both drives, then partitions, installs Ubuntu, configures grub, and applies your `SSHKEYS_URL`. The whole process takes 3–6 minutes.
+
+When it finishes, reboot:
+
+```bash
+reboot
+```
+
+### First login and second-disk setup
+
+Wait ~60 seconds for the new system to boot. The rescue's SSH host key changes after install; clear the old entry and log in with your GitHub keys:
+
+```bash
+ssh-keygen -R YOUR_SERVER_IP
+ssh root@YOUR_SERVER_IP
+```
+
+The second disk is now bare. Some installimage versions advertise a `POST_INSTALL` hook that runs scripts inside the freshly installed system, but it fails silently and is unreliable — set up the second disk by hand. Re-create the same script we staged in rescue, or paste these commands directly:
+
+```bash
+sudo parted -s /dev/nvme1n1 mklabel gpt mkpart primary ext4 1MiB 100%
+sudo udevadm settle
+sudo mkfs.ext4 -L coder-workspaces /dev/nvme1n1p1
+sudo mkdir -p /coder-workspaces
+UUID=$(sudo blkid -s UUID -o value /dev/nvme1n1p1)
+echo "UUID=$UUID  /coder-workspaces  ext4  defaults,nofail  0 2" | sudo tee -a /etc/fstab
+sudo mount -a
+```
+
+### Verify
+
+```bash
+hostnamectl
+df -h
+lsblk
+```
+
+You should see all five mounts (`/boot`, `/`, `/var`, `/data`, `/coder-workspaces`) sized as designed, and `lsblk` should show LVM logical volumes on `nvme0n1` plus a single ext4 partition on `nvme1n1`.
+
+The server is now a clean Ubuntu 24.04 LTS host ready for the rest of this guide. Proceed to Step 2 (Install Docker).
+
+---
+
+## Step 2: Install Docker
 
 Docker must be installed from the official apt repository, **not** via snap (Sysbox requires the non-snap version).
 
@@ -45,7 +188,7 @@ sudo systemctl enable --now docker
 
 ---
 
-## Step 2: Set Up the Registry Mirror
+## Step 3: Set Up the Registry Mirror
 
 A pull-through registry mirror caches Docker Hub images locally, so workspace startups pull images from the host rather than Docker Hub. This dramatically speeds up first-start time and avoids Docker Hub rate limits.
 
@@ -124,7 +267,7 @@ curl http://localhost:5000/v2/_catalog
 
 ---
 
-## Step 3: Install Sysbox
+## Step 4: Install Sysbox
 
 Sysbox provides secure Docker-in-Docker without `--privileged`. It has no apt repository — install via `.deb` package.
 
@@ -148,7 +291,7 @@ See [Sysbox install docs](https://github.com/nestybox/sysbox/blob/master/docs/us
 
 ---
 
-## Step 4: Install PostgreSQL
+## Step 5: Install PostgreSQL
 
 Coder ships with a built-in SQLite database that works fine for a single server. PostgreSQL is needed if you ever want to run multiple Coder server replicas (for redundancy or handling larger user load) — and migrating later is painful, so it's worth setting up now.
 
@@ -183,7 +326,7 @@ If this fails with a peer authentication error, confirm `/etc/postgresql/*/main/
 
 ---
 
-## Step 5: Get a TLS Certificate
+## Step 6: Get a TLS Certificate
 
 Coder has no built-in Let's Encrypt support — it reads certificate files directly. Obtain the certificate before configuring Coder. The DNS-01 challenge is the recommended approach because it works without opening port 80, supports wildcard certificates, and works even if your server isn't yet reachable on its final DNS name.
 
@@ -301,7 +444,7 @@ If you're migrating an existing DNS name (e.g., `coder.ddev.com`) from another s
 
 ---
 
-## Step 6: Install Terraform
+## Step 7: Install Terraform
 
 Coder attempts to install Terraform automatically on first boot, but this fails due to a bug ([coder/coder#24578](https://github.com/coder/coder/issues/24578)). Install Terraform manually beforehand to work around it.
 
@@ -330,7 +473,7 @@ terraform --version
 
 ---
 
-## Step 7: Install Coder
+## Step 8: Install Coder
 
 ### Install the binary
 
@@ -369,7 +512,7 @@ CODER_REDIRECT_TO_ACCESS_URL=true
 # Wildcard domain for workspace app subdomain routing (requires *.coder.ddev.com DNS + cert)
 CODER_WILDCARD_ACCESS_URL=*.coder.ddev.com
 
-# PostgreSQL connection (set up in Step 3)
+# PostgreSQL connection (set up in Step 5)
 CODER_PG_CONNECTION_URL=postgresql://coder:strongpasswordhere@localhost/coder?sslmode=disable
 ```
 
@@ -469,7 +612,7 @@ There is also a toggle in the Coder admin UI at **Admin → Security** that can 
 
 ---
 
-## Step 8: Deploy the DDEV Template
+## Step 9: Deploy the DDEV Template
 
 With Coder running and the CLI authenticated, follow the [Operations Guide](./operations-guide.md) to build the Docker image and push the template.
 
@@ -486,7 +629,7 @@ make deploy-user-defined-web
 
 ---
 
-## Step 9: Set Up the Drupal Core Seed Cache (optional, highly recommended)
+## Step 10: Set Up the Drupal Core Seed Cache (optional, highly recommended)
 
 The `drupal-core` template can provision a fully configured Drupal core development environment on new workspaces using a **seed cache** on the host. Without the cache, first-time workspace setup downloads a full git clone and all composer dependencies (~10-13 minutes). With the cache, the install phase drops to ~15 seconds, and total workspace startup is about a minute.
 
@@ -635,7 +778,7 @@ ddev logs       # check container logs for errors
 
 ---
 
-## Step 10: Set Up Discord Notifications
+## Step 11: Set Up Discord Notifications
 
 Coder can send webhook notifications to Discord for events like new user signups, workspace creation/deletion, and workspace health alerts. This uses a small relay service that translates Coder's webhook format to Discord's.
 
@@ -741,7 +884,7 @@ coder provisioner keys create my-provisioner-key --org default
 **On each additional provisioner node:**
 
 ```bash
-# Install Docker and Sysbox (same as Steps 1 and 3 above)
+# Install Docker and Sysbox (same as Steps 2 and 4 above)
 
 # Install the Coder binary (provisioner daemon only — no server needed)
 curl -L https://coder.com/install.sh | sh
