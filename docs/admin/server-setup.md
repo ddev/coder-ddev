@@ -677,7 +677,7 @@ DDEV must be installed on the Coder server itself (not just inside workspaces). 
 
 Follow the [DDEV Linux installation instructions](https://docs.ddev.com/en/stable/users/install/ddev-installation/#ddev-installation-linux) to install DDEV on the host.
 
-> **User note:** The seed cache must be owned and operated by a normal (non-root) user. DDEV refuses to run as root. All the commands below, and the systemd service, must run as that user — not with `sudo`. On this server the user is `rfay`; adjust for your own setup.
+> **User note:** The seed cache must be owned and operated by a normal (non-root) user. DDEV refuses to run as root. All the commands below, and the systemd service, must run as that user — not with `sudo`.
 
 ### One-time initial setup
 
@@ -734,9 +734,11 @@ sudo install -m 644 $REPO/drupal-core/scripts/drupal-cache-updater.service \
 sudo install -m 644 $REPO/drupal-core/scripts/drupal-cache-updater.timer \
   /etc/systemd/system/
 
-# If your seed directory or cache user differs from the defaults, edit the service:
+# Edit the service to set the correct user (required — YOURUSER is a placeholder):
+sudo sed -i "s/User=YOURUSER/User=$(whoami)/" /etc/systemd/system/drupal-cache-updater.service
+# If your seed directory differs from ~/cache/drupal-core-seed, also add --seed-dir:
 #   sudo vim /etc/systemd/system/drupal-cache-updater.service
-# See the comments in that file for User and --seed-dir guidance.
+# and change ExecStart to: /usr/local/bin/update-drupal-cache --seed-dir /your/cache/path
 
 sudo systemctl daemon-reload
 sudo systemctl enable --now drupal-cache-updater.timer
@@ -762,24 +764,12 @@ journalctl -u drupal-cache-updater.service -f
 
 ### Template variable
 
-The template uses a `cache_path` variable for the host-side seed directory. The default in both `drupal-core/template.tf` and the `Makefile` is currently hardcoded to the path on this server (`/home/rfay/cache/drupal-core-seed`), so `make push-template-drupal-core` works without any override on this server.
+The template uses a `cache_path` variable for the host-side seed directory. The `Makefile` defaults `DRUPAL_CACHE_PATH` to `~/cache/drupal-core-seed` (resolved to the home directory of whoever runs `make`), so `make push-template-drupal-core` works without any override as long as your seed directory is at that path.
 
-**On a different server or with a different user**, update the defaults before deploying:
-
-```bash
-# In Makefile, change:
-DRUPAL_CACHE_PATH ?= /home/youruser/cache/drupal-core-seed
-
-# In drupal-core/template.tf, change:
-variable "cache_path" {
-  default = "/home/youruser/cache/drupal-core-seed"
-}
-```
-
-Or override at deploy time without changing files:
+If your seed directory is elsewhere, override at deploy time:
 
 ```bash
-make push-template-drupal-core DRUPAL_CACHE_PATH=/home/youruser/cache/drupal-core-seed
+make push-template-drupal-core DRUPAL_CACHE_PATH=/your/cache/path
 ```
 
 ### How new workspaces use the cache

@@ -17,16 +17,20 @@
 #
 # Options:
 #   --seed-dir PATH   Absolute path to the seed directory.
-#                     Default: /home/rfay/cache/drupal-core-seed
-#                     Must match the cache_path variable set in the Coder template.
+#                     Default: ~/cache/drupal-core-seed (resolved to the running user's home)
+#                     The Coder template's cache_path variable must be set to the same path.
 #
 # Note: This script must run as the user who owns the seed directory (not root).
 # DDEV refuses to run as root. The systemd service (drupal-cache-updater.service)
 # must set User= to the cache owner — see that file and docs/admin/server-setup.md.
+#
+# Note: when run via the systemd timer, the seed directory is taken from the default
+# or from the ExecStart line in drupal-cache-updater.service — edit that file to pass
+# --seed-dir if your seed directory differs from the default.
 
 set -euo pipefail
 
-SEED_DIR="/home/rfay/cache/drupal-core-seed"
+SEED_DIR="${HOME}/cache/drupal-core-seed"
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -61,11 +65,9 @@ echo ""
 
 cd "$SEED_DIR"
 
-# Ensure DDEV project is running
-if ! ddev describe 2>/dev/null | grep -q "OK"; then
-  echo "Starting DDEV seed project..."
-  ddev start
-fi
+echo "Starting DDEV seed project..."
+ddev poweroff
+ddev start -y
 
 pushd ${SEED_DIR}/repos/drupal >/dev/null
 git pull
@@ -74,6 +76,8 @@ popd >/dev/null
 # Update composer dependencies (also updates repos/drupal git checkout via path repo)
 echo "Running composer update..."
 ddev composer update --with-all-dependencies
+
+ddev composer require drush/drush
 
 # Fresh site install so the exported snapshot matches the updated codebase
 echo "Running site install..."

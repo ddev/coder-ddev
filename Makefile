@@ -12,7 +12,7 @@ TEMPLATES := user-defined-web drupal-core freeform
 # Host path to the drupal-core seed cache (bind-mounted read-only into workspaces).
 # This path is specific to the server where the template is deployed.
 # Override with: make push-template-drupal-core DRUPAL_CACHE_PATH=/other/path/drupal-core-seed
-DRUPAL_CACHE_PATH ?= /home/rfay/cache/drupal-core-seed ##v Host path to drupal-core seed cache; override per-server
+DRUPAL_CACHE_PATH ?= $(HOME)/cache/drupal-core-seed ##v Host path to drupal-core seed cache; override per-server
 
 # Whether to activate the pushed template version immediately.
 # Set to false to push for testing before promoting:

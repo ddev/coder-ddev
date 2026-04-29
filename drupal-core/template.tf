@@ -61,7 +61,6 @@ variable "docker_gid" {
 variable "cache_path" {
   description = "Host path to the drupal-core seed cache directory (mounted read-only into workspaces)"
   type        = string
-  default     = "/home/rfay/cache/drupal-core-seed"
 }
 
 # Per-workspace user parameters (shown in workspace creation UI, pre-fillable via ?param.name=value URL)
