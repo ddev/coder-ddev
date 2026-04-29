@@ -503,27 +503,30 @@ sudo vim /etc/coder.d/coder.env
 
 #### Listening on port 443 (recommended for production)
 
-Coder terminates TLS itself — no reverse proxy needed:
+Coder terminates TLS itself — no reverse proxy needed. Replace `coder.example.com` with your actual hostname throughout:
 
 ```bash
-# Externally-reachable URL
-CODER_ACCESS_URL=https://coder.ddev.com
+# Externally-reachable URL — replace with your hostname
+CODER_ACCESS_URL=https://coder.example.com
 
 # Serve HTTPS directly on port 443
 CODER_TLS_ENABLE=true
 CODER_TLS_ADDRESS=0.0.0.0:443
-CODER_TLS_CERT_FILE=/etc/letsencrypt/live/coder.ddev.com/fullchain.pem
-CODER_TLS_KEY_FILE=/etc/letsencrypt/live/coder.ddev.com/privkey.pem
+CODER_TLS_CERT_FILE=/etc/letsencrypt/live/coder.example.com/fullchain.pem
+CODER_TLS_KEY_FILE=/etc/letsencrypt/live/coder.example.com/privkey.pem
 
 # Redirect HTTP on port 80 to HTTPS
 CODER_HTTP_ADDRESS=0.0.0.0:80
 CODER_REDIRECT_TO_ACCESS_URL=true
 
-# Wildcard domain for workspace app subdomain routing (requires *.coder.ddev.com DNS + cert)
-CODER_WILDCARD_ACCESS_URL=*.coder.ddev.com
+# Wildcard domain for workspace app subdomain routing (requires *.coder.example.com DNS + cert)
+CODER_WILDCARD_ACCESS_URL=*.coder.example.com
 
-# PostgreSQL connection (set up in Step 5)
+# PostgreSQL connection (set up in Step 5) — replace the password
 CODER_PG_CONNECTION_URL=postgresql://coder:strongpasswordhere@localhost/coder?sslmode=disable
+
+# Telemetry — disable if you prefer not to send usage data to Coder
+CODER_TELEMETRY=false
 ```
 
 #### Alternative: plain HTTP or non-standard port
@@ -531,7 +534,7 @@ CODER_PG_CONNECTION_URL=postgresql://coder:strongpasswordhere@localhost/coder?ss
 If you're running behind a reverse proxy (nginx, Caddy) that handles TLS, or just testing on a LAN:
 
 ```bash
-CODER_ACCESS_URL=http://coder.ddev.com:3000
+CODER_ACCESS_URL=http://coder.example.com:3000
 CODER_HTTP_ADDRESS=0.0.0.0:3000
 # No TLS variables needed; your proxy handles termination
 ```
@@ -551,7 +554,7 @@ journalctl -u coder -f
 
 ### First-run admin setup
 
-Navigate to `https://coder.ddev.com` and create the initial admin user.
+Navigate to `https://coder.example.com` (your hostname) and create the initial admin user.
 
 > **Important:** Use your GitHub username as the Coder username (e.g. `rfay`). When you later log in via GitHub OAuth, Coder matches on username — if the name is already taken it creates a second account with a random suffix (e.g. `rfay-wanderingortiz8`) which will not have admin permissions. Getting the username right here avoids that entirely.
 
