@@ -200,7 +200,28 @@ sudo systemctl enable --now docker
 
 A pull-through registry mirror caches Docker Hub images locally, so workspace startups pull images from the host rather than Docker Hub. This dramatically speeds up first-start time and avoids Docker Hub rate limits.
 
-The workspace image already includes `/etc/docker/daemon.json` pointing to `coder.ddev.com:5000`, so no template changes are needed — just run the mirror on the host.
+The workspace image no longer hardcodes any mirror host. The startup script now uses this strategy:
+
+1. If `docker_registry_mirror` is explicitly set, use it.
+2. Otherwise, try `http://<coder-host>:5000` (derived from `CODER_AGENT_URL`) and use it only if `GET /v2/` is reachable.
+3. If no reachable mirror is found, continue without a mirror.
+
+This means `staging-coder.ddev.com` and `coder.ddev.com` work automatically when their local registry mirror is running.
+
+Optional override (for nonstandard host/port, or to force a specific mirror) can still be set on the provisioner host:
+
+```bash
+sudo tee /etc/systemd/system/coder-provisioner.service.d/10-registry-mirror.conf > /dev/null <<'EOF'
+[Service]
+Environment=TF_VAR_docker_registry_mirror=http://coder.ddev.com:5000
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl restart coder-provisioner
+```
+
+Replace `http://coder.ddev.com:5000` with your preferred mirror address when needed.
+If your install uses a different provisioner service name, apply the same `TF_VAR_docker_registry_mirror=...` environment variable to that service instead.
 
 ### Create directories and config
 

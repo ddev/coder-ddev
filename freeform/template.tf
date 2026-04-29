@@ -56,6 +56,12 @@ variable "docker_gid" {
   default     = 988
 }
 
+variable "docker_registry_mirror" {
+  description = "Optional Docker registry mirror URL override (e.g. http://your-host:5000). When empty, startup auto-detects a mirror at http://<coder-host>:5000 if reachable."
+  type        = string
+  default     = ""
+}
+
 data "coder_workspace" "me" {}
 data "coder_workspace_owner" "me" {}
 
@@ -255,6 +261,31 @@ resource "coder_agent" "main" {
         echo "export $_var=$_val" >> ~/.bashrc
       fi
     done
+
+    # Configure Docker daemon registry mirror.
+    # Priority: explicit Terraform variable, then auto-detect on Coder host:5000 if reachable.
+    REGISTRY_MIRROR="${var.docker_registry_mirror}"
+    if [ -z "$REGISTRY_MIRROR" ] && [ -n "$CODER_AGENT_URL" ]; then
+      CODER_HOST=$(echo "$CODER_AGENT_URL" | sed -E 's#^https?://([^/:]+).*$#\1#')
+      CANDIDATE_MIRROR="http://$CODER_HOST:5000"
+      if [ -n "$CODER_HOST" ] && curl -fsS --max-time 2 "$CANDIDATE_MIRROR/v2/" > /dev/null 2>&1; then
+        REGISTRY_MIRROR="$CANDIDATE_MIRROR"
+        echo "Detected registry mirror on Coder host: $REGISTRY_MIRROR"
+      else
+        echo "No reachable registry mirror detected on Coder host; continuing without mirror"
+      fi
+    fi
+    if [ -n "$REGISTRY_MIRROR" ]; then
+      echo "Configuring Docker registry mirror: $REGISTRY_MIRROR"
+      MIRROR_HOST=$(echo "$REGISTRY_MIRROR" | sed 's|https\?://||')
+      sudo mkdir -p /etc/docker
+      sudo tee /etc/docker/daemon.json > /dev/null <<EOF
+{
+  "registry-mirrors": ["$REGISTRY_MIRROR"],
+  "insecure-registries": ["$MIRROR_HOST"]
+}
+EOF
+    fi
 
     # Start Docker Daemon (Sysbox)
     if ! pgrep -x "dockerd" > /dev/null; then
