@@ -5,12 +5,25 @@ name: Integration Tests
 # the Coder provisioner can reach the local Docker/Sysbox environment.
 #
 # One-time runner setup on staging-coder.ddev.com:
-#   mkdir -p ~/actions-runner && cd ~/actions-runner
-#   # Get the exact download/configure commands from:
+#   # Create a dedicated low-privilege user for the runner (do not run as root or admin)
+#   sudo useradd -m -s /bin/bash github-runner
+#   sudo -u github-runner mkdir -p /home/github-runner/actions-runner
+#   cd /home/github-runner/actions-runner
+#
+#   # Download and configure — get the exact commands (including the registration token) from:
 #   # https://github.com/ddev/coder-ddev/settings/actions/runners/new?arch=x64&os=linux
 #   # https://docs.github.com/en/actions/how-tos/manage-runners/self-hosted-runners/add-runners
-#   ./config.sh --url https://github.com/ddev/coder-ddev --token <token> --labels sysbox
-#   sudo ./svc.sh install && sudo ./svc.sh start
+#   sudo -u github-runner ./config.sh \
+#     --url https://github.com/ddev/coder-ddev \
+#     --token <token> \
+#     --name staging-coder \
+#     --labels sysbox
+#   sudo ./svc.sh install github-runner
+#   sudo ./svc.sh start
+#
+#   # To remove/re-register: get removal token from GitHub Settings → Actions → Runners → Remove
+#   sudo ./svc.sh stop && sudo ./svc.sh uninstall
+#   sudo -u github-runner ./config.sh remove --token <removal-token>
 #
 # Requires:
 #   Repository variable: TEST_CODER_URL           - https://staging-coder.ddev.com
