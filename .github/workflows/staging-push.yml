@@ -3,11 +3,16 @@ name: Staging Push Validation
 # Pushes all templates to staging-coder.ddev.com with --activate=false to
 # verify the Coder provider accepts the HCL before any workspace is affected.
 #
+# One-time setup on the test Coder instance:
+#   coder users create --email ci@staging-coder.ddev.com --username ci-bot --login-type none
+#   coder users edit-roles ci-bot --roles template-admin --yes
+#   coder tokens create --user ci-bot --lifetime 8760h
+#   Store the token in 1Password at op://test-secrets/TEST_CODER_SESSION_TOKEN/credential
+#
 # Requires:
-#   Repository variable: TEST_CODER_URL         - https://staging-coder.ddev.com
+#   Repository variable: TEST_CODER_URL           - https://staging-coder.ddev.com
 #   Repository secret:   OP_SERVICE_ACCOUNT_TOKEN - 1Password service account with read access
 #   1Password item:      op://test-secrets/TEST_CODER_SESSION_TOKEN/credential
-#                        (machine token for ci-bot user on test Coder instance)
 
 on:
   push:
