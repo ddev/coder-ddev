@@ -37,6 +37,9 @@ name: Integration Tests
 #   Repository secret:   OP_SERVICE_ACCOUNT_TOKEN - 1Password service account with read access
 #   1Password item:      op://test-secrets/TEST_CODER_SESSION_TOKEN/credential
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 on:
   push:
     branches: [main]
