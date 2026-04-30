@@ -9,6 +9,7 @@ This guide covers daily workflows, tips, and best practices for working with DDE
 - [DDEV Workflows](#ddev-workflows)
 - [Git Workflows](#git-workflows)
 - [Port Forwarding](#port-forwarding)
+- [Sharing and Collaboration](#sharing-and-collaboration)
 - [Common Tasks](#common-tasks)
 - [Tips and Tricks](#tips-and-tricks)
 - [Performance Optimization](#performance-optimization)
@@ -665,6 +666,60 @@ coder port-forward my-workspace --tcp 3000:3000
 # Access via:
 # http://localhost:3000
 ```
+
+## Sharing and Collaboration
+
+### Sharing Your Workspace
+
+You can share a running workspace with another user for pair programming or review. The recipient gets a live view of your workspace in their browser — same URL, same running site.
+
+**Via the web UI:**
+1. Open your workspace in the Coder dashboard
+2. Click **Share** in the top-right corner
+3. Enter the Coder username to share with and set the permission level
+4. Send them the workspace URL
+
+**Via the CLI:**
+```bash
+# Share with another user (read-only by default)
+coder sharing add <owner>/<workspace> --user <username>
+
+# Example
+coder sharing add rfay/issue-3453474 --user stasadev
+
+# List current shares
+coder sharing list rfay/issue-3453474
+
+# Remove a share
+coder sharing remove rfay/issue-3453474 --user stasadev
+```
+
+See [Coder's shared workspaces docs](https://coder.com/docs/user-guides/shared-workspaces) for full details on permission levels.
+
+### Admin Access
+
+Admins can access any workspace on the server — useful for debugging or support. From the Coder dashboard, admins see all workspaces under **Admin settings → Workspaces** and can SSH into or open any of them.
+
+### Sharing Individual Ports
+
+You can share a specific port (e.g., a site you're working on) without sharing the full workspace:
+
+**Via the web UI:**
+1. Open your workspace
+2. Click **Open ports** (top right of the agent section)
+3. Click the share icon next to the port you want to expose
+4. Set visibility: **Owner** (private), **Authenticated** (any logged-in user), or **Public** (anyone with the URL)
+
+**Via the CLI:**
+```bash
+# List open ports
+coder port-forward <workspace> --list
+
+# Open a port publicly (share the printed URL)
+coder open url <workspace> --port 8080
+```
+
+Public port sharing is handy for quickly showing a site to someone without a Coder account.
 
 ## Common Tasks
 
