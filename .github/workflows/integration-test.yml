@@ -8,21 +8,27 @@ name: Integration Tests
 #   # Create a dedicated low-privilege user for the runner (do not run as root or admin)
 #   sudo apt-get install -y unzip   # required by coder/setup-action
 #   sudo useradd -m -s /bin/bash github-runner
-#   sudo -u github-runner mkdir -p /home/github-runner/actions-runner
-#   cd /home/github-runner/actions-runner
 #
-#   # Download and configure — get the exact commands (including the registration token) from:
+#   # Register N runner instances (one per parallel matrix job — currently 3 templates).
+#   # Each instance needs its own directory, a unique --name, and its own service.
+#   # Get a fresh registration token for each from:
 #   # https://github.com/ddev/coder-ddev/settings/actions/runners/new?arch=x64&os=linux
 #   # https://docs.github.com/en/actions/how-tos/manage-runners/self-hosted-runners/add-runners
-#   sudo -u github-runner ./config.sh \
-#     --url https://github.com/ddev/coder-ddev \
-#     --token <token> \
-#     --name staging-coder \
-#     --labels sysbox
-#   sudo ./svc.sh install github-runner
-#   sudo ./svc.sh start
+#   for N in 1 2 3; do
+#     sudo -u github-runner mkdir -p /home/github-runner/actions-runner-${N}
+#     cd /home/github-runner/actions-runner-${N}
+#     # copy runner binaries here (download once, copy to each dir) or re-download
+#     sudo -u github-runner ./config.sh \
+#       --url https://github.com/ddev/coder-ddev \
+#       --token <token> \
+#       --name staging-coder-${N} \
+#       --labels sysbox
+#     sudo ./svc.sh install github-runner   # creates actions.runner.*.service
+#     sudo ./svc.sh start
+#   done
 #
-#   # To remove/re-register: get removal token from GitHub Settings → Actions → Runners → Remove
+#   # To remove/re-register one instance: get removal token from GitHub Settings → Actions → Runners → Remove
+#   cd /home/github-runner/actions-runner-${N}
 #   sudo ./svc.sh stop && sudo ./svc.sh uninstall
 #   sudo -u github-runner ./config.sh remove --token <removal-token>
 #
@@ -42,6 +48,10 @@ on:
         type: boolean
         required: false
         default: false
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   integration-test:
