@@ -17,6 +17,7 @@ name: Staging Push Validation
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
     inputs:
       debug_enabled:
@@ -49,6 +50,7 @@ jobs:
 
       - name: Load 1Password secrets
         uses: 1password/load-secrets-action@v4
+        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.owner.login == github.repository_owner }}
         with:
           export-env: true
         env:
