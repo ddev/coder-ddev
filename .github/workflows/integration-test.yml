@@ -143,10 +143,12 @@ jobs:
       - name: Verify workspace — DDEV can start a project
         run: |
           coder ssh ${{ env.WORKSPACE_NAME }} -- env CI=$CI DDEV_NONINTERACTIVE=$DDEV_NONINTERACTIVE bash -c "
-            mkdir -p /tmp/ci-test && cd /tmp/ci-test &&
+            TESTDIR=\$(mktemp -d /tmp/ci-ddev-XXXXXX) && cd \$TESTDIR &&
             ddev config --project-type=php --docroot=web &&
             ddev start -y &&
-            ddev stop
+            ddev stop &&
+            ddev delete --omit-snapshot -y &&
+            rm -rf \$TESTDIR
           "
 
       - name: Delete workspace
