@@ -1,0 +1,113 @@
+name: Integration Tests
+
+# Creates real workspaces on staging-coder.ddev.com, verifies they start
+# correctly, then deletes them. Runs on the self-hosted sysbox runner so
+# the Coder provisioner can reach the local Docker/Sysbox environment.
+#
+# One-time runner setup on staging-coder.ddev.com:
+#   mkdir -p ~/actions-runner && cd ~/actions-runner
+#   # Get the exact download/configure commands from:
+#   # https://github.com/ddev/coder-ddev/settings/actions/runners/new?arch=x64&os=linux
+#   # https://docs.github.com/en/actions/how-tos/manage-runners/self-hosted-runners/add-runners
+#   ./config.sh --url https://github.com/ddev/coder-ddev --token <token> --labels sysbox
+#   sudo ./svc.sh install && sudo ./svc.sh start
+#
+# Requires:
+#   Repository variable: TEST_CODER_URL           - https://staging-coder.ddev.com
+#   Repository secret:   OP_SERVICE_ACCOUNT_TOKEN - 1Password service account with read access
+#   1Password item:      op://test-secrets/TEST_CODER_SESSION_TOKEN/credential
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      debug_enabled:
+        description: 'Run the build with tmate set "debug_enabled"'
+        type: boolean
+        required: false
+        default: false
+
+jobs:
+  integration-test:
+    name: Integration test (${{ matrix.template }})
+    runs-on: [self-hosted, sysbox]
+    strategy:
+      matrix:
+        template: [user-defined-web, freeform]
+      fail-fast: false
+    env:
+      WORKSPACE_NAME: ci-${{ matrix.template }}-${{ github.run_id }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Load 1Password secrets
+        uses: 1password/load-secrets-action@v4
+        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.owner.login == github.repository_owner }}
+        with:
+          export-env: true
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          TEST_CODER_SESSION_TOKEN: "op://test-secrets/TEST_CODER_SESSION_TOKEN/credential"
+
+      - uses: coder/setup-action@v1
+        with:
+          access_url: ${{ vars.TEST_CODER_URL }}
+          coder_session_token: ${{ env.TEST_CODER_SESSION_TOKEN }}
+
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        with:
+          limit-access-to-actor: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+
+      - name: Copy VERSION into template directory
+        run: cp VERSION ${{ matrix.template }}/VERSION
+
+      - name: Push template (inactive)
+        run: |
+          coder templates push ${{ matrix.template }} \
+            --directory ${{ matrix.template }} \
+            --activate=false \
+            --name ci-${{ github.run_id }} \
+            --yes \
+            --variable workspace_image_registry=index.docker.io/ddev/coder-ddev
+
+      - name: Create workspace
+        run: |
+          coder create ${{ env.WORKSPACE_NAME }} \
+            --template ${{ matrix.template }} \
+            --template-version ci-${{ github.run_id }} \
+            --yes
+
+      - name: Verify workspace — agent connected
+        run: coder ssh ${{ env.WORKSPACE_NAME }} --wait -- echo "Agent connected"
+
+      - name: Verify workspace — Docker daemon running
+        run: coder ssh ${{ env.WORKSPACE_NAME }} -- docker ps
+
+      - name: Verify workspace — DDEV installed
+        run: coder ssh ${{ env.WORKSPACE_NAME }} -- ddev --version
+
+      - name: Verify workspace — DDEV global config present
+        run: coder ssh ${{ env.WORKSPACE_NAME }} -- test -f ~/.ddev/global_config.yaml
+
+      - name: Verify workspace — DDEV can start a project
+        run: |
+          coder ssh ${{ env.WORKSPACE_NAME }} -- bash -c "
+            mkdir -p /tmp/ci-test && cd /tmp/ci-test &&
+            ddev config --project-type=php --docroot=web &&
+            ddev start &&
+            ddev stop
+          "
+
+      - name: Delete workspace
+        if: always()
+        run: coder delete ${{ env.WORKSPACE_NAME }} --yes || true
+
+      - name: Archive CI template version
+        if: always()
+        run: coder templates versions archive ${{ matrix.template }} ci-${{ github.run_id }} --yes || true
