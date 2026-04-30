@@ -330,6 +330,10 @@ resource "coder_agent" "main" {
       grep -qxF 'config.coder.yaml' "$HOME/.gitignore_global" || \
         echo 'config.coder.yaml' >> "$HOME/.gitignore_global"
     fi
+    mkdir -p ~/.ddev
+    if [ -f /home/coder-files/.ddev/global_config.yaml ] && [ ! -f ~/.ddev/global_config.yaml ]; then
+      cp /home/coder-files/.ddev/global_config.yaml ~/.ddev/global_config.yaml
+    fi
     if [ -n "$CODER_WORKSPACE_OWNER_NAME" ]; then
       git config --global user.name "$CODER_WORKSPACE_OWNER_NAME"
     fi
@@ -425,11 +429,8 @@ EOF
       echo "Docker Daemon already running."
     fi
 
-    # Create .ddev directory and seed global config from image defaults
+    # Create .ddev directory
     mkdir -p ~/.ddev
-    if [ -f /home/coder-files/.ddev/global_config.yaml ] && [ ! -f ~/.ddev/global_config.yaml ]; then
-      cp /home/coder-files/.ddev/global_config.yaml ~/.ddev/global_config.yaml
-    fi
 
     # Pre-pull DDEV images in background (uses registry mirror if configured)
     ddev utility download-images || true

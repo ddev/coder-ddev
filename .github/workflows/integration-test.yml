@@ -135,7 +135,13 @@ jobs:
         run: coder ssh ${{ env.WORKSPACE_NAME }} -- ddev --version
 
       - name: Verify workspace — DDEV global config present
-        run: coder ssh ${{ env.WORKSPACE_NAME }} -- bash -c 'test -f ~/.ddev/global_config.yaml'
+        run: |
+          for i in $(seq 1 12); do
+            coder ssh ${{ env.WORKSPACE_NAME }} -- bash -c 'test -f ~/.ddev/global_config.yaml' && exit 0
+            echo "Attempt $i/12: global_config.yaml not yet present, waiting 5s..."
+            sleep 5
+          done
+          exit 1
 
       - name: Verify workspace — DDEV can start a project
         run: |
