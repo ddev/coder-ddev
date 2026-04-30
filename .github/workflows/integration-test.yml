@@ -85,7 +85,7 @@ jobs:
       DDEV_NONINTERACTIVE: "true"
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Load 1Password secrets
         uses: 1password/load-secrets-action@v4

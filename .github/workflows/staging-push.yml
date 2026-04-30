@@ -46,7 +46,7 @@ jobs:
       VERSION_NAME: ci-${{ github.run_id }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Load 1Password secrets
         uses: 1password/load-secrets-action@v4
