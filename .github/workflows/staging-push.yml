@@ -1,0 +1,83 @@
+name: Staging Push Validation
+
+# Pushes all templates to staging-coder.ddev.com with --activate=false to
+# verify the Coder provider accepts the HCL before any workspace is affected.
+#
+# Requires:
+#   Repository variable: TEST_CODER_URL         - https://staging-coder.ddev.com
+#   Repository secret:   OP_SERVICE_ACCOUNT_TOKEN - 1Password service account with read access
+#   1Password item:      op://test-secrets/TEST_CODER_SESSION_TOKEN/credential
+#                        (machine token for ci-bot user on test Coder instance)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      debug_enabled:
+        description: 'Run the build with tmate set "debug_enabled"'
+        type: boolean
+        required: false
+        default: false
+
+jobs:
+  push-staging:
+    name: Push to staging (${{ matrix.template }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - template: user-defined-web
+            extra_vars: ""
+          - template: drupal-core
+            # cache_path required until #99 (remove seed cache) lands;
+            # non-existent path is fine — only checked at workspace create time
+            extra_vars: "--variable cache_path=/tmp/ci-no-cache"
+          - template: freeform
+            extra_vars: ""
+      fail-fast: false
+    env:
+      VERSION_NAME: ci-${{ github.run_id }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Load 1Password secrets
+        uses: 1password/load-secrets-action@v4
+        with:
+          export-env: true
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          TEST_CODER_SESSION_TOKEN: "op://test-secrets/TEST_CODER_SESSION_TOKEN/credential"
+
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        with:
+          limit-access-to-actor: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+
+      - uses: coder/setup-action@v1
+        with:
+          access_url: ${{ vars.TEST_CODER_URL }}
+          coder_session_token: ${{ env.TEST_CODER_SESSION_TOKEN }}
+
+      - name: Copy VERSION into template directory
+        run: cp VERSION ${{ matrix.template }}/VERSION
+
+      - name: Push template (inactive)
+        run: |
+          coder templates push ${{ matrix.template }} \
+            --directory ${{ matrix.template }} \
+            --activate=false \
+            --name ${{ env.VERSION_NAME }} \
+            --yes \
+            --variable workspace_image_registry=index.docker.io/ddev/coder-ddev \
+            ${{ matrix.extra_vars }}
+
+      - name: Verify version exists
+        run: coder templates versions list ${{ matrix.template }} | grep ${{ env.VERSION_NAME }}
+
+      - name: Archive CI version
+        if: always()
+        run: coder templates versions archive ${{ matrix.template }} ${{ env.VERSION_NAME }} --yes || true

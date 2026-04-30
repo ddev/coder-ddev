@@ -122,6 +122,10 @@ test-templates: ## Run Terraform mock unit tests for all templates (requires ter
 	done
 	@echo "All template tests passed."
 
+.PHONY: push-staging
+push-staging: ## Push all templates to staging-coder.ddev.com inactive (ACTIVATE=false); requires CODER_URL set to staging
+	$(MAKE) push-all-templates ACTIVATE=false
+
 .PHONY: clean
 clean: ## Remove local image
 	@echo "Removing local images..."
