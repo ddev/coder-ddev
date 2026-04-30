@@ -81,6 +81,9 @@ jobs:
             extra_vars: ""
             extra_params: ""
       fail-fast: false
+    defaults:
+      run:
+        shell: bash -euo pipefail {0}
     env:
       WORKSPACE_NAME: ci-${{ matrix.template }}-${{ github.run_id }}
       CI: "true"
@@ -143,11 +146,13 @@ jobs:
       - name: Verify workspace — DDEV can start a project
         run: |
           coder ssh ${{ env.WORKSPACE_NAME }} -- env CI=${{ env.CI }} DDEV_NONINTERACTIVE=${{ env.DDEV_NONINTERACTIVE }} bash -c '
-            TESTDIR=/tmp/ci-ddev-${{ github.run_id }} && mkdir -p $TESTDIR && cd $TESTDIR &&
-            ddev config --project-type=php --docroot=web &&
-            ddev start -y &&
-            ddev stop &&
-            ddev delete --omit-snapshot -y &&
+            set -euo pipefail
+            TESTDIR=/tmp/ci-ddev-${{ github.run_id }}
+            mkdir -p $TESTDIR && cd $TESTDIR
+            ddev config --project-type=php --docroot=web
+            ddev start -y
+            ddev stop
+            ddev delete --omit-snapshot -y
             rm -rf $TESTDIR
           '
 
