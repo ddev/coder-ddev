@@ -134,7 +134,7 @@ jobs:
         run: coder ssh ${{ env.WORKSPACE_NAME }} -- ddev --version
 
       - name: Verify workspace — DDEV global config present
-        run: coder ssh ${{ env.WORKSPACE_NAME }} -- test -f /home/coder/.ddev/global_config.yaml
+        run: coder ssh ${{ env.WORKSPACE_NAME }} -- bash -c 'test -f $HOME/.ddev/global_config.yaml'
 
       - name: Verify workspace — DDEV can start a project
         run: |
