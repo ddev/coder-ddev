@@ -88,15 +88,32 @@ See `image/README.md` for details on customizing the Docker image.
 ### Using the Makefile
 
 ```bash
-# Push template only
+# Push all three templates (no image build — use when only HCL changed)
+make push-all-templates
+
+# Push a single template
 make push-template-user-defined-web
+make push-template-drupal-core
+make push-template-freeform
 
-# Full deployment (build image + push image + push template)
-make deploy-user-defined-web
+# Full deployment: build image, push image, push all templates
+make deploy-all
 
-# Full deployment without cache
-make deploy-user-defined-web-no-cache
+# Full deployment without cache (clean image build)
+make build-and-push-no-cache && make push-all-templates
 ```
+
+### Auto-stop TTL
+
+Set a default auto-stop so idle workspaces shut down and free resources. Run once after initial deployment (or after adding a new template):
+
+```bash
+coder templates edit drupal-core      --default-ttl 2h --yes
+coder templates edit user-defined-web --default-ttl 2h --yes
+coder templates edit freeform         --default-ttl 2h --yes
+```
+
+Users can override the TTL on their individual workspaces if needed.
 
 ### Template Configuration
 
