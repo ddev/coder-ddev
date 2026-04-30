@@ -8,7 +8,7 @@ terraform {
       source  = "kreuzwerker/docker"
       version = "~> 3.0"
     }
-}
+  }
 }
 
 provider "docker" {
@@ -103,7 +103,7 @@ data "coder_parameter" "vscode_extensions" {
 locals {
   # Determine workspace home path
   # Sysbox Strategy: Use standard /home/coder
-  workspace_home = "/home/coder"
+  workspace_home      = "/home/coder"
   selected_extensions = jsondecode(data.coder_parameter.vscode_extensions.value)
 }
 
@@ -571,8 +571,8 @@ BASHCOMP
     CODER_AGENT_FORCE_UPDATE = "35"
     # DOCKER_HOST not needed as we use local socket
     # DOCKER_HOST                = var.docker_host
-    CODER_WORKSPACE_ID         = data.coder_workspace.me.id
-    CODER_WORKSPACE_NAME       = data.coder_workspace.me.name
+    CODER_WORKSPACE_ID          = data.coder_workspace.me.id
+    CODER_WORKSPACE_NAME        = data.coder_workspace.me.name
     CODER_WORKSPACE_OWNER_NAME  = data.coder_workspace_owner.me.name
     CODER_WORKSPACE_OWNER_EMAIL = data.coder_workspace_owner.me.email
     # Force HOME to /home/coder (Standard Home Strategy)
@@ -658,8 +658,8 @@ resource "coder_script" "ddev_shutdown" {
 
 
 resource "docker_container" "workspace" {
-  count = data.coder_workspace.me.start_count
-  image = docker_image.workspace_image.image_id
+  count    = data.coder_workspace.me.start_count
+  image    = docker_image.workspace_image.image_id
   name     = "coder-${data.coder_workspace.me.id}"
   hostname = "${data.coder_workspace.me.name}-${data.coder_workspace_owner.me.name}"
   user     = "coder"
@@ -669,8 +669,8 @@ resource "docker_container" "workspace" {
 
   # Increase stop_timeout to allow shutdown_script and ddev stop to run
   # Default is usually 10s, which is not enough for ddev shutdown
-  stop_timeout = 180
-  stop_signal  = "SIGINT"
+  stop_timeout          = 180
+  stop_signal           = "SIGINT"
   destroy_grace_seconds = 60
 
 

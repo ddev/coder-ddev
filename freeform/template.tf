@@ -8,7 +8,7 @@ terraform {
       source  = "kreuzwerker/docker"
       version = "~> 3.0"
     }
-}
+  }
 }
 
 provider "docker" {
@@ -86,9 +86,9 @@ data "coder_parameter" "vscode_extensions" {
 }
 
 locals {
-  workspace_home = "/home/coder"
+  workspace_home      = "/home/coder"
   selected_extensions = jsondecode(data.coder_parameter.vscode_extensions.value)
-  image_version  = try(trimspace(file("${path.module}/VERSION")), var.image_version)
+  image_version       = try(trimspace(file("${path.module}/VERSION")), var.image_version)
 
   registry_without_version      = replace(var.workspace_image_registry, ":${local.image_version}", "")
   workspace_image_registry_base = replace(local.registry_without_version, ":latest", "")
@@ -395,9 +395,9 @@ BASHCOMP
   EOT
 
   env = {
-    CODER_AGENT_FORCE_UPDATE   = "1"
-    CODER_WORKSPACE_ID         = data.coder_workspace.me.id
-    CODER_WORKSPACE_NAME       = data.coder_workspace.me.name
+    CODER_AGENT_FORCE_UPDATE    = "1"
+    CODER_WORKSPACE_ID          = data.coder_workspace.me.id
+    CODER_WORKSPACE_NAME        = data.coder_workspace.me.name
     CODER_WORKSPACE_OWNER_NAME  = data.coder_workspace_owner.me.name
     CODER_WORKSPACE_OWNER_EMAIL = data.coder_workspace_owner.me.email
     HOME                        = "/home/coder"
@@ -510,19 +510,19 @@ resource "coder_script" "ddev_shutdown" {
 }
 
 resource "docker_container" "workspace" {
-  count        = data.coder_workspace.me.start_count
-  image        = docker_image.workspace_image.image_id
-  name         = "coder-${data.coder_workspace.me.id}"
-  hostname     = "${data.coder_workspace.me.name}-${data.coder_workspace_owner.me.name}"
-  user         = "coder"
-  group_add    = [tostring(var.docker_gid)]
-  stop_timeout = 180
-  stop_signal  = "SIGINT"
+  count                 = data.coder_workspace.me.start_count
+  image                 = docker_image.workspace_image.image_id
+  name                  = "coder-${data.coder_workspace.me.id}"
+  hostname              = "${data.coder_workspace.me.name}-${data.coder_workspace_owner.me.name}"
+  user                  = "coder"
+  group_add             = [tostring(var.docker_gid)]
+  stop_timeout          = 180
+  stop_signal           = "SIGINT"
   destroy_grace_seconds = 60
-  working_dir  = local.workspace_home
-  cpu_shares   = var.cpu * 1024
-  memory       = var.memory * 1024 * 1024 * 1024
-  runtime      = "sysbox-runc"
+  working_dir           = local.workspace_home
+  cpu_shares            = var.cpu * 1024
+  memory                = var.memory * 1024 * 1024 * 1024
+  runtime               = "sysbox-runc"
 
   volumes {
     container_path = local.workspace_home

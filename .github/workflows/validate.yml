@@ -1,0 +1,37 @@
+name: Validate Templates
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  validate:
+    name: Validate (${{ matrix.template }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        template: [user-defined-web, drupal-core, freeform]
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: "~1.9"
+      - name: Init
+        run: terraform init -backend=false -input=false
+        working-directory: ${{ matrix.template }}
+      - name: Validate
+        run: terraform validate
+        working-directory: ${{ matrix.template }}
+
+  fmt:
+    name: Format Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: "~1.9"
+      - name: Check formatting
+        run: terraform fmt -check -recursive

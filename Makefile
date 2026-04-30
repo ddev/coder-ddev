@@ -102,6 +102,18 @@ test: ## Test the built image by running it
 	docker run --rm $(IMAGE_TAG) node --version
 	@echo "Test complete"
 
+.PHONY: validate
+validate: ## Validate all Terraform templates (requires terraform in PATH)
+	@for t in $(TEMPLATES); do \
+		echo "--- Validating $$t ---"; \
+		(cd $$t && terraform init -backend=false -input=false -no-color && terraform validate -no-color) || exit 1; \
+	done
+	@echo "All templates valid."
+
+.PHONY: fmt-check
+fmt-check: ## Check Terraform formatting across all templates
+	terraform fmt -check -recursive
+
 .PHONY: clean
 clean: ## Remove local image
 	@echo "Removing local images..."
