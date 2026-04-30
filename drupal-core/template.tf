@@ -1008,6 +1008,10 @@ WELCOME_STATIC
             log_setup "  Applied composer/composer pin to ~2.8.1 (json-schema conflict detected)"
           fi
 
+          # Allow all Composer plugins — issue fork packages (e.g. symfony/runtime) may
+          # introduce plugins not listed in the project's allow-plugins config.
+          ddev composer config allow-plugins true >> "$SETUP_LOG" 2>&1
+
           # Now resolve dependencies for the checked-out issue branch.
           # Use 'update -W' (not 'install') so composer re-solves the full dependency graph
           # with the new composer.json constraints rather than trying to honour a stale lock file.
@@ -1227,6 +1231,9 @@ LAUNCH_EOF
     TOTAL_TIME=$((SECONDS - SCRIPT_START))
     INSTALL_TIME=$((SECONDS - SETUP_START))
 
+    # Collect failure lines for summary (✗-prefixed lines from the setup log)
+    FAILURE_SUMMARY=$(grep "✗" "$SETUP_LOG" 2>/dev/null | grep -v "^$" | head -20 || true)
+
     # Final status and summary
     update_status ""
     update_status "Completed: $(date)"
@@ -1236,38 +1243,61 @@ LAUNCH_EOF
     update_status "  Install/seed phase:           $${INSTALL_TIME}s"
     update_status "  Total workspace startup:      $${TOTAL_TIME}s"
     update_status ""
+    if [ "$SETUP_FAILED" = "true" ]; then
+      update_status "=========================================="
+      update_status "✗ SETUP FAILED — workspace needs attention"
+      update_status "=========================================="
+      update_status ""
+      update_status "Errors:"
+      echo "$FAILURE_SUMMARY" | while IFS= read -r _line; do update_status "  $_line"; done
+      update_status ""
+      update_status "SSH in and run: cat $SETUP_LOG"
+    fi
+    update_status ""
     update_status "View full logs: $SETUP_LOG"
 
     log_setup ""
     log_setup "=========================================="
-    log_setup "✨ Setup Complete!"
+    if [ "$SETUP_FAILED" = "true" ]; then
+      log_setup "✗ SETUP FAILED — see errors below"
+    else
+      log_setup "✨ Setup Complete!"
+    fi
     log_setup "=========================================="
     log_setup ""
-    log_setup "⏱  Timing Summary:"
-    log_setup "   ddev utility download-images: $${IMAGES_TIME}s"
-    log_setup "   Install/seed phase:           $${INSTALL_TIME}s"
-    log_setup "   Total workspace startup:      $${TOTAL_TIME}s"
-    log_setup ""
-    log_setup "📁 Project Location:"
-    log_setup "   $DRUPAL_DIR"
-    log_setup ""
-    log_setup "🌐 Access Your Site:"
-    log_setup "   - Click 'DDEV Web' in Coder dashboard"
-    log_setup "   - Or run: ddev launch"
-    log_setup ""
-    log_setup "🔐 Admin Credentials:"
-    log_setup "   Username: admin"
-    log_setup "   Password: admin"
-    log_setup ""
-    log_setup "🛠️  Useful Commands:"
-    log_setup "   ddev drush uli          # One-time login link"
-    log_setup "   ddev drush status       # Check Drupal status"
-    log_setup "   ddev logs               # View logs"
-    log_setup "   ddev ssh                # SSH into container"
-    log_setup ""
-    log_setup "📋 Setup Details:"
-    log_setup "   Status: $SETUP_STATUS"
-    log_setup "   Logs:   $SETUP_LOG"
+    if [ "$SETUP_FAILED" = "true" ]; then
+      log_setup "Errors encountered:"
+      echo "$FAILURE_SUMMARY" | while IFS= read -r _line; do log_setup "  $_line"; done
+      log_setup ""
+      log_setup "Full log: cat $SETUP_LOG"
+      log_setup "Status:   cat $SETUP_STATUS"
+    else
+      log_setup "⏱  Timing Summary:"
+      log_setup "   ddev utility download-images: $${IMAGES_TIME}s"
+      log_setup "   Install/seed phase:           $${INSTALL_TIME}s"
+      log_setup "   Total workspace startup:      $${TOTAL_TIME}s"
+      log_setup ""
+      log_setup "📁 Project Location:"
+      log_setup "   $DRUPAL_DIR"
+      log_setup ""
+      log_setup "🌐 Access Your Site:"
+      log_setup "   - Click 'DDEV Web' in Coder dashboard"
+      log_setup "   - Or run: ddev launch"
+      log_setup ""
+      log_setup "🔐 Admin Credentials:"
+      log_setup "   Username: admin"
+      log_setup "   Password: admin"
+      log_setup ""
+      log_setup "🛠️  Useful Commands:"
+      log_setup "   ddev drush uli          # One-time login link"
+      log_setup "   ddev drush status       # Check Drupal status"
+      log_setup "   ddev logs               # View logs"
+      log_setup "   ddev ssh                # SSH into container"
+      log_setup ""
+      log_setup "📋 Setup Details:"
+      log_setup "   Status: $SETUP_STATUS"
+      log_setup "   Logs:   $SETUP_LOG"
+    fi
     log_setup ""
 
     # Create projects directory for additional projects if needed
@@ -1393,21 +1423,46 @@ BASHCOMP
   
     
     
-    echo "=== Setup Complete ==="
-    echo ""
-    echo "⏱  Timing: images=$${IMAGES_TIME}s  install=$${INSTALL_TIME}s  total=$${TOTAL_TIME}s"
-    echo ""
-    echo "📁 Drupal core ready at ~/drupal-core"
-    echo "📄 Welcome message saved to ~/WELCOME.txt"
-    echo ""
-    echo "Next steps:"
-    echo "  1. Click 'DDEV Web' app to access your site"
-    echo "  2. Log in with admin/admin"
-    echo "  3. Run 'ddev drush uli' for one-time login link"
-    echo ""
-    
-    
-    
+    if [ "$SETUP_FAILED" = "true" ]; then
+      # Overwrite WELCOME.txt so SSH login immediately shows the failure
+      {
+        echo "⚠  WORKSPACE SETUP INCOMPLETE"
+        echo "================================"
+        echo ""
+        echo "Setup encountered errors. Run this for details:"
+        echo "  cat $SETUP_LOG"
+        echo ""
+        echo "Errors:"
+        echo "$FAILURE_SUMMARY" | sed 's/^/  /'
+        echo ""
+        echo "Status file: cat $SETUP_STATUS"
+      } > ~/WELCOME.txt
+
+      echo ""
+      echo "=========================================="
+      echo "✗ SETUP FAILED"
+      echo "=========================================="
+      echo ""
+      echo "Errors:"
+      echo "$FAILURE_SUMMARY" | sed 's/^/  /'
+      echo ""
+      echo "Full log: cat $SETUP_LOG"
+      echo ""
+    else
+      echo "=== Setup Complete ==="
+      echo ""
+      echo "⏱  Timing: images=$${IMAGES_TIME}s  install=$${INSTALL_TIME}s  total=$${TOTAL_TIME}s"
+      echo ""
+      echo "📁 Drupal core ready at ~/drupal-core"
+      echo "📄 Welcome message saved to ~/WELCOME.txt"
+      echo ""
+      echo "Next steps:"
+      echo "  1. Click 'DDEV Web' app to access your site"
+      echo "  2. Log in with admin/admin"
+      echo "  3. Run 'ddev drush uli' for one-time login link"
+      echo ""
+    fi
+
     # Explicitly exit with success to prevent "Unhealthy" status
     exit 0
   EOT
