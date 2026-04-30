@@ -24,6 +24,9 @@ jobs:
       - name: Validate
         run: terraform validate
         working-directory: ${{ matrix.template }}
+      - name: Test
+        run: terraform test
+        working-directory: ${{ matrix.template }}
 
   fmt:
     name: Format Check

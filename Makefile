@@ -114,6 +114,14 @@ validate: ## Validate all Terraform templates (requires terraform in PATH)
 fmt-check: ## Check Terraform formatting across all templates
 	terraform fmt -check -recursive
 
+.PHONY: test-templates
+test-templates: ## Run Terraform mock unit tests for all templates (requires terraform in PATH)
+	@for t in $(TEMPLATES); do \
+		echo "--- Testing $$t ---"; \
+		(cd $$t && terraform test) || exit 1; \
+	done
+	@echo "All template tests passed."
+
 .PHONY: clean
 clean: ## Remove local image
 	@echo "Removing local images..."
