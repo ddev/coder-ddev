@@ -142,7 +142,7 @@ jobs:
 
       - name: Verify workspace — DDEV can start a project
         run: |
-          coder ssh ${{ env.WORKSPACE_NAME }} -- env CI=$CI DDEV_NONINTERACTIVE=$DDEV_NONINTERACTIVE bash -c "
+          coder ssh ${{ env.WORKSPACE_NAME }} -- env CI=${{ env.CI }} DDEV_NONINTERACTIVE=${{ env.DDEV_NONINTERACTIVE }} bash -c "
             TESTDIR=/tmp/ci-ddev-${{ github.run_id }} && mkdir -p \$TESTDIR && cd \$TESTDIR &&
             ddev config --project-type=php --docroot=web &&
             ddev start -y &&

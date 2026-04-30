@@ -235,7 +235,7 @@ resource "coder_agent" "main" {
         echo 'config.coder.yaml' >> "$HOME/.gitignore_global"
     fi
     mkdir -p ~/.ddev
-    ddev config global --instrumentation-opt-in=false > /dev/null 2>&1 || true
+    ddev config global --instrumentation-opt-in=true > /dev/null 2>&1 || true
     if [ -n "$CODER_WORKSPACE_OWNER_NAME" ]; then
       git config --global user.name "$CODER_WORKSPACE_OWNER_NAME"
     fi
