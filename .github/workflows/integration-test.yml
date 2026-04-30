@@ -91,10 +91,9 @@ jobs:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
           TEST_CODER_SESSION_TOKEN: "op://test-secrets/TEST_CODER_SESSION_TOKEN/credential"
 
-      - uses: coder/setup-action@v1
-        with:
-          access_url: ${{ vars.TEST_CODER_URL }}
-          coder_session_token: ${{ env.TEST_CODER_SESSION_TOKEN }}
+      - name: Login to Coder
+        if: ${{ env.TEST_CODER_SESSION_TOKEN != '' }}
+        run: coder login --token "${{ env.TEST_CODER_SESSION_TOKEN }}" "${{ vars.TEST_CODER_URL }}"
 
       - name: Setup tmate session
         uses: mxschmitt/action-tmate@v3
