@@ -425,8 +425,11 @@ EOF
       echo "Docker Daemon already running."
     fi
 
-    # Create .ddev directory for ddev config (DDEV creates global_config.yaml on first use)
+    # Create .ddev directory and seed global config from image defaults
     mkdir -p ~/.ddev
+    if [ -f /home/coder-files/.ddev/global_config.yaml ] && [ ! -f ~/.ddev/global_config.yaml ]; then
+      cp /home/coder-files/.ddev/global_config.yaml ~/.ddev/global_config.yaml
+    fi
 
     # Pre-pull DDEV images in background (uses registry mirror if configured)
     ddev utility download-images || true

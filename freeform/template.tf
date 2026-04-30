@@ -308,8 +308,11 @@ EOF
       echo "Docker Daemon already running."
     fi
 
-    # Create .ddev directory (DDEV creates global_config.yaml on first use)
+    # Create .ddev directory and seed global config from image defaults
     mkdir -p ~/.ddev/commands/host
+    if [ -f /home/coder-files/.ddev/global_config.yaml ] && [ ! -f ~/.ddev/global_config.yaml ]; then
+      cp /home/coder-files/.ddev/global_config.yaml ~/.ddev/global_config.yaml
+    fi
     if [ -d /home/coder-files/.ddev/commands/host ]; then
       cp -f /home/coder-files/.ddev/commands/host/* ~/.ddev/commands/host/
       chmod 755 ~/.ddev/commands/host/*

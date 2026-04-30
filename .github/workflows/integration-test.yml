@@ -62,11 +62,19 @@ jobs:
         include:
           - template: user-defined-web
             extra_vars: ""
+            extra_params: ""
           - template: drupal-core
             # cache_path required by template; non-existent path is fine — only checked at workspace create time
             extra_vars: "--variable cache_path=/tmp/ci-no-cache"
+            # --yes does not auto-accept empty-string defaults; pass all drupal-core params explicitly
+            extra_params: >-
+              --parameter issue_fork=
+              --parameter issue_branch=
+              --parameter drupal_version=12
+              --parameter install_profile=minimal
           - template: freeform
             extra_vars: ""
+            extra_params: ""
       fail-fast: false
     env:
       WORKSPACE_NAME: ci-${{ matrix.template }}-${{ github.run_id }}
@@ -114,6 +122,7 @@ jobs:
             --template ${{ matrix.template }} \
             --template-version ci-${{ github.run_id }} \
             --parameter "vscode_extensions=[]" \
+            ${{ matrix.extra_params }} \
             --yes
 
       - name: Verify workspace — agent connected
