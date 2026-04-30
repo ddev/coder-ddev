@@ -131,6 +131,10 @@ push-template-drupal-core: ## Push drupal-core template to Coder
 push-template-freeform: ## Push freeform template to Coder
 	$(call push_template,freeform)
 
+.PHONY: push-all-templates
+push-all-templates: push-template-user-defined-web push-template-drupal-core push-template-freeform ## Push all templates to Coder (no image build)
+	@echo "All templates pushed!"
+
 # --- Deploy targets ---
 
 .PHONY: deploy-user-defined-web
@@ -150,5 +154,5 @@ deploy-freeform: push-template-freeform ## Deploy freeform template (uses existi
 	@echo "Deployment of freeform complete!"
 
 .PHONY: deploy-all
-deploy-all: deploy-user-defined-web push-template-drupal-core push-template-freeform ## Deploy image and all templates
+deploy-all: build-and-push push-all-templates ## Build image, push image, and push all templates
 	@echo "All templates deployed!"
