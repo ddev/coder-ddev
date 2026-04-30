@@ -78,6 +78,8 @@ jobs:
       fail-fast: false
     env:
       WORKSPACE_NAME: ci-${{ matrix.template }}-${{ github.run_id }}
+      CI: "true"
+      DDEV_NONINTERACTIVE: "true"
 
     steps:
       - uses: actions/checkout@v4
@@ -135,11 +137,10 @@ jobs:
 
       - name: Verify workspace — DDEV can start a project
         run: |
-          coder ssh ${{ env.WORKSPACE_NAME }} -- bash -c "
-            export CI=true DDEV_NONINTERACTIVE=true &&
+          coder ssh ${{ env.WORKSPACE_NAME }} -- env CI=$CI DDEV_NONINTERACTIVE=$DDEV_NONINTERACTIVE bash -c "
             mkdir -p /tmp/ci-test && cd /tmp/ci-test &&
             ddev config --project-type=php --docroot=web &&
-            ddev start &&
+            ddev start -y &&
             ddev stop
           "
 
