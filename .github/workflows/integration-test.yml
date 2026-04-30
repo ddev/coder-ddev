@@ -6,6 +6,7 @@ name: Integration Tests
 #
 # One-time runner setup on staging-coder.ddev.com:
 #   # Create a dedicated low-privilege user for the runner (do not run as root or admin)
+#   sudo apt-get install -y unzip   # required by coder/setup-action
 #   sudo useradd -m -s /bin/bash github-runner
 #   sudo -u github-runner mkdir -p /home/github-runner/actions-runner
 #   cd /home/github-runner/actions-runner
@@ -48,7 +49,14 @@ jobs:
     runs-on: [self-hosted, sysbox]
     strategy:
       matrix:
-        template: [user-defined-web, freeform]
+        include:
+          - template: user-defined-web
+            extra_vars: ""
+          - template: drupal-core
+            # cache_path required by template; non-existent path is fine — only checked at workspace create time
+            extra_vars: "--variable cache_path=/tmp/ci-no-cache"
+          - template: freeform
+            extra_vars: ""
       fail-fast: false
     env:
       WORKSPACE_NAME: ci-${{ matrix.template }}-${{ github.run_id }}
@@ -87,13 +95,15 @@ jobs:
             --activate=false \
             --name ci-${{ github.run_id }} \
             --yes \
-            --variable workspace_image_registry=index.docker.io/ddev/coder-ddev
+            --variable workspace_image_registry=index.docker.io/ddev/coder-ddev \
+            ${{ matrix.extra_vars }}
 
       - name: Create workspace
         run: |
           coder create ${{ env.WORKSPACE_NAME }} \
             --template ${{ matrix.template }} \
             --template-version ci-${{ github.run_id }} \
+            --parameter "vscode_extensions=[]" \
             --yes
 
       - name: Verify workspace — agent connected
