@@ -117,7 +117,7 @@ jobs:
             --yes
 
       - name: Verify workspace — agent connected
-        run: coder ssh ${{ env.WORKSPACE_NAME }} --wait -- echo "Agent connected"
+        run: coder ssh ${{ env.WORKSPACE_NAME }} --wait=yes -- echo "Agent connected"
 
       - name: Verify workspace — Docker daemon running
         run: coder ssh ${{ env.WORKSPACE_NAME }} -- docker ps
