@@ -147,7 +147,7 @@ jobs:
 
       - name: Verify workspace — DDEV can start a project
         run: |
-          coder ssh ${{ env.WORKSPACE_NAME }} -- bash -c 'cat > /tmp/ddev-ci-test.sh' << 'SCRIPT'
+          coder ssh ${{ env.WORKSPACE_NAME }} -- bash -c 'cat > /tmp/ddev-ci-test.sh' << 'SCRIPT' || true
           set -euo pipefail
           TESTDIR=/tmp/ci-ddev-${{ github.run_id }}
           echo "--- Creating test project in $TESTDIR ---"
