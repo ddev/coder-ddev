@@ -175,9 +175,28 @@ jobs:
             bash /tmp/ci-ddev-test-${{ github.run_id }}.sh < /dev/null
           coder ssh ${{ env.WORKSPACE_NAME }} -- test -f /tmp/ci-ddev-success-${{ github.run_id }}
 
+      - name: Record expected host directory
+        run: |
+          OWNER=$(coder whoami --output json | jq -r '.username')
+          echo "HOST_DIR=/coder-workspaces/${OWNER}-${{ env.WORKSPACE_NAME }}" >> "$GITHUB_ENV"
+
       - name: Delete workspace
         if: always()
         run: coder delete ${{ env.WORKSPACE_NAME }} --yes || true
+
+      - name: Verify host directory removed
+        if: always()
+        run: |
+          if [[ -z "${HOST_DIR:-}" ]]; then
+            echo "HOST_DIR not set — workspace may not have been created, skipping"
+            exit 0
+          fi
+          if [[ -d "$HOST_DIR" ]]; then
+            echo "ERROR: Host directory was not removed by destroy provisioner: $HOST_DIR" >&2
+            ls -la "$HOST_DIR" >&2 || true
+            exit 1
+          fi
+          echo "OK: host directory removed: $HOST_DIR"
 
       - name: Archive CI template version
         if: always()
