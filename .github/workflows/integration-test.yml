@@ -10,6 +10,7 @@ name: Integration Tests
 #   sudo useradd -m -s /bin/bash github-runner
 #
 #   # Register N runner instances (one per parallel matrix job — currently 2 templates).
+#   # TODO: Revisit runner count if more templates or matrix cells are added.
 #   # Each instance needs its own directory, a unique --name, and its own service.
 #   # Get a fresh registration token for each from:
 #   # https://github.com/ddev/coder-ddev/settings/actions/runners/new?arch=x64&os=linux
