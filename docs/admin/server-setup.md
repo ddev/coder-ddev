@@ -575,24 +575,21 @@ journalctl -u coder -f
 
 ### Allow Coder to delete workspace directories
 
-When a workspace is deleted, a Terraform destroy-time provisioner calls a wrapper script to remove the workspace's host directory. The Coder service (running as the `coder` system user) needs passwordless sudo access to that specific script.
+When a workspace is deleted, a Terraform destroy-time provisioner runs `rm -rf` to clean up the workspace host directory. The Coder service runs as the `coder` system user (UID 999), but workspace files are owned by UID 1000. Sudo is not an option — the Coder systemd service sets `NoNewPrivileges`, which blocks sudo entirely.
 
-Install the wrapper and configure sudoers:
+The solution is a default ACL on `/coder-workspaces/` that gives the `coder` user `rwx` on every new workspace directory created there. In Linux, deleting a file requires write permission on its *parent directory*, not on the file itself — so this is sufficient for `rm -rf` with no privilege escalation.
 
 ```bash
-# Install the wrapper script
-sudo install -m 755 scripts/coder-delete-workspace-dir.sh /usr/local/bin/coder-delete-workspace-dir
-
-# Grant coder user sudo access to only that script
-echo 'coder ALL=(ALL) NOPASSWD: /usr/local/bin/coder-delete-workspace-dir' \
-  | sudo tee /etc/sudoers.d/coder-workspace-cleanup
-sudo chmod 0440 /etc/sudoers.d/coder-workspace-cleanup
-sudo visudo -c
+sudo apt-get install -y acl
+sudo setfacl -m u:coder:rwx /coder-workspaces
+sudo setfacl -d -m u:coder:rwx /coder-workspaces
+# Verify
+getfacl /coder-workspaces
 ```
 
-The wrapper validates that the argument matches exactly `/coder-workspaces/<alphanumeric-name>` before deleting, preventing path traversal. Granting sudo for a bare `rm -rf` with a glob would allow path traversal attacks if the `coder` process were ever compromised.
+The `-d` flag sets the *default* ACL, which new subdirectories inherit automatically. Directories created by Docker for each workspace will inherit `rwx` for the `coder` user, and files created inside those directories will inherit it recursively from there.
 
-Without this setup, workspace deletion will log permission errors and leave the directory behind (recoverable with `scripts/cleanup-deleted-workspaces.sh`).
+Without this, workspace deletion will log permission errors and leave the directory behind (recoverable with `scripts/cleanup-deleted-workspaces.sh`).
 
 ### First-run admin setup
 
