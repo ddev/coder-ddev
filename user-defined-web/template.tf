@@ -721,9 +721,7 @@ resource "docker_container" "workspace" {
   # Command to keep container running
   command = ["sh", "-c", coder_agent.main.init_script]
 
-  # Ensure container is destroyed (stopped) BEFORE workspace_cleanup runs (rm -rf) through reverse dependency
-
-
+  depends_on = [null_resource.workspace_cleanup]
 
   # Restart policy
   restart = "unless-stopped"
@@ -738,9 +736,16 @@ resource "docker_container" "workspace" {
   privileged = false
 }
 
-# Cleanup ddev resources when workspace is destroyed
-# NOTE: Destroy provisioner temporarily disabled due to Terraform limitations
-# TODO: Implement cleanup via alternative method (e.g., Coder lifecycle hooks or external script)
+resource "null_resource" "workspace_cleanup" {
+  triggers = {
+    host_path = "/coder-workspaces/${data.coder_workspace_owner.me.name}-${data.coder_workspace.me.name}"
+  }
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = "rm -rf -- '${self.triggers.host_path}'"
+  }
+}
 
 resource "coder_metadata" "workspace_info" {
   resource_id = docker_container.workspace[0].id

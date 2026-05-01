@@ -252,12 +252,9 @@ coder delete workspace1 workspace2 workspace3 --yes
 
 - Workspace container
 - `/var/lib/docker` Docker named volume (Docker daemon data for that workspace)
+- Host directory at `/coder-workspaces/<owner>-<workspace>` — via destroy-time provisioner in the template
 
-**Not** automatically removed:
-
-- The host directory at `/coder-workspaces/<owner>-<workspace>` (contains the user's files)
-
-Run `scripts/cleanup-deleted-workspaces.sh` periodically to remove these orphaned directories. See [Orphaned Workspace Cleanup](#orphaned-workspace-cleanup) below.
+If the provisioner doesn't run (e.g. Terraform error, or directories orphaned before this feature was added), use `scripts/cleanup-deleted-workspaces.sh`. See [Orphaned Workspace Cleanup](#orphaned-workspace-cleanup) below.
 
 ## Template Updates
 

@@ -1,18 +1,23 @@
 #!/usr/bin/env bash
 # Remove host directories and Docker volumes left behind by deleted Coder workspaces.
 #
+# New workspaces clean up automatically on deletion via the null_resource destroy
+# provisioner in each template. This script handles directories that were orphaned
+# before that provisioner existed, or in any case where the provisioner didn't run.
+#
 # By default runs in dry-run mode (prints what would be deleted).
 # Pass --force to actually delete.
 #
-# Requires: coder CLI (authenticated), docker, jq
+# Requires: coder CLI (authenticated as admin), docker (in docker group), sudo access
 #
 # Usage:
-#   ./scripts/cleanup-deleted-workspaces.sh           # dry run
-#   ./scripts/cleanup-deleted-workspaces.sh --force   # delete orphaned data
+#   ./scripts/cleanup-deleted-workspaces.sh                          # dry run
+#   ./scripts/cleanup-deleted-workspaces.sh --force                  # delete orphaned data
+#   WORKSPACES_DIR=/custom/path ./scripts/cleanup-deleted-workspaces.sh  # override base dir
 
 set -euo pipefail
 
-WORKSPACES_DIR="/coder-workspaces"
+WORKSPACES_DIR="${WORKSPACES_DIR:-/coder-workspaces}"
 FORCE=false
 
 for arg in "$@"; do
