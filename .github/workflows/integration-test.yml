@@ -61,6 +61,7 @@ concurrency:
 jobs:
   integration-test:
     name: Integration test (${{ matrix.template }})
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.owner.login == github.repository_owner }}
     runs-on: [self-hosted, sysbox]
     strategy:
       matrix:
@@ -148,11 +149,15 @@ jobs:
           coder ssh ${{ env.WORKSPACE_NAME }} -- env CI=${{ env.CI }} DDEV_NONINTERACTIVE=${{ env.DDEV_NONINTERACTIVE }} bash -s << 'SCRIPT'
           set -euo pipefail
           TESTDIR=/tmp/ci-ddev-${{ github.run_id }}
+          echo "--- Creating test project in $TESTDIR ---"
           mkdir -p "$TESTDIR" && cd "$TESTDIR"
           ddev config --project-type=php --docroot=web
+          echo "--- Starting DDEV project ---"
           ddev start -y
+          echo "--- Deleting DDEV project ---"
           ddev delete --omit-snapshot -y
           rm -rf "$TESTDIR"
+          echo "--- DDEV test complete ---"
           SCRIPT
 
       - name: Delete workspace
