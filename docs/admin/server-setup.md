@@ -928,6 +928,69 @@ This should post a message to your Discord channel.
 
 ---
 
+## Step 12: Set Up Icinga2 Monitoring
+
+New Coder servers should be monitored by `monitor.ddev.com` using icinga2. This connects the server as an icinga2 agent to the central monitoring master.
+
+See also: [DDEV testmachine setup docs](https://docs.ddev.com/en/stable/developers/buildkite-testmachine-setup/) and [maintainer-info monitoring](https://github.com/ddev/maintainer-info/blob/main/topics/monitoring.md) (private repo) for broader context on the monitoring infrastructure.
+
+### Install icinga2 and monitoring plugins
+
+```bash
+sudo apt-get install -y icinga2 icinga2-bin icinga2-common icinga2-doc \
+  monitoring-plugins monitoring-plugins-basic monitoring-plugins-common \
+  monitoring-plugins-contrib monitoring-plugins-standard \
+  libmonitoring-plugin-perl nmon
+```
+
+### Generate a ticket on monitor.ddev.com
+
+```bash
+sudo icinga2 pki ticket --cn <new-server-hostname>
+```
+
+Copy the hex ticket string — you'll need it in the next step.
+
+### Run the node wizard on the new server
+
+```bash
+sudo icinga2 node wizard
+```
+
+Answer the prompts as follows:
+
+| Prompt | Answer |
+| ------ | ------ |
+| Agent/satellite setup? | `Y` (default) |
+| Common name (CN) | `<new-server-hostname>` (e.g. `staging-coder.ddev.com`) |
+| Parent endpoint CN | `monitor.ddev.com` |
+| Establish connection to parent? | `Y` (default) |
+| Parent endpoint host | `monitor.ddev.com` |
+| Parent endpoint port | (enter, default 5665) |
+| Add more endpoints? | `N` (default) |
+| Parent zone name | `master` (default) |
+| Request ticket | paste the ticket from above |
+| Accept config from parent? | `y` |
+| Accept commands from parent? | `y` |
+
+Then restart icinga2:
+
+```bash
+sudo systemctl restart icinga2
+```
+
+### Configure the host in Icinga Director
+
+In the Icinga Director web UI at [monitor.ddev.com/icingaweb2](https://monitor.ddev.com/icingaweb2):
+
+1. Clone the `coder.ddev.com` host entry
+2. Set the name and address to the new server hostname
+3. Deploy the configuration
+
+The new host will appear in the monitoring dashboard once the agent connects and the deploy completes.
+
+---
+
 ## Adding Capacity: Additional Provisioner Nodes
 
 Coder separates the **control plane** (the Coder server) from **provisioners** (the processes that run Terraform to create workspaces). By default, the Coder server includes a built-in provisioner. For additional capacity or to run workspaces on separate machines, you can run **external provisioner daemons**.
