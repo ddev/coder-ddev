@@ -147,20 +147,19 @@ jobs:
 
       - name: Verify workspace — DDEV can start a project
         run: |
-          coder ssh ${{ env.WORKSPACE_NAME }} -- bash -c 'cat > /tmp/ddev-ci-test.sh' << 'SCRIPT' || true
+          coder ssh ${{ env.WORKSPACE_NAME }} -- env CI=${{ env.CI }} DDEV_NONINTERACTIVE=${{ env.DDEV_NONINTERACTIVE }} NO_COLOR=${{ env.NO_COLOR }} bash << 'SCRIPT'
           set -euo pipefail
           TESTDIR=/tmp/ci-ddev-${{ github.run_id }}
           echo "--- Creating test project in $TESTDIR ---"
           mkdir -p "$TESTDIR" && cd "$TESTDIR"
           ddev config --project-type=php --docroot=web
           echo "--- Starting DDEV project ---"
-          ddev start -y
+          ddev start -y < /dev/null
           echo "--- Deleting DDEV project ---"
           ddev delete --omit-snapshot -y
           rm -rf "$TESTDIR"
           echo "--- DDEV test complete ---"
           SCRIPT
-          coder ssh ${{ env.WORKSPACE_NAME }} -- env CI=${{ env.CI }} DDEV_NONINTERACTIVE=${{ env.DDEV_NONINTERACTIVE }} NO_COLOR=${{ env.NO_COLOR }} bash /tmp/ddev-ci-test.sh
 
       - name: Delete workspace
         if: always()
