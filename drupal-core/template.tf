@@ -1666,7 +1666,7 @@ resource "null_resource" "workspace_cleanup" {
 
   provisioner "local-exec" {
     when    = destroy
-    command = "rm -rf -- '${self.triggers.host_path}'"
+    command = "sudo rm -rf -- '${self.triggers.host_path}'"
   }
 }
 

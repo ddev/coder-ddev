@@ -573,6 +573,19 @@ View logs:
 journalctl -u coder -f
 ```
 
+### Allow Coder to delete workspace directories
+
+The Coder service runs as the `coder` system user. When a workspace is deleted, a Terraform destroy-time provisioner runs `sudo rm -rf` to clean up the workspace's host directory under `/coder-workspaces/`. Grant the `coder` user passwordless sudo for that operation:
+
+```bash
+echo 'coder ALL=(ALL) NOPASSWD: /usr/bin/rm -rf -- /coder-workspaces/*' \
+  | sudo tee /etc/sudoers.d/coder-workspace-cleanup
+sudo chmod 0440 /etc/sudoers.d/coder-workspace-cleanup
+sudo visudo -c  # verify the file is valid
+```
+
+Without this, workspace deletion will log permission errors and leave the directory behind (it falls back to `scripts/cleanup-deleted-workspaces.sh`).
+
 ### First-run admin setup
 
 Navigate to `https://coder.example.com` (your hostname) and create the initial admin user.
