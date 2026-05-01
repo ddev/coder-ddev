@@ -350,7 +350,7 @@ docker run --rm \
 
 ### Orphaned Workspace Cleanup
 
-When a workspace is deleted, Coder removes the container and its Docker named volume, but the host directory at `/coder-workspaces/<owner>-<workspace>` is left behind. Run the cleanup script periodically (e.g. monthly) to reclaim disk space.
+When a workspace is deleted, the destroy provisioner automatically removes the host directory at `/coder-workspaces/<owner>-<workspace>`. Directories can still be orphaned if the provisioner fails or for workspaces deleted before the provisioner was added. Run the cleanup script to reclaim disk space in those cases.
 
 ```bash
 # Dry run — shows what would be deleted without removing anything
@@ -360,7 +360,7 @@ When a workspace is deleted, Coder removes the container and its Docker named vo
 ./scripts/cleanup-deleted-workspaces.sh --force
 ```
 
-Run as your normal user (not root) — the script calls `sudo rm -rf` internally for directory removal, and uses `docker volume rm` (requires docker group membership).
+Run as your normal user (not root) — the script calls `sudo /usr/local/bin/coder-delete-workspace-dir` internally for directory removal, and uses `docker volume rm` (requires docker group membership).
 
 The script:
 
