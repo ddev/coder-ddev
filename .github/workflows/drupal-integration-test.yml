@@ -146,7 +146,24 @@ jobs:
           CODER_DOMAIN="${CODER_DOMAIN#https://}"
           SITE_URL="https://drupal-site--${{ env.WORKSPACE_NAME }}--${OWNER}.${CODER_DOMAIN}"
           echo "Checking $SITE_URL"
-          curl -sfL --max-time 30 --retry 3 --retry-delay 5 "$SITE_URL" | grep -qi "log in"
+          # drupal-site app has share="owner" so requests must carry a Coder session token
+          HTTP_STATUS=$(curl -sL --max-time 30 --retry 3 --retry-delay 5 \
+            -H "Coder-Session-Token: ${TEST_CODER_SESSION_TOKEN}" \
+            -o /tmp/drupal-response.html \
+            -w "%{http_code}" \
+            "$SITE_URL")
+          echo "HTTP status: $HTTP_STATUS"
+          if [[ ! "$HTTP_STATUS" =~ ^[23] ]]; then
+            echo "ERROR: unexpected HTTP status $HTTP_STATUS" >&2
+            head -50 /tmp/drupal-response.html >&2 || true
+            exit 1
+          fi
+          if ! grep -qi "log in" /tmp/drupal-response.html; then
+            echo "ERROR: response does not contain 'log in' — Drupal may not have started" >&2
+            head -50 /tmp/drupal-response.html >&2
+            exit 1
+          fi
+          echo "OK: Drupal site is accessible and shows login page"
 
       - &delete-workspace
         name: Delete workspace
@@ -294,7 +311,24 @@ jobs:
           CODER_DOMAIN="${CODER_DOMAIN#https://}"
           SITE_URL="https://drupal-site--${{ env.WORKSPACE_NAME }}--${OWNER}.${CODER_DOMAIN}"
           echo "Checking $SITE_URL"
-          curl -sfL --max-time 30 --retry 3 --retry-delay 5 "$SITE_URL" | grep -qi "log in"
+          # drupal-site app has share="owner" so requests must carry a Coder session token
+          HTTP_STATUS=$(curl -sL --max-time 30 --retry 3 --retry-delay 5 \
+            -H "Coder-Session-Token: ${TEST_CODER_SESSION_TOKEN}" \
+            -o /tmp/drupal-response.html \
+            -w "%{http_code}" \
+            "$SITE_URL")
+          echo "HTTP status: $HTTP_STATUS"
+          if [[ ! "$HTTP_STATUS" =~ ^[23] ]]; then
+            echo "ERROR: unexpected HTTP status $HTTP_STATUS" >&2
+            head -50 /tmp/drupal-response.html >&2 || true
+            exit 1
+          fi
+          if ! grep -qi "log in" /tmp/drupal-response.html; then
+            echo "ERROR: response does not contain 'log in' — Drupal may not have started" >&2
+            head -50 /tmp/drupal-response.html >&2
+            exit 1
+          fi
+          echo "OK: Drupal site is accessible and shows login page"
 
       - name: Delete workspace
         if: always()
