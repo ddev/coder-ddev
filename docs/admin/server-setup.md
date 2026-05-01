@@ -575,16 +575,24 @@ journalctl -u coder -f
 
 ### Allow Coder to delete workspace directories
 
-The Coder service runs as the `coder` system user. When a workspace is deleted, a Terraform destroy-time provisioner runs `sudo rm -rf` to clean up the workspace's host directory under `/coder-workspaces/`. Grant the `coder` user passwordless sudo for that operation:
+When a workspace is deleted, a Terraform destroy-time provisioner calls a wrapper script to remove the workspace's host directory. The Coder service (running as the `coder` system user) needs passwordless sudo access to that specific script.
+
+Install the wrapper and configure sudoers:
 
 ```bash
-echo 'coder ALL=(ALL) NOPASSWD: /usr/bin/rm -rf -- /coder-workspaces/*' \
+# Install the wrapper script
+sudo install -m 755 scripts/coder-delete-workspace-dir.sh /usr/local/bin/coder-delete-workspace-dir
+
+# Grant coder user sudo access to only that script
+echo 'coder ALL=(ALL) NOPASSWD: /usr/local/bin/coder-delete-workspace-dir' \
   | sudo tee /etc/sudoers.d/coder-workspace-cleanup
 sudo chmod 0440 /etc/sudoers.d/coder-workspace-cleanup
-sudo visudo -c  # verify the file is valid
+sudo visudo -c
 ```
 
-Without this, workspace deletion will log permission errors and leave the directory behind (it falls back to `scripts/cleanup-deleted-workspaces.sh`).
+The wrapper validates that the argument matches exactly `/coder-workspaces/<alphanumeric-name>` before deleting, preventing path traversal. Granting sudo for a bare `rm -rf` with a glob would allow path traversal attacks if the `coder` process were ever compromised.
+
+Without this setup, workspace deletion will log permission errors and leave the directory behind (recoverable with `scripts/cleanup-deleted-workspaces.sh`).
 
 ### First-run admin setup
 
