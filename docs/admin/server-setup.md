@@ -580,7 +580,8 @@ When a workspace is deleted, a Terraform destroy-time provisioner runs `rm -rf` 
 The solution is a default ACL on `/coder-workspaces/` that gives the `coder` user `rwx` on every new workspace directory created there. In Linux, deleting a file requires write permission on its *parent directory*, not on the file itself — so this is sufficient for `rm -rf` with no privilege escalation.
 
 ```bash
-sudo apt-get install -y acl
+# acl is installed by default on Ubuntu 24.04; this is a no-op if already present
+sudo apt-get update && sudo apt-get install -y acl
 sudo setfacl -m u:coder:rwx /coder-workspaces
 sudo setfacl -d -m u:coder:rwx /coder-workspaces
 # Verify
