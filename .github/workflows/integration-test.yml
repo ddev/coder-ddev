@@ -89,6 +89,7 @@ jobs:
       WORKSPACE_NAME: ci-${{ matrix.template }}-${{ github.run_id }}
       CI: "true"
       DDEV_NONINTERACTIVE: "true"
+      NO_COLOR: "1"
 
     steps:
       - uses: actions/checkout@v6
@@ -146,19 +147,19 @@ jobs:
 
       - name: Verify workspace — DDEV can start a project
         run: |
-          coder ssh ${{ env.WORKSPACE_NAME }} -- env CI=${{ env.CI }} DDEV_NONINTERACTIVE=${{ env.DDEV_NONINTERACTIVE }} bash -s << 'SCRIPT'
-          set -euo pipefail
-          TESTDIR=/tmp/ci-ddev-${{ github.run_id }}
-          echo "--- Creating test project in $TESTDIR ---"
-          mkdir -p "$TESTDIR" && cd "$TESTDIR"
-          ddev config --project-type=php --docroot=web
-          echo "--- Starting DDEV project ---"
-          ddev start -y
-          echo "--- Deleting DDEV project ---"
-          ddev delete --omit-snapshot -y
-          rm -rf "$TESTDIR"
-          echo "--- DDEV test complete ---"
-          SCRIPT
+          coder ssh ${{ env.WORKSPACE_NAME }} -- env CI=${{ env.CI }} DDEV_NONINTERACTIVE=${{ env.DDEV_NONINTERACTIVE }} NO_COLOR=${{ env.NO_COLOR }} bash -c '
+            set -euo pipefail
+            TESTDIR=/tmp/ci-ddev-${{ github.run_id }}
+            echo "--- Creating test project in $TESTDIR ---"
+            mkdir -p "$TESTDIR" && cd "$TESTDIR"
+            ddev config --project-type=php --docroot=web
+            echo "--- Starting DDEV project ---"
+            ddev start -y
+            echo "--- Deleting DDEV project ---"
+            ddev delete --omit-snapshot -y
+            rm -rf "$TESTDIR"
+            echo "--- DDEV test complete ---"
+          '
 
       - name: Delete workspace
         if: always()
