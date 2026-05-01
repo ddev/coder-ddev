@@ -248,11 +248,16 @@ coder delete my-workspace --yes
 coder delete workspace1 workspace2 workspace3 --yes
 ```
 
-**Note:** Deleting a workspace removes:
+**Deleting a workspace removes:**
+
 - Workspace container
-- `/home/coder` volume (host directory)
-- `/var/lib/docker` volume (Docker daemon data)
-- All DDEV containers and volumes inside the workspace
+- `/var/lib/docker` Docker named volume (Docker daemon data for that workspace)
+
+**Not** automatically removed:
+
+- The host directory at `/coder-workspaces/<owner>-<workspace>` (contains the user's files)
+
+Run `scripts/cleanup-deleted-workspaces.sh` periodically to remove these orphaned directories. See [Orphaned Workspace Cleanup](#orphaned-workspace-cleanup) below.
 
 ## Template Updates
 
@@ -345,6 +350,27 @@ docker run --rm \
   ubuntu:24.04 \
   tar -xzf /backup/docker-volume-backup.tar.gz -C /target
 ```
+
+### Orphaned Workspace Cleanup
+
+When a workspace is deleted, Coder removes the container and its Docker named volume, but the host directory at `/coder-workspaces/<owner>-<workspace>` is left behind. Run the cleanup script periodically (e.g. monthly) to reclaim disk space.
+
+```bash
+# Dry run — shows what would be deleted without removing anything
+./scripts/cleanup-deleted-workspaces.sh
+
+# Actually delete orphaned directories and Docker volumes
+sudo ./scripts/cleanup-deleted-workspaces.sh --force
+```
+
+The script:
+
+- Queries `coder list --all` to get the current list of active workspaces
+- Compares against directories in `/coder-workspaces/` and Docker volumes named `coder-*-dind-cache`
+- Reports sizes before deleting
+- Refuses to delete anything if the Coder CLI returns no workspaces (guards against misconfigured auth)
+
+**Prerequisites:** `coder` CLI must be authenticated as an admin (so `coder list --all` returns all users' workspaces). `docker` must be available on the host.
 
 ### Template Versioning
 
