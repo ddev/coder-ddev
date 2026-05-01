@@ -145,16 +145,16 @@ jobs:
 
       - name: Verify workspace — DDEV can start a project
         run: |
-          coder ssh ${{ env.WORKSPACE_NAME }} -- env CI=${{ env.CI }} DDEV_NONINTERACTIVE=${{ env.DDEV_NONINTERACTIVE }} bash -c '
-            set -euo pipefail
-            TESTDIR=/tmp/ci-ddev-${{ github.run_id }}
-            mkdir -p $TESTDIR && cd $TESTDIR
-            ddev config --project-type=php --docroot=web
-            ddev start -y
-            ddev stop
-            ddev delete --omit-snapshot -y
-            rm -rf $TESTDIR
-          '
+          coder ssh ${{ env.WORKSPACE_NAME }} -- env CI=${{ env.CI }} DDEV_NONINTERACTIVE=${{ env.DDEV_NONINTERACTIVE }} bash -s << 'SCRIPT'
+          set -euo pipefail
+          TESTDIR=/tmp/ci-ddev-${{ github.run_id }}
+          mkdir -p "$TESTDIR" && cd "$TESTDIR"
+          ddev config --project-type=php --docroot=web
+          ddev start -y
+          ddev stop
+          ddev delete --omit-snapshot -y
+          rm -rf "$TESTDIR"
+          SCRIPT
 
       - name: Delete workspace
         if: always()
