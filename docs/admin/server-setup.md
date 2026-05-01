@@ -575,7 +575,7 @@ journalctl -u coder -f
 
 ### Allow Coder to delete workspace directories
 
-When a workspace is deleted, a Terraform destroy-time provisioner calls a wrapper script to remove the workspace's host directory. The Coder service runs as the `coder` system user (UID 999), but workspace files are owned by UID 1000.
+When a workspace is deleted, a Terraform destroy-time provisioner calls a wrapper script to remove the workspace's host directory. The Coder service runs as the `coder` system user (UID 999) and needs root to delete entries from `/coder-workspaces/` (owned by root).
 
 The Coder systemd service sets `NoNewPrivileges`, which blocks sudo. Override that, install the wrapper, and configure sudoers:
 
@@ -589,14 +589,14 @@ sudo systemctl daemon-reload && sudo systemctl restart coder
 # Install the wrapper script
 sudo install -m 755 scripts/coder-delete-workspace-dir.sh /usr/local/bin/coder-delete-workspace-dir
 
-# Grant coder user sudo access to only that script
-echo 'coder ALL=(#1000) NOPASSWD: /usr/local/bin/coder-delete-workspace-dir' \
+# Grant coder user sudo access to only that script (runs as root)
+echo 'coder ALL=(root) NOPASSWD: /usr/local/bin/coder-delete-workspace-dir' \
   | sudo tee /etc/sudoers.d/coder-workspace-cleanup
 sudo chmod 0440 /etc/sudoers.d/coder-workspace-cleanup
 sudo visudo -c
 ```
 
-The wrapper validates that the argument matches exactly `/coder-workspaces/<alphanumeric-name>` before deleting, preventing path traversal even though sudo is in play.
+The wrapper validates that the argument matches exactly `/coder-workspaces/<alphanumeric-name>` before deleting, preventing path traversal even though the script runs as root.
 
 Without this setup, workspace deletion will log permission errors and leave the directory behind (recoverable with `scripts/cleanup-deleted-workspaces.sh`).
 

@@ -1666,7 +1666,7 @@ resource "null_resource" "workspace_cleanup" {
 
   provisioner "local-exec" {
     when    = destroy
-    command = "sudo -u '#1000' /usr/local/bin/coder-delete-workspace-dir '${self.triggers.host_path}'"
+    command = "sudo /usr/local/bin/coder-delete-workspace-dir '${self.triggers.host_path}'"
   }
 }
 
