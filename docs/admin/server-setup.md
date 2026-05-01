@@ -582,7 +582,7 @@ The Coder systemd service sets `NoNewPrivileges`, which blocks sudo. Override th
 ```bash
 # Allow the coder service to use sudo (needed for workspace directory cleanup)
 sudo mkdir -p /etc/systemd/system/coder.service.d/
-printf '[Service]\nNoNewPrivileges=no\nCapabilityBoundingSet=CAP_SYSLOG CAP_IPC_LOCK CAP_NET_BIND_SERVICE CAP_SETUID CAP_SETGID CAP_AUDIT_WRITE\n' \
+printf '[Service]\nNoNewPrivileges=no\nCapabilityBoundingSet=CAP_SYSLOG CAP_IPC_LOCK CAP_NET_BIND_SERVICE CAP_SETUID CAP_SETGID CAP_AUDIT_WRITE CAP_DAC_OVERRIDE\n' \
   | sudo tee /etc/systemd/system/coder.service.d/allow-privileges.conf
 sudo systemctl daemon-reload && sudo systemctl restart coder
 

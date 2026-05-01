@@ -26,8 +26,4 @@ fi
 
 [[ -d "$path" ]] || exit 0
 
-# Files may be owned by a different UID than the process running rm.
-# Reset permissions on the directory so rm can remove everything.
-chmod -R u+rwX "$path" 2>/dev/null || true
-
 exec rm -rf -- "$path"
