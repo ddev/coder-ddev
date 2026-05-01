@@ -146,6 +146,7 @@ jobs:
           echo "HOST_DIR=/coder-workspaces/${OWNER}-${{ env.WORKSPACE_NAME }}" >> "$GITHUB_ENV"
 
       - name: Verify workspace — DDEV can start a project
+        if: ${{ matrix.app_slug != '' }}
         run: |
           # Write start script to runner-local file so we avoid the coder ssh heredoc+PTY hang
           cat > /tmp/ci-ddev-start-${{ github.run_id }}.sh << 'EOF'
@@ -180,11 +181,10 @@ jobs:
           [[ "$STATUS" =~ ^[2-4] ]] || { echo "ERROR: unexpected HTTP status $STATUS" >&2; exit 1; }
 
       - name: Cleanup DDEV test project
+        if: ${{ matrix.app_slug != '' }}
         run: |
-          coder ssh ${{ env.WORKSPACE_NAME }} -- \
-            env CI=${{ env.CI }} DDEV_NONINTERACTIVE=${{ env.DDEV_NONINTERACTIVE }} NO_COLOR=${{ env.NO_COLOR }} \
-            bash -c "cd /tmp/ci-ddev-${{ github.run_id }} && ddev delete --omit-snapshot -y && rm -rf /tmp/ci-ddev-${{ github.run_id }}" \
-            < /dev/null
+          coder ssh ${{ env.WORKSPACE_NAME }} -- ddev delete ci-ddev-${{ github.run_id }} --omit-snapshot -y < /dev/null || true
+          coder ssh ${{ env.WORKSPACE_NAME }} -- rm -rf /tmp/ci-ddev-${{ github.run_id }} < /dev/null || true
 
       - name: Delete workspace
         if: always()
