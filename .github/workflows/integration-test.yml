@@ -9,7 +9,7 @@ name: Integration Tests
 #   sudo apt-get install -y unzip   # required by actions/checkout and other actions
 #   sudo useradd -m -s /bin/bash github-runner
 #
-#   # Register N runner instances (one per parallel matrix job — currently 3 templates).
+#   # Register N runner instances (one per parallel matrix job — currently 2 templates).
 #   # Each instance needs its own directory, a unique --name, and its own service.
 #   # Get a fresh registration token for each from:
 #   # https://github.com/ddev/coder-ddev/settings/actions/runners/new?arch=x64&os=linux
@@ -69,15 +69,6 @@ jobs:
           - template: user-defined-web
             extra_vars: ""
             extra_params: ""
-          - template: drupal-core
-            # cache_path required by template; non-existent path is fine — only checked at workspace create time
-            extra_vars: "--variable cache_path=/tmp/ci-no-cache"
-            # --yes does not auto-accept empty-string defaults; pass all drupal-core params explicitly
-            extra_params: >-
-              --parameter issue_fork=
-              --parameter issue_branch=
-              --parameter drupal_version=12
-              --parameter install_profile=minimal
           - template: freeform
             extra_vars: ""
             extra_params: ""
