@@ -248,11 +248,13 @@ coder delete my-workspace --yes
 coder delete workspace1 workspace2 workspace3 --yes
 ```
 
-**Note:** Deleting a workspace removes:
+**Deleting a workspace removes:**
+
 - Workspace container
-- `/home/coder` volume (host directory)
-- `/var/lib/docker` volume (Docker daemon data)
-- All DDEV containers and volumes inside the workspace
+- `/var/lib/docker` Docker named volume (Docker daemon data for that workspace)
+- Host directory at `/coder-workspaces/<owner>-<workspace>` — via destroy-time provisioner in the template
+
+If the provisioner doesn't run (e.g. Terraform error, or directories orphaned before this feature was added), use `scripts/cleanup-deleted-workspaces.sh`. See [Orphaned Workspace Cleanup](#orphaned-workspace-cleanup) below.
 
 ## Template Updates
 
@@ -345,6 +347,29 @@ docker run --rm \
   ubuntu:24.04 \
   tar -xzf /backup/docker-volume-backup.tar.gz -C /target
 ```
+
+### Orphaned Workspace Cleanup
+
+When a workspace is deleted, the destroy provisioner automatically removes the host directory at `/coder-workspaces/<owner>-<workspace>`. Directories can still be orphaned if the provisioner fails or for workspaces deleted before the provisioner was added. Run the cleanup script to reclaim disk space in those cases.
+
+```bash
+# Dry run — shows what would be deleted without removing anything
+./scripts/cleanup-deleted-workspaces.sh
+
+# Actually delete orphaned directories and Docker volumes
+./scripts/cleanup-deleted-workspaces.sh --force
+```
+
+Run as your normal user (not root) — the script calls `sudo /usr/local/bin/coder-delete-workspace-dir` internally for directory removal, and uses `docker volume rm` (requires docker group membership).
+
+The script:
+
+- Queries `coder list --all` to get the current list of active workspaces
+- Compares against directories in `/coder-workspaces/` and Docker volumes named `coder-*-dind-cache`
+- Reports sizes before deleting
+- Refuses to delete anything if the Coder CLI returns no workspaces (guards against misconfigured auth)
+
+**Prerequisites:** `coder` CLI authenticated as an admin; user in the `docker` group; `sudo` access for directory removal.
 
 ### Template Versioning
 

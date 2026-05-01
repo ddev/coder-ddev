@@ -554,6 +554,19 @@ resource "docker_container" "workspace" {
   ]
 
   privileged = false
+
+  depends_on = [null_resource.workspace_cleanup]
+}
+
+resource "null_resource" "workspace_cleanup" {
+  triggers = {
+    host_path = "/coder-workspaces/${data.coder_workspace_owner.me.name}-${data.coder_workspace.me.name}"
+  }
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = "sudo /usr/local/bin/coder-delete-workspace-dir '${self.triggers.host_path}'"
+  }
 }
 
 resource "coder_metadata" "workspace_info" {
