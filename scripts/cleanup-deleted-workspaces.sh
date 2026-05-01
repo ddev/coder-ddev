@@ -72,7 +72,7 @@ else
     size=$(du -sh "$dir" 2>/dev/null | cut -f1 || echo "?")
     echo "  $dir  ($size)"
     if [[ "$FORCE" == true ]]; then
-      rm -rf "$dir"
+      sudo rm -rf "$dir"
       echo "  -> deleted"
     fi
   done

@@ -360,8 +360,10 @@ When a workspace is deleted, Coder removes the container and its Docker named vo
 ./scripts/cleanup-deleted-workspaces.sh
 
 # Actually delete orphaned directories and Docker volumes
-sudo ./scripts/cleanup-deleted-workspaces.sh --force
+./scripts/cleanup-deleted-workspaces.sh --force
 ```
+
+Run as your normal user (not root) — the script calls `sudo rm -rf` internally for directory removal, and uses `docker volume rm` (requires docker group membership).
 
 The script:
 
@@ -370,7 +372,7 @@ The script:
 - Reports sizes before deleting
 - Refuses to delete anything if the Coder CLI returns no workspaces (guards against misconfigured auth)
 
-**Prerequisites:** `coder` CLI must be authenticated as an admin (so `coder list --all` returns all users' workspaces). `docker` must be available on the host.
+**Prerequisites:** `coder` CLI authenticated as an admin; user in the `docker` group; `sudo` access for directory removal.
 
 ### Template Versioning
 
