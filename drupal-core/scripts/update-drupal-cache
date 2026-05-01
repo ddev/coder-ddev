@@ -7,10 +7,10 @@
 # The seed cache is a pre-built drupal-core project containing:
 #   - repos/drupal/        Drupal core git clone
 #   - vendor/              Composer packages
-#   - .tarballs/db.sql.gz  Installed demo_umami database snapshot
 #
-# New workspaces copy from this cache (rsync + git fetch + ddev import-db)
-# instead of running a full composer create + site install, saving ~8-12 minutes.
+# New workspaces copy from this cache (rsync + git fetch + ddev composer install)
+# instead of downloading all packages from Packagist, saving several minutes.
+# The database is always installed fresh in each workspace via ddev drush si.
 #
 # Usage:
 #   ./update-drupal-cache [--seed-dir PATH]
@@ -79,15 +79,6 @@ ddev composer update --with-all-dependencies
 
 ddev composer require drush/drush
 
-# Fresh site install so the exported snapshot matches the updated codebase
-echo "Running site install..."
-ddev drush si -y demo_umami --account-pass=admin
-
-# Export the database snapshot for fast import into new workspaces
-echo "Exporting database snapshot..."
-mkdir -p .tarballs
-ddev export-db --file=.tarballs/db.sql.gz
-
 echo ""
 echo "=== Seed cache updated successfully ==="
 echo "Completed: $(date)"
@@ -95,5 +86,4 @@ echo ""
 echo "New workspaces will use this cache automatically."
 echo "Cache contents:"
 echo "  composer.json/lock: $(stat -c '%y' composer.lock 2>/dev/null | cut -d. -f1 || echo 'unknown')"
-echo "  db.sql.gz:          $(stat -c '%y' .tarballs/db.sql.gz 2>/dev/null | cut -d. -f1 || echo 'unknown')"
 echo "  Drupal HEAD:        $(git -C repos/drupal log -1 --format='%h %s' 2>/dev/null || echo 'unknown')"

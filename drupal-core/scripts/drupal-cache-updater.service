@@ -16,8 +16,8 @@ WorkingDirectory=%h
 ExecStart=/usr/local/bin/update-drupal-cache
 StandardOutput=journal
 StandardError=journal
-# Allow up to 30 minutes for composer update + site install
-TimeoutStartSec=1800
+# Allow up to 20 minutes for composer update
+TimeoutStartSec=1200
 
 [Install]
 WantedBy=multi-user.target

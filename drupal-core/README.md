@@ -20,11 +20,11 @@ Automated Coder workspace for Drupal core development using [joachim-n/drupal-co
 
 ## Initial Setup Time
 
-When a seed cache is available on the server (the default), first workspace creation takes approximately **15-30 seconds**:
+When a seed cache is available on the server (the default), first workspace creation takes approximately **3-5 minutes**:
 - rsync from seed cache: ~3s
 - git fetch: ~1s
 - composer install: ~2s
-- Database import: ~9s
+- Drupal site install (ddev drush si): ~2-3 min
 - DDEV start: ~15s
 
 Without a seed cache, first setup takes 10-15 minutes (full composer create + Drupal install).
@@ -166,7 +166,7 @@ coder create --template drupal-core my-workspace --parameter install_profile=sta
 ```
 Options: `demo_umami` (default), `minimal`, `standard`.
 
-Note: issue fork workspaces always run a full site install regardless of profile; `demo_umami` only uses the cached DB snapshot for standard workspaces.
+All workspaces run a full `ddev drush si` on first setup regardless of profile or whether an issue fork is specified.
 
 ### Add Custom Commands
 Create scripts in `~/.ddev/commands/host/` or `.ddev/commands/web/`

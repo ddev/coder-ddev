@@ -691,9 +691,9 @@ This deploys three templates:
 
 ## Step 10: Set Up the Drupal Core Seed Cache (optional, highly recommended)
 
-The `drupal-core` template can provision a fully configured Drupal core development environment on new workspaces using a **seed cache** on the host. Without the cache, first-time workspace setup downloads a full git clone and all composer dependencies (~10-13 minutes). With the cache, the install phase drops to ~15 seconds, and total workspace startup is about a minute.
+The `drupal-core` template can provision a Drupal core development environment faster on new workspaces using a **seed cache** on the host. Without the cache, first-time workspace setup downloads a full git clone and all composer dependencies (~10-13 minutes). With the cache, the composer install phase is nearly instant; total workspace startup is 3-5 minutes (the remaining time is the Drupal site install, which always runs fresh).
 
-The cache is a standing DDEV project on the host that is periodically refreshed. New workspaces copy the git checkout, vendor directory, and a pre-built database snapshot from it.
+The cache is a standing DDEV project on the host that is periodically refreshed. New workspaces copy the git checkout and vendor directory from it. The database is always installed fresh via `ddev drush si` — this avoids schema-drift reliability problems with pre-built DB snapshots.
 
 ### Prerequisites
 
@@ -721,13 +721,6 @@ ddev composer create-project joachim-n/drupal-core-development-project --no-inte
 
 # Add Drush
 ddev composer require drush/drush
-
-# Install Drupal with the demo_umami profile
-ddev drush si -y demo_umami --account-pass=admin
-
-# Export the database snapshot used by new workspaces
-mkdir -p .tarballs
-ddev export-db --file=.tarballs/db.sql.gz
 ```
 
 After this runs, the seed directory contains:
@@ -738,12 +731,11 @@ After this runs, the seed directory contains:
 | `repos/drupal/` | Git clone of Drupal core |
 | `vendor/` | All Composer packages |
 | `web/` | Docroot (symlinked) |
-| `.tarballs/db.sql.gz` | Installed database snapshot |
 | `.ddev/` | Host DDEV config — **not** copied to workspaces |
 
 ### Install the hourly update timer
 
-The update script runs `composer update`, a fresh `drush si` (site install), and `export-db` to keep the cache current with Drupal HEAD. Install it as an hourly systemd timer:
+The update script runs `composer update` to keep the cache current with Drupal HEAD. Install it as an hourly systemd timer:
 
 ```bash
 REPO=~/workspace/coder-ddev   # adjust if your repo is elsewhere
@@ -801,15 +793,18 @@ make push-template-drupal-core DRUPAL_CACHE_PATH=/your/cache/path
 When a workspace starts for the first time:
 
 1. The startup script checks for a valid seed at `/home/coder-cache-seed` (the read-only bind mount of `cache_path`)
-2. **Cache hit:** `rsync` copies the project files (excluding `.ddev/`), `ddev composer install` ensures vendor is current, then `ddev import-db` loads the database dump (~15 seconds total)
+2. **Cache hit:** `rsync` copies the project files (excluding `.ddev/`), `ddev composer install` ensures vendor is current (near-instant with vendor already present), then `ddev drush si` installs Drupal fresh (~2-3 min)
 3. **Cache miss** (path absent or incomplete): falls back to full `ddev composer create-project` + `ddev drush si` — slower but always works
+
+The database is always installed fresh — there is no pre-built DB snapshot. This avoids schema-drift failures that occurred when the cached DB became stale relative to Drupal HEAD.
 
 Check workspace startup logs in the Coder dashboard or at `/tmp/drupal-setup.log` inside the workspace to confirm which path was taken.
 
 ### Troubleshooting
 
 **Cache not being used:**
-- Verify the seed directory exists and is populated: `ls $SEED_DIR/composer.json $SEED_DIR/.tarballs/db.sql.gz`
+
+- Verify the seed directory exists and is populated: `ls $SEED_DIR/composer.json $SEED_DIR/vendor`
 - Confirm `cache_path` in the deployed template matches your actual seed directory (check with `coder templates show drupal-core`)
 - Check the workspace startup log for the "Cache mount check" diagnostic block — it shows exactly which files were found or missing at the bind mount path
 - Look for "Cache hit" in the log; "No cache available" means the path is absent or the seed was never initialized
