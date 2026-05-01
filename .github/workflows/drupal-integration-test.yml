@@ -38,6 +38,7 @@ on:
     branches: [main]
     paths:
       - 'drupal-core/**'
+  pull_request:
   workflow_dispatch:
     inputs:
       debug_enabled:
@@ -175,8 +176,8 @@ jobs:
   drupal-issue-fork:
     name: Drupal issue fork ${{ vars.DRUPAL_TEST_ISSUE_FORK || '3585397' }}
     if: |
-      github.event_name == 'schedule' ||
-      github.event_name == 'workflow_dispatch'
+      github.event_name != 'push' &&
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.owner.login == github.repository_owner)
     runs-on: [self-hosted, sysbox]
     defaults:
       run:
