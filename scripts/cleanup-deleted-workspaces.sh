@@ -77,7 +77,7 @@ else
     size=$(du -sh "$dir" 2>/dev/null | cut -f1 || echo "?")
     echo "  $dir  ($size)"
     if [[ "$FORCE" == true ]]; then
-      sudo rm -rf -- "$dir"
+      sudo /usr/local/bin/coder-delete-workspace-dir "$dir"
       echo "  -> deleted"
     fi
   done
