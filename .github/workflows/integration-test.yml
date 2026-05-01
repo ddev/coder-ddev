@@ -1,0 +1,184 @@
+name: Integration Tests
+
+# Creates real workspaces on staging-coder.ddev.com, verifies they start
+# correctly, then deletes them. Runs on the self-hosted sysbox runner so
+# the Coder provisioner can reach the local Docker/Sysbox environment.
+#
+# One-time runner setup on staging-coder.ddev.com:
+#   # Create a dedicated low-privilege user for the runner (do not run as root or admin)
+#   sudo apt-get install -y unzip   # required by actions/checkout and other actions
+#   sudo useradd -m -s /bin/bash github-runner
+#
+#   # Register N runner instances (one per parallel matrix job — currently 3 templates).
+#   # Each instance needs its own directory, a unique --name, and its own service.
+#   # Get a fresh registration token for each from:
+#   # https://github.com/ddev/coder-ddev/settings/actions/runners/new?arch=x64&os=linux
+#   # https://docs.github.com/en/actions/how-tos/manage-runners/self-hosted-runners/add-runners
+#   for N in 1 2 3; do
+#     sudo -u github-runner mkdir -p /home/github-runner/actions-runner-${N}
+#     cd /home/github-runner/actions-runner-${N}
+#     # copy runner binaries here (download once, copy to each dir) or re-download
+#     sudo -u github-runner ./config.sh \
+#       --url https://github.com/ddev/coder-ddev \
+#       --token <token> \
+#       --name staging-coder-${N} \
+#       --labels sysbox
+#     sudo ./svc.sh install github-runner   # creates actions.runner.*.service
+#     sudo ./svc.sh start
+#   done
+#
+#   # To remove/re-register one instance: get removal token from GitHub Settings → Actions → Runners → Remove
+#   cd /home/github-runner/actions-runner-${N}
+#   sudo ./svc.sh stop && sudo ./svc.sh uninstall
+#   sudo -u github-runner ./config.sh remove --token <removal-token>
+#
+# Requires:
+#   Repository variable: TEST_CODER_URL           - https://staging-coder.ddev.com
+#   Repository secret:   OP_SERVICE_ACCOUNT_TOKEN - 1Password service account with read access
+#   1Password item:      op://test-secrets/TEST_CODER_SESSION_TOKEN/credential
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+    inputs:
+      debug_enabled:
+        description: 'Run the build with tmate set "debug_enabled"'
+        type: boolean
+        required: false
+        default: false
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  integration-test:
+    name: Integration test (${{ matrix.template }})
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.owner.login == github.repository_owner }}
+    runs-on: [self-hosted, sysbox]
+    strategy:
+      matrix:
+        include:
+          - template: user-defined-web
+            extra_vars: ""
+            extra_params: ""
+          - template: drupal-core
+            # cache_path required by template; non-existent path is fine — only checked at workspace create time
+            extra_vars: "--variable cache_path=/tmp/ci-no-cache"
+            # --yes does not auto-accept empty-string defaults; pass all drupal-core params explicitly
+            extra_params: >-
+              --parameter issue_fork=
+              --parameter issue_branch=
+              --parameter drupal_version=12
+              --parameter install_profile=minimal
+          - template: freeform
+            extra_vars: ""
+            extra_params: ""
+      fail-fast: false
+    defaults:
+      run:
+        shell: bash -euo pipefail {0}
+    env:
+      WORKSPACE_NAME: ci-${{ matrix.template }}-${{ github.run_id }}
+      CI: "true"
+      DDEV_NONINTERACTIVE: "true"
+      NO_COLOR: "1"
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Load 1Password secrets
+        uses: 1password/load-secrets-action@v4
+        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.owner.login == github.repository_owner }}
+        with:
+          export-env: true
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          TEST_CODER_SESSION_TOKEN: "op://test-secrets/TEST_CODER_SESSION_TOKEN/credential"
+
+      - name: Login to Coder
+        if: ${{ env.TEST_CODER_SESSION_TOKEN != '' }}
+        run: coder login --token "${{ env.TEST_CODER_SESSION_TOKEN }}" "${{ vars.TEST_CODER_URL }}"
+
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        with:
+          limit-access-to-actor: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+
+      - name: Copy VERSION into template directory
+        run: cp VERSION ${{ matrix.template }}/VERSION
+
+      - name: Push template (inactive)
+        run: |
+          coder templates push ${{ matrix.template }} \
+            --directory ${{ matrix.template }} \
+            --activate=false \
+            --name ci-${{ github.run_id }} \
+            --yes \
+            --variable workspace_image_registry=index.docker.io/ddev/coder-ddev \
+            ${{ matrix.extra_vars }}
+
+      - name: Create workspace
+        run: |
+          coder create ${{ env.WORKSPACE_NAME }} \
+            --template ${{ matrix.template }} \
+            --template-version ci-${{ github.run_id }} \
+            --parameter "vscode_extensions=[]" \
+            ${{ matrix.extra_params }} \
+            --yes
+
+      - name: Verify workspace — agent connected
+        run: coder ssh ${{ env.WORKSPACE_NAME }} --wait=yes -- echo "Agent connected"
+
+      - name: Verify workspace — Docker daemon running
+        run: coder ssh ${{ env.WORKSPACE_NAME }} -- docker ps
+
+      - name: Verify workspace — DDEV installed
+        run: coder ssh ${{ env.WORKSPACE_NAME }} -- ddev --version
+
+      - name: Verify workspace — DDEV can start a project
+        run: |
+          # Write test script to runner-local file so we avoid the coder ssh heredoc+PTY hang
+          cat > /tmp/ci-ddev-test-${{ github.run_id }}.sh << 'EOF'
+          set -euo pipefail
+          TESTDIR=/tmp/ci-ddev-${{ github.run_id }}
+          echo "--- Creating test project in $TESTDIR ---"
+          mkdir -p "$TESTDIR" && cd "$TESTDIR"
+          ddev config --project-type=php --docroot=web
+          echo "--- Starting DDEV project ---"
+          ddev start -y
+          echo "--- Deleting DDEV project ---"
+          ddev delete --omit-snapshot -y
+          rm -rf "$TESTDIR"
+          echo "--- DDEV test complete ---"
+          touch /tmp/ci-ddev-success-${{ github.run_id }}
+          EOF
+          # Push script to workspace via scp (coder ssh --stdio as ProxyCommand)
+          scp \
+            -o StrictHostKeyChecking=no \
+            -o UserKnownHostsFile=/dev/null \
+            -o ProxyCommand="coder ssh --stdio ${{ env.WORKSPACE_NAME }}" \
+            /tmp/ci-ddev-test-${{ github.run_id }}.sh \
+            coder@workspace:/tmp/ci-ddev-test-${{ github.run_id }}.sh
+          # Execute script file (< /dev/null prevents coder ssh stdin from blocking)
+          coder ssh ${{ env.WORKSPACE_NAME }} -- \
+            env CI=${{ env.CI }} DDEV_NONINTERACTIVE=${{ env.DDEV_NONINTERACTIVE }} NO_COLOR=${{ env.NO_COLOR }} \
+            bash /tmp/ci-ddev-test-${{ github.run_id }}.sh < /dev/null
+          coder ssh ${{ env.WORKSPACE_NAME }} -- test -f /tmp/ci-ddev-success-${{ github.run_id }}
+
+      - name: Delete workspace
+        if: always()
+        run: coder delete ${{ env.WORKSPACE_NAME }} --yes || true
+
+      - name: Archive CI template version
+        if: always()
+        run: coder templates versions archive ${{ matrix.template }} ci-${{ github.run_id }} --yes || true

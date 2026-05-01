@@ -234,6 +234,8 @@ resource "coder_agent" "main" {
       grep -qxF 'config.coder.yaml' "$HOME/.gitignore_global" || \
         echo 'config.coder.yaml' >> "$HOME/.gitignore_global"
     fi
+    mkdir -p ~/.ddev
+    ddev config global --instrumentation-opt-in=true > /dev/null 2>&1 || true
     if [ -n "$CODER_WORKSPACE_OWNER_NAME" ]; then
       git config --global user.name "$CODER_WORKSPACE_OWNER_NAME"
     fi
@@ -308,7 +310,7 @@ EOF
       echo "Docker Daemon already running."
     fi
 
-    # Create .ddev directory (DDEV creates global_config.yaml on first use)
+    # Create .ddev commands directory
     mkdir -p ~/.ddev/commands/host
     if [ -d /home/coder-files/.ddev/commands/host ]; then
       cp -f /home/coder-files/.ddev/commands/host/* ~/.ddev/commands/host/
