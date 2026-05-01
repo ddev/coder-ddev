@@ -871,8 +871,8 @@ WELCOME_STATIC
           update_status "  cd $DRUPAL_DIR && ddev composer create-project --no-install \"joachim-n/drupal-core-development-project:dev-main\" ."
         fi
       else
-        log_setup "No cache available, running full composer create (this takes 5-10 minutes)..."
-        update_status "⏳ DDEV composer create: In progress (this takes 5-10 minutes)..."
+        log_setup "No cache available, running full composer create..."
+        update_status "⏳ DDEV composer create: In progress..."
 
         if ddev composer create joachim-n/drupal-core-development-project --no-interaction >> "$SETUP_LOG" 2>&1; then
           log_setup "✓ Drupal core development project created ($((SECONDS - _t))s)"
@@ -1072,13 +1072,9 @@ WELCOME_STATIC
         fi
       fi
 
-      # Step 6: Install or import Drupal database
-      # Fast path (DB cache import) is only used when:
-      #   - No issue fork (issue code may differ from cached DB)
-      #   - Install profile is demo_umami (cache was built with that profile)
-      #   - Cache tarball exists
+      # Step 6: Install Drupal database
 
-      # Compute site name for drush si (used when running a full install)
+      # Compute site name for drush si
       if [ -n "$ISSUE_FORK" ] && [ -n "$ISSUE_TITLE" ]; then
         SITE_NAME="#$${ISSUE_FORK}: $${ISSUE_TITLE}"
       elif [ -n "$ISSUE_FORK" ]; then
@@ -1090,31 +1086,12 @@ WELCOME_STATIC
       if ddev drush status 2>/dev/null | grep -q "Drupal bootstrap.*Successful"; then
         log_setup "✓ Drupal already installed"
         update_status "✓ Drupal install: Already present"
-      elif [ "$USING_ISSUE_FORK" = "false" ] && [ -f "$CACHE_SEED/.tarballs/db.sql.gz" ]; then
-        # Fast path: load seed DB for non-issue-fork workspaces when cache is available.
-        # The seed was built with demo_umami + current main, so the schema matches.
-        _t=$SECONDS
-        log_setup "Loading seed database (fast path)..."
-        update_status "⏳ Drupal install: Loading seed database..."
-        if gzip -dc "$CACHE_SEED/.tarballs/db.sql.gz" | ddev mysql >> "$SETUP_LOG" 2>&1; then
-          log_setup "✓ Seed database loaded ($((SECONDS - _t))s)"
-          log_setup ""
-          log_setup "   Admin Credentials:"
-          log_setup "      Username: admin"
-          log_setup "      Password: admin"
-          log_setup ""
-          update_status "✓ Drupal install: Loaded from seed"
-        else
-          log_setup "⚠ Seed DB load failed ($((SECONDS - _t))s), falling back to drush si..."
-          update_status "⚠ Drupal install: Seed load failed, running drush si..."
-          ddev drush si -y "$INSTALL_PROFILE" --account-pass=admin --site-name="$SITE_NAME" >> "$SETUP_LOG" 2>&1 || true
-        fi
       else
         _t=$SECONDS
         if [ "$USING_ISSUE_FORK" = "true" ]; then
-          log_setup "Installing Drupal with $INSTALL_PROFILE profile (issue fork: full install required)..."
+          log_setup "Installing Drupal with $INSTALL_PROFILE profile (issue fork)..."
         else
-          log_setup "Installing Drupal with $INSTALL_PROFILE profile (this will take 2-3 minutes)..."
+          log_setup "Installing Drupal with $INSTALL_PROFILE profile..."
         fi
         update_status "⏳ Drupal install: In progress..."
 
