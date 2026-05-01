@@ -23,6 +23,11 @@ mock_provider "docker" {}
 
 # cache_path has no default so must be supplied in every run block.
 # Any path works here — the mock docker provider does not validate host paths.
+#
+# Note: drupal_version is a coder_parameter with option constraints, not a
+# Terraform variable with a validation block. The Coder API enforces the
+# allowed values (10/11/12) at workspace creation time; there is nothing to
+# test at the terraform test layer.
 
 run "plan_succeeds_with_defaults" {
   command = plan

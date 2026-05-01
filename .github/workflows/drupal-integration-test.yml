@@ -126,7 +126,7 @@ jobs:
 
       - &verify-webroot
         name: Verify workspace — web root exists
-        run: coder ssh ${{ env.WORKSPACE_NAME }} -- test -f ~/drupal/web/index.php
+        run: coder ssh ${{ env.WORKSPACE_NAME }} -- test -f ~/drupal-core/web/index.php
 
       - &verify-drush
         name: Verify workspace — Drush DB connected
@@ -271,7 +271,13 @@ jobs:
         run: coder ssh ${{ env.WORKSPACE_NAME }} -- ddev --version
 
       - name: Verify workspace — web root exists
-        run: coder ssh ${{ env.WORKSPACE_NAME }} -- test -f ~/drupal/web/index.php
+        run: coder ssh ${{ env.WORKSPACE_NAME }} -- test -f ~/drupal-core/web/index.php
+
+      - name: Verify workspace — issue branch checked out
+        run: |
+          CURRENT=$(coder ssh ${{ env.WORKSPACE_NAME }} -- git -C ~/drupal-core/repos/drupal branch --show-current)
+          echo "Current branch: $CURRENT  Expected: ${{ env.ISSUE_BRANCH }}"
+          [[ "$CURRENT" == "${{ env.ISSUE_BRANCH }}" ]] || { echo "ERROR: wrong branch" >&2; exit 1; }
 
       - name: Verify workspace — Drush DB connected
         run: coder ssh ${{ env.WORKSPACE_NAME }} -- ddev drush status --fields=db-status | grep -i connected
