@@ -147,20 +147,32 @@ jobs:
 
       - name: Verify workspace — DDEV can start a project
         run: |
-          coder ssh ${{ env.WORKSPACE_NAME }} -- env CI=${{ env.CI }} DDEV_NONINTERACTIVE=${{ env.DDEV_NONINTERACTIVE }} NO_COLOR=${{ env.NO_COLOR }} bash << 'SCRIPT' || true
+          # Write test script to runner-local file so we avoid the coder ssh heredoc+PTY hang
+          cat > /tmp/ci-ddev-test-${{ github.run_id }}.sh << 'EOF'
           set -euo pipefail
           TESTDIR=/tmp/ci-ddev-${{ github.run_id }}
           echo "--- Creating test project in $TESTDIR ---"
           mkdir -p "$TESTDIR" && cd "$TESTDIR"
           ddev config --project-type=php --docroot=web
           echo "--- Starting DDEV project ---"
-          ddev start -y < /dev/null
+          ddev start -y
           echo "--- Deleting DDEV project ---"
           ddev delete --omit-snapshot -y
           rm -rf "$TESTDIR"
           echo "--- DDEV test complete ---"
           touch /tmp/ci-ddev-success-${{ github.run_id }}
-          SCRIPT
+          EOF
+          # Push script to workspace via scp (coder ssh --stdio as ProxyCommand)
+          scp \
+            -o StrictHostKeyChecking=no \
+            -o UserKnownHostsFile=/dev/null \
+            -o ProxyCommand="coder ssh --stdio ${{ env.WORKSPACE_NAME }}" \
+            /tmp/ci-ddev-test-${{ github.run_id }}.sh \
+            coder@workspace:/tmp/ci-ddev-test-${{ github.run_id }}.sh
+          # Execute script file (< /dev/null prevents coder ssh stdin from blocking)
+          coder ssh ${{ env.WORKSPACE_NAME }} -- \
+            env CI=${{ env.CI }} DDEV_NONINTERACTIVE=${{ env.DDEV_NONINTERACTIVE }} NO_COLOR=${{ env.NO_COLOR }} \
+            bash /tmp/ci-ddev-test-${{ github.run_id }}.sh < /dev/null
           coder ssh ${{ env.WORKSPACE_NAME }} -- test -f /tmp/ci-ddev-success-${{ github.run_id }}
 
       - name: Delete workspace
