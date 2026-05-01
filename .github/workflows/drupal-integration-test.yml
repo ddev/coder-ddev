@@ -146,7 +146,7 @@ jobs:
           CODER_DOMAIN="${CODER_DOMAIN#https://}"
           SITE_URL="https://drupal-site--${{ env.WORKSPACE_NAME }}--${OWNER}.${CODER_DOMAIN}"
           echo "Checking $SITE_URL"
-          curl -sf --max-time 30 "$SITE_URL" | grep -qi "log in"
+          curl -sfL --max-time 30 --retry 3 --retry-delay 5 "$SITE_URL" | grep -qi "log in"
 
       - &delete-workspace
         name: Delete workspace
@@ -275,7 +275,7 @@ jobs:
 
       - name: Verify workspace — issue branch checked out
         run: |
-          CURRENT=$(coder ssh ${{ env.WORKSPACE_NAME }} -- git -C /home/coder/drupal-core/repos/drupal branch --show-current)
+          CURRENT=$(coder ssh ${{ env.WORKSPACE_NAME }} -- git -C /home/coder/drupal-core/repos/drupal branch --show-current | tr -d '\r\n')
           echo "Current branch: $CURRENT  Expected: ${{ env.ISSUE_BRANCH }}"
           [[ "$CURRENT" == "${{ env.ISSUE_BRANCH }}" ]] || { echo "ERROR: wrong branch" >&2; exit 1; }
 
@@ -294,7 +294,7 @@ jobs:
           CODER_DOMAIN="${CODER_DOMAIN#https://}"
           SITE_URL="https://drupal-site--${{ env.WORKSPACE_NAME }}--${OWNER}.${CODER_DOMAIN}"
           echo "Checking $SITE_URL"
-          curl -sf --max-time 30 "$SITE_URL" | grep -qi "log in"
+          curl -sfL --max-time 30 --retry 3 --retry-delay 5 "$SITE_URL" | grep -qi "log in"
 
       - name: Delete workspace
         if: always()
