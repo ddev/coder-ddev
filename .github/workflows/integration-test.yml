@@ -177,7 +177,7 @@ jobs:
 
       - name: Record expected host directory
         run: |
-          OWNER=$(coder whoami --output json | jq -r '.username')
+          OWNER=$(coder whoami --output json | jq -r 'if type == "array" then .[0].username else .username end')
           echo "HOST_DIR=/coder-workspaces/${OWNER}-${{ env.WORKSPACE_NAME }}" >> "$GITHUB_ENV"
 
       - name: Delete workspace
