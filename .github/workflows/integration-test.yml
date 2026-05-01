@@ -151,7 +151,6 @@ jobs:
           mkdir -p "$TESTDIR" && cd "$TESTDIR"
           ddev config --project-type=php --docroot=web
           ddev start -y
-          ddev stop
           ddev delete --omit-snapshot -y
           rm -rf "$TESTDIR"
           SCRIPT
