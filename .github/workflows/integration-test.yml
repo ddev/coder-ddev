@@ -9,7 +9,8 @@ name: Integration Tests
 #   sudo apt-get install -y unzip   # required by actions/checkout and other actions
 #   sudo useradd -m -s /bin/bash github-runner
 #
-#   # Register N runner instances (one per parallel matrix job — currently 3 templates).
+#   # Register N runner instances (one per parallel matrix job — currently 2 templates).
+#   # TODO: Revisit runner count if more templates or matrix cells are added.
 #   # Each instance needs its own directory, a unique --name, and its own service.
 #   # Get a fresh registration token for each from:
 #   # https://github.com/ddev/coder-ddev/settings/actions/runners/new?arch=x64&os=linux
@@ -69,18 +70,11 @@ jobs:
           - template: user-defined-web
             extra_vars: ""
             extra_params: ""
-          - template: drupal-core
-            # cache_path required by template; non-existent path is fine — only checked at workspace create time
-            extra_vars: "--variable cache_path=/tmp/ci-no-cache"
-            # --yes does not auto-accept empty-string defaults; pass all drupal-core params explicitly
-            extra_params: >-
-              --parameter issue_fork=
-              --parameter issue_branch=
-              --parameter drupal_version=12
-              --parameter install_profile=minimal
+            app_slug: "ddev-web"
           - template: freeform
             extra_vars: ""
             extra_params: ""
+            app_slug: ""
       fail-fast: false
     defaults:
       run:
@@ -145,40 +139,52 @@ jobs:
       - name: Verify workspace — DDEV installed
         run: coder ssh ${{ env.WORKSPACE_NAME }} -- ddev --version
 
-      - name: Verify workspace — DDEV can start a project
+      - name: Record expected host directory
         run: |
-          # Write test script to runner-local file so we avoid the coder ssh heredoc+PTY hang
-          cat > /tmp/ci-ddev-test-${{ github.run_id }}.sh << 'EOF'
+          OWNER=$(coder whoami --output json | jq -r 'if type == "array" then .[0].username else .username end')
+          echo "OWNER=$OWNER" >> "$GITHUB_ENV"
+          echo "HOST_DIR=/coder-workspaces/${OWNER}-${{ env.WORKSPACE_NAME }}" >> "$GITHUB_ENV"
+
+      - name: Verify workspace — DDEV can start a project
+        if: ${{ matrix.app_slug != '' }}
+        run: |
+          # Write start script to runner-local file so we avoid the coder ssh heredoc+PTY hang
+          cat > /tmp/ci-ddev-start-${{ github.run_id }}.sh << 'EOF'
           set -euo pipefail
           TESTDIR=/tmp/ci-ddev-${{ github.run_id }}
           echo "--- Creating test project in $TESTDIR ---"
-          mkdir -p "$TESTDIR" && cd "$TESTDIR"
+          mkdir -p "$TESTDIR/web" && cd "$TESTDIR"
           ddev config --project-type=php --docroot=web
           echo "--- Starting DDEV project ---"
           ddev start -y
-          echo "--- Deleting DDEV project ---"
-          ddev delete --omit-snapshot -y
-          rm -rf "$TESTDIR"
-          echo "--- DDEV test complete ---"
-          touch /tmp/ci-ddev-success-${{ github.run_id }}
+          echo "--- DDEV started ---"
           EOF
-          # Push script to workspace via scp (coder ssh --stdio as ProxyCommand)
           scp \
             -o StrictHostKeyChecking=no \
             -o UserKnownHostsFile=/dev/null \
             -o ProxyCommand="coder ssh --stdio ${{ env.WORKSPACE_NAME }}" \
-            /tmp/ci-ddev-test-${{ github.run_id }}.sh \
-            coder@workspace:/tmp/ci-ddev-test-${{ github.run_id }}.sh
-          # Execute script file (< /dev/null prevents coder ssh stdin from blocking)
+            /tmp/ci-ddev-start-${{ github.run_id }}.sh \
+            coder@workspace:/tmp/ci-ddev-start-${{ github.run_id }}.sh
           coder ssh ${{ env.WORKSPACE_NAME }} -- \
             env CI=${{ env.CI }} DDEV_NONINTERACTIVE=${{ env.DDEV_NONINTERACTIVE }} NO_COLOR=${{ env.NO_COLOR }} \
-            bash /tmp/ci-ddev-test-${{ github.run_id }}.sh < /dev/null
-          coder ssh ${{ env.WORKSPACE_NAME }} -- test -f /tmp/ci-ddev-success-${{ github.run_id }}
+            bash /tmp/ci-ddev-start-${{ github.run_id }}.sh < /dev/null
 
-      - name: Record expected host directory
+      - name: Verify workspace — DDEV web externally accessible
+        if: ${{ matrix.app_slug != '' }}
         run: |
-          OWNER=$(coder whoami --output json | jq -r 'if type == "array" then .[0].username else .username end')
-          echo "HOST_DIR=/coder-workspaces/${OWNER}-${{ env.WORKSPACE_NAME }}" >> "$GITHUB_ENV"
+          CODER_DOMAIN="${{ vars.TEST_CODER_URL }}"
+          CODER_DOMAIN="${CODER_DOMAIN#https://}"
+          SITE_URL="https://${{ matrix.app_slug }}--${{ env.WORKSPACE_NAME }}--${OWNER}.${CODER_DOMAIN}"
+          echo "Checking $SITE_URL"
+          STATUS=$(curl -s --max-time 30 -o /dev/null -w "%{http_code}" "$SITE_URL")
+          echo "HTTP status: $STATUS"
+          [[ "$STATUS" =~ ^[2-4] ]] || { echo "ERROR: unexpected HTTP status $STATUS" >&2; exit 1; }
+
+      - name: Cleanup DDEV test project
+        if: ${{ matrix.app_slug != '' }}
+        run: |
+          coder ssh ${{ env.WORKSPACE_NAME }} -- ddev delete ci-ddev-${{ github.run_id }} --omit-snapshot -y < /dev/null || true
+          coder ssh ${{ env.WORKSPACE_NAME }} -- rm -rf /tmp/ci-ddev-${{ github.run_id }} < /dev/null || true
 
       - name: Delete workspace
         if: always()

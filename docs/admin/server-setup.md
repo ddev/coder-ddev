@@ -1042,6 +1042,81 @@ See [Coder external provisioner docs](https://coder.com/docs/admin/provisioners)
 
 ---
 
+## Step 13: Configure GitHub Actions CI
+
+The repository runs integration tests against `staging-coder.ddev.com` on every push to `main` and nightly. Three workflows are involved: `validate.yml` (static HCL checks, no credentials needed), `staging-push.yml` (pushes templates with `--activate=false`), and `integration-test.yml` / `drupal-integration-test.yml` (create and verify real workspaces on the self-hosted runner).
+
+### One-time setup on staging-coder.ddev.com
+
+#### 1. Register the self-hosted GitHub Actions runner
+
+The integration tests run on a self-hosted runner tagged `sysbox` so they have access to the Sysbox-capable Docker daemon. Register one runner instance per concurrent matrix job (currently 2 for `integration-test.yml` and 3 for `drupal-integration-test.yml`):
+
+```bash
+sudo apt-get install -y unzip
+sudo useradd -m -s /bin/bash github-runner
+
+for N in 1 2 3 4 5; do
+  sudo -u github-runner mkdir -p /home/github-runner/actions-runner-${N}
+  # Download runner binaries from GitHub Settings → Actions → Runners → New self-hosted runner
+  # Copy binaries to each directory, then:
+  sudo -u github-runner /home/github-runner/actions-runner-${N}/config.sh \
+    --url https://github.com/ddev/coder-ddev \
+    --token <token-from-github> \
+    --name staging-coder-${N} \
+    --labels sysbox \
+    --unattended
+  sudo /home/github-runner/actions-runner-${N}/svc.sh install github-runner
+  sudo /home/github-runner/actions-runner-${N}/svc.sh start
+done
+```
+
+Get a fresh registration token for each batch from **GitHub → Settings → Actions → Runners → New self-hosted runner**.
+
+#### 2. Create the CI bot user on staging
+
+```bash
+coder users create --email ci@staging-coder.ddev.com --username ci-bot --login-type none
+coder users edit-roles ci-bot --roles template-admin --yes
+coder tokens create --user ci-bot --lifetime 8760h
+```
+
+Store the token in 1Password at `op://test-secrets/TEST_CODER_SESSION_TOKEN/credential`.
+
+### GitHub repository configuration
+
+Go to **GitHub → Settings → Secrets and variables → Actions** and add:
+
+**Secrets:**
+
+| Name                      | Value                                                                          |
+|---------------------------|--------------------------------------------------------------------------------|
+| `OP_SERVICE_ACCOUNT_TOKEN` | 1Password service account token with read access to the `test-secrets` vault |
+
+**Variables:**
+
+| Name                     | Value                                   |
+|--------------------------|-----------------------------------------|
+| `TEST_CODER_URL`         | `https://staging-coder.ddev.com`        |
+| `DRUPAL_TEST_ISSUE_FORK` | A drupal.org issue number (see below)   |
+
+### Choosing a test issue for `DRUPAL_TEST_ISSUE_FORK`
+
+The `drupal-integration-test.yml` workflow creates a workspace from a real drupal.org issue fork and verifies the site comes up correctly. The issue number is the only thing you need to configure — the branch name and Drupal version are resolved automatically from the drupal.org and GitLab APIs.
+
+Pick an issue that:
+
+- Is **Needs review** status (not Needs work or Closed)
+- Targets **main** (12.x) — search at `drupal.org/project/issues/drupal?status=8&version=12.x-dev`
+- Has an **issue fork** on `git.drupalcode.org/issue/drupal-{number}`
+- Is a modest change (under ~10 files) with no database schema changes
+
+Set the bare issue number (e.g. `3585397`) or the prefixed form (`drupal-3585397`) — both work.
+
+Update this variable whenever the issue is closed or merged. The current default (`3585397`) is a PHP 8.4 compatibility fix targeting Drupal 12.x main.
+
+---
+
 ## Troubleshooting
 
 **Coder service won't start:**
