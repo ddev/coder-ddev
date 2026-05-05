@@ -73,14 +73,14 @@ while IFS= read -r router; do
   # Derive Coder slug from service name: strip {ddev_project}- prefix and -{port} suffix.
   # Examples (DDEV_PROJECT=myproject, WORKSPACE=myworkspace):
   #   myproject-web-8080    → svc=web  port=8080  → slug=PROJECT_SLUG (primary web)
-  #   myproject-web-8025    → svc=web  port=8025  → slug=mailpit
+  #   myproject-web-8025    → svc=web  port=8025  → slug=mailpit-PROJECT_SLUG
   #   myproject-adminer-9100 → svc=adminer        → slug=adminer
   svc_and_port="${service#${DDEV_PROJECT}-}"
   port="${svc_and_port##*-}"
   svc_name="${svc_and_port%-*}"
 
   if [ "$svc_name" = "web" ] && [ "$port" = "8025" ]; then
-    slug="mailpit"
+    slug="mailpit-${PROJECT_SLUG}"
   elif [ "$svc_name" = "web" ]; then
     slug="$PROJECT_SLUG"
   else
@@ -112,11 +112,11 @@ while IFS= read -r router; do
          .http.routers.\"${ROUTER_NAME}\".tls = false" \
       /tmp/coder-routes-raw.yaml
     echo "  + ${slug}: ${entrypoints[*]} → ${service}  (https://${CODER_HOST})"
-  elif [ "$slug" = "mailpit" ] || [ "$slug" = "adminer" ]; then
+  elif [ "$slug" = "mailpit-${PROJECT_SLUG}" ] || [ "$slug" = "adminer" ]; then
     # Known Coder app slugs (defined as coder_app resources in the Terraform template):
     # use Host() rule so the Coder subdomain proxy URL routes correctly.
     CODER_HOST="${slug}--${WORKSPACE}--${OWNER}.${DOMAIN}"
-    [ "$slug" = "mailpit" ] && MAILPIT_URL="https://${CODER_HOST}"
+    [ "$slug" = "mailpit-${PROJECT_SLUG}" ] && MAILPIT_URL="https://${CODER_HOST}"
     RULE='Host(`'"${CODER_HOST}"'`)'
     RULE="$RULE" SVC="$service" \
       yq e -i \

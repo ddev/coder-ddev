@@ -57,7 +57,7 @@ WEB_ROUTER="${PROJECT}-coder-${PROJECT_SLUG}"
 
 if [ "${MAILPIT}" = "true" ]; then
   if [ -f "$CODER_ROUTES" ]; then
-    mailpit_rule=$(yq e ".http.routers.\"${PROJECT}-coder-mailpit\".rule // \"\"" "$CODER_ROUTES" 2>/dev/null)
+    mailpit_rule=$(yq e ".http.routers.\"${PROJECT}-coder-mailpit-${PROJECT_SLUG}\".rule // \"\"" "$CODER_ROUTES" 2>/dev/null)
     if [ -n "$mailpit_rule" ] && [ "$mailpit_rule" != "null" ]; then
       host=$(echo "$mailpit_rule" | sed -E 's/Host\(`(.+)`\)/\1/')
       echo "https://${host}"
@@ -65,7 +65,7 @@ if [ "${MAILPIT}" = "true" ]; then
     fi
   fi
   # fallback
-  echo "https://mailpit--${WORKSPACE}--${OWNER}.${DOMAIN}"
+  echo "https://mailpit-${PROJECT_SLUG}--${WORKSPACE}--${OWNER}.${DOMAIN}"
   exit 0
 fi
 

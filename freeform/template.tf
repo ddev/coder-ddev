@@ -477,10 +477,12 @@ resource "coder_app" "ddev_web" {
 
 # Mailpit runs inside the web container at port 8025.
 # DDEV service: {project}-web-8025 (from HTTP_EXPOSE=...,{mailpit_port}:8025 on the web container).
+# One app per project so each gets its own subdomain: mailpit-{project}--{workspace}--{owner}.domain
 resource "coder_app" "mailpit" {
+  for_each     = toset(local.project_names)
   agent_id     = coder_agent.main.id
-  slug         = "mailpit"
-  display_name = "Mailpit"
+  slug         = "mailpit-${each.key}"
+  display_name = "Mailpit (${each.key})"
   url          = "http://localhost:8025"
   icon         = "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/mailpit.svg"
   subdomain    = true
