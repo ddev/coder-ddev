@@ -34,23 +34,26 @@ fi
 for N in 1 2; do
   PROJ="ci-site${N}-${SUFFIX}"
   # Each project's coder_app slug matches the DDEV project name.
-  EXPECTED_URL="https://${PROJ}--${WORKSPACE}--${OWNER}.${DOMAIN}"
+  WEB_URL="https://${PROJ}--${WORKSPACE}--${OWNER}.${DOMAIN}"
+  MAILPIT_URL="https://mailpit--${WORKSPACE}--${OWNER}.${DOMAIN}"
 
   echo "--- ${PROJ}: ddev launch ---"
   cd "/tmp/${PROJ}"
   LAUNCH=$(ddev launch 2>&1)
   echo "${LAUNCH}"
-  echo "${LAUNCH}" | grep -qF "${EXPECTED_URL}" || {
-    echo "ERROR: expected ${EXPECTED_URL} not found in ddev launch output" >&2
+  echo "${LAUNCH}" | grep -qF "${WEB_URL}" || {
+    echo "ERROR: expected ${WEB_URL} not found in ddev launch output" >&2
     exit 1
   }
-  echo "  OK: ddev launch shows correct URL"
+  echo "  OK: ddev launch shows correct Web URL"
+  echo "${LAUNCH}" | grep -qF "${MAILPIT_URL}" || {
+    echo "ERROR: expected ${MAILPIT_URL} not found in ddev launch output" >&2
+    exit 1
+  }
+  echo "  OK: ddev launch shows correct Mailpit URL"
 
-  # The coder-url custom service in docker-compose.coder-describe.yaml is picked up
-  # by DDEV on the next start after coder-routes writes it. Restart to trigger that.
-  echo "--- ${PROJ}: ddev restart (to load coder-url describe service) ---"
-  ddev restart 2>&1 | tail -3
-
+  # docker-compose.coder-describe.yaml is written by the post-start hook (coder-routes)
+  # during ddev start, so ddev describe picks it up immediately — no restart needed.
   echo "--- ${PROJ}: ddev describe ---"
   DESCRIBE=$(ddev describe 2>&1)
   echo "${DESCRIBE}"
@@ -59,9 +62,14 @@ for N in 1 2; do
     exit 1
   }
   echo "  OK: ddev describe shows project running"
-  echo "${DESCRIBE}" | grep -qF "${EXPECTED_URL}" || {
-    echo "ERROR: Coder URL ${EXPECTED_URL} not found in ddev describe output" >&2
+  echo "${DESCRIBE}" | grep -qF "${WEB_URL}" || {
+    echo "ERROR: Web URL ${WEB_URL} not found in ddev describe output" >&2
     exit 1
   }
-  echo "  OK: ddev describe shows Coder URL"
+  echo "  OK: ddev describe shows Web URL"
+  echo "${DESCRIBE}" | grep -qF "${MAILPIT_URL}" || {
+    echo "ERROR: Mailpit URL ${MAILPIT_URL} not found in ddev describe output" >&2
+    exit 1
+  }
+  echo "  OK: ddev describe shows Mailpit URL"
 done
