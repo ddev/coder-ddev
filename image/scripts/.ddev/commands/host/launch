@@ -78,6 +78,10 @@ if [ ! -f "$CODER_ROUTES" ]; then
   exit 0
 fi
 
+WEB_LINE=""
+MAILPIT_LINE=""
+OTHER_LINES=""
+
 while IFS= read -r router; do
   entrypoint=$(yq e ".http.routers.\"${router}\".entrypoints[0] // \"\"" "$CODER_ROUTES" 2>/dev/null)
   [ -z "$entrypoint" ] || [ "$entrypoint" = "null" ] && continue
@@ -90,16 +94,20 @@ while IFS= read -r router; do
     # Extract hostname from Host(`...`) — these use Coder subdomain proxy
     host=$(echo "$rule" | sed -E 's/Host\(`(.+)`\)/\1/')
     if [ "$router" = "$WEB_ROUTER" ]; then
-      echo "  Web:     https://${host}${PATH_SUFFIX}"
+      WEB_LINE="  Web:     https://${host}${PATH_SUFFIX}"
     elif [ "$slug" = "mailpit" ]; then
-      echo "  Mailpit: https://${host}"
+      MAILPIT_LINE="  Mailpit: https://${host}"
     else
-      echo "  ${slug}: https://${host}"
+      OTHER_LINES="${OTHER_LINES}  ${slug}: https://${host}\n"
     fi
   else
     # PathPrefix rule — dynamic add-on, accessible via Coder port-forwarding URL
-    echo "  ${slug}: https://${ext_port}--${AGENT}--${WORKSPACE}--${OWNER}.${DOMAIN}"
+    OTHER_LINES="${OTHER_LINES}  ${slug}: https://${ext_port}--${AGENT}--${WORKSPACE}--${OWNER}.${DOMAIN}\n"
   fi
 done < <(yq e '.http.routers | keys | .[]' "$CODER_ROUTES" 2>/dev/null)
+
+[ -n "$WEB_LINE" ] && echo "$WEB_LINE"
+[ -n "$MAILPIT_LINE" ] && echo "$MAILPIT_LINE"
+[ -n "$OTHER_LINES" ] && printf "%b" "$OTHER_LINES"
 
 echo ""
