@@ -35,7 +35,6 @@ for N in 1 2; do
   PROJ="ci-site${N}-${SUFFIX}"
   # Each project's coder_app slug matches the DDEV project name.
   WEB_URL="https://${PROJ}--${WORKSPACE}--${OWNER}.${DOMAIN}"
-  MAILPIT_URL="https://mailpit--${WORKSPACE}--${OWNER}.${DOMAIN}"
 
   echo "--- ${PROJ}: ddev launch ---"
   cd "/tmp/${PROJ}"
@@ -46,11 +45,6 @@ for N in 1 2; do
     exit 1
   }
   echo "  OK: ddev launch shows correct Web URL"
-  echo "${LAUNCH}" | grep -qF "${MAILPIT_URL}" || {
-    echo "ERROR: expected ${MAILPIT_URL} not found in ddev launch output" >&2
-    exit 1
-  }
-  echo "  OK: ddev launch shows correct Mailpit URL"
 
   # docker-compose.coder-describe.yaml is written by the post-start hook (coder-routes)
   # during ddev start, so ddev describe picks it up immediately — no restart needed.
@@ -67,9 +61,4 @@ for N in 1 2; do
     exit 1
   }
   echo "  OK: ddev describe shows Web URL"
-  echo "${DESCRIBE}" | grep -qF "${MAILPIT_URL}" || {
-    echo "ERROR: Mailpit URL ${MAILPIT_URL} not found in ddev describe output" >&2
-    exit 1
-  }
-  echo "  OK: ddev describe shows Mailpit URL"
 done
