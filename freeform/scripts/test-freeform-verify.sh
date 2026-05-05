@@ -48,6 +48,11 @@ for N in 1 2; do
   }
   echo "  OK: ddev launch shows correct URL"
 
+  # The coder-url custom service in docker-compose.coder-describe.yaml is picked up
+  # by DDEV on the next start after coder-routes writes it. Restart to trigger that.
+  echo "--- ${PROJ}: ddev restart (to load coder-url describe service) ---"
+  ddev restart 2>&1 | tail -3
+
   echo "--- ${PROJ}: ddev describe ---"
   DESCRIBE=$(ddev describe 2>&1)
   echo "${DESCRIBE}"
@@ -56,4 +61,9 @@ for N in 1 2; do
     exit 1
   }
   echo "  OK: ddev describe shows project running"
+  echo "${DESCRIBE}" | grep -qF "${EXPECTED_URL}" || {
+    echo "ERROR: Coder URL ${EXPECTED_URL} not found in ddev describe output" >&2
+    exit 1
+  }
+  echo "  OK: ddev describe shows Coder URL"
 done
