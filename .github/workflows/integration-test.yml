@@ -122,12 +122,27 @@ jobs:
             ${{ matrix.extra_vars }}
 
       - name: Create workspace
+        if: ${{ matrix.template != 'freeform' }}
         run: |
           coder create ${{ env.WORKSPACE_NAME }} \
             --template ${{ matrix.template }} \
             --template-version ci-${{ github.run_id }} \
             --parameter "vscode_extensions=[]" \
             ${{ matrix.extra_params }} \
+            --yes
+
+      - name: Create freeform workspace (with project names)
+        if: ${{ matrix.template == 'freeform' }}
+        run: |
+          cat > /tmp/freeform-params-${{ github.run_id }}.yaml << EOF
+          project_names: "ci-site1-${{ github.run_id }},ci-site2-${{ github.run_id }}"
+          vscode_extensions: "[]"
+          EOF
+          coder create ${{ env.WORKSPACE_NAME }} \
+            --template ${{ matrix.template }} \
+            --template-version ci-${{ github.run_id }} \
+            --rich-parameter-file /tmp/freeform-params-${{ github.run_id }}.yaml \
+            --use-parameter-defaults \
             --yes
 
       - name: Verify workspace — agent connected
@@ -227,13 +242,17 @@ jobs:
       - name: Cleanup freeform PHP projects
         if: ${{ always() && matrix.template == 'freeform' }}
         run: |
+          coder show "${{ env.WORKSPACE_NAME }}" > /dev/null 2>&1 || {
+            echo "Workspace ${{ env.WORKSPACE_NAME }} not found — skipping DDEV cleanup"
+            exit 0
+          }
           scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
             -o ProxyCommand="coder ssh --stdio ${{ env.WORKSPACE_NAME }}" \
             freeform/scripts/test-freeform-cleanup.sh \
             coder@workspace:/tmp/test-freeform-cleanup.sh
           coder ssh ${{ env.WORKSPACE_NAME }} -- \
             env DDEV_NONINTERACTIVE=${{ env.DDEV_NONINTERACTIVE }} \
-            bash /tmp/test-freeform-cleanup.sh "${{ github.run_id }}" < /dev/null || true
+            bash /tmp/test-freeform-cleanup.sh "${{ github.run_id }}" < /dev/null
 
       - name: Delete workspace
         if: always()

@@ -31,12 +31,10 @@ if [ -z "${WORKSPACE}" ] || [ -z "${OWNER}" ] || [ -z "${DOMAIN}" ]; then
   exit 1
 fi
 
-# The coder_app slug is the workspace name, so all projects in this workspace
-# share the same Coder subdomain URL (workspace--workspace--owner.domain).
-EXPECTED_URL="https://${WORKSPACE}--${WORKSPACE}--${OWNER}.${DOMAIN}"
-
 for N in 1 2; do
   PROJ="ci-site${N}-${SUFFIX}"
+  # Each project's coder_app slug matches the DDEV project name.
+  EXPECTED_URL="https://${PROJ}--${WORKSPACE}--${OWNER}.${DOMAIN}"
 
   echo "--- ${PROJ}: ddev launch ---"
   cd "/tmp/${PROJ}"
