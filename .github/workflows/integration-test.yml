@@ -222,7 +222,8 @@ jobs:
             EXPECTED_URL="https://${PROJ}--${{ env.WORKSPACE_NAME }}--${OWNER}.${CODER_DOMAIN}"
             echo "Checking ddev launch for project ${PROJ}, expecting: ${EXPECTED_URL}"
             LAUNCH_OUTPUT=$(coder ssh ${{ env.WORKSPACE_NAME }} -- \
-              env DDEV_SITENAME=${PROJ} DDEV_NONINTERACTIVE=true NO_COLOR=1 ddev launch < /dev/null 2>&1)
+              env DDEV_SITENAME=${PROJ} DDEV_NONINTERACTIVE=true NO_COLOR=1 \
+              bash /home/coder/.ddev/commands/host/launch < /dev/null 2>&1)
             echo "  Launch output: ${LAUNCH_OUTPUT}"
             echo "$LAUNCH_OUTPUT" | grep -qF "${EXPECTED_URL}" || {
               echo "ERROR: expected URL ${EXPECTED_URL} not found in ddev launch output" >&2
