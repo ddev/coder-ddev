@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+#ddev-silent-no-warn
 
 ## Description: Regenerate Coder Traefik routing rules for this DDEV project
 ## Usage: coder-routes

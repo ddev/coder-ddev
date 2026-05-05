@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+#ddev-silent-no-warn
 
 ## Description: Show Coder URLs for this DDEV project (replaces browser-open in cloud)
 ## Usage: launch [path] [-m|--mailpit]
