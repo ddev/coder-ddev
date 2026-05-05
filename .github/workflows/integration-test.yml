@@ -222,8 +222,7 @@ jobs:
             EXPECTED_URL="https://${PROJ}--${{ env.WORKSPACE_NAME }}--${OWNER}.${CODER_DOMAIN}"
             echo "Checking ddev launch for project ${PROJ}, expecting: ${EXPECTED_URL}"
             LAUNCH_OUTPUT=$(coder ssh ${{ env.WORKSPACE_NAME }} -- \
-              env DDEV_NONINTERACTIVE=${{ env.DDEV_NONINTERACTIVE }} NO_COLOR=${{ env.NO_COLOR }} \
-              bash -c "cd /tmp/${PROJ} && ddev launch" < /dev/null 2>&1)
+              env DDEV_SITENAME=${PROJ} DDEV_NONINTERACTIVE=true NO_COLOR=1 ddev launch < /dev/null 2>&1)
             echo "  Launch output: ${LAUNCH_OUTPUT}"
             echo "$LAUNCH_OUTPUT" | grep -qF "${EXPECTED_URL}" || {
               echo "ERROR: expected URL ${EXPECTED_URL} not found in ddev launch output" >&2
@@ -238,9 +237,7 @@ jobs:
           for N in 1 2; do
             PROJ="ci-site${N}-${{ github.run_id }}"
             echo "Checking ddev describe for ${PROJ}"
-            DESCRIBE_OUTPUT=$(coder ssh ${{ env.WORKSPACE_NAME }} -- \
-              env DDEV_NONINTERACTIVE=${{ env.DDEV_NONINTERACTIVE }} NO_COLOR=${{ env.NO_COLOR }} \
-              bash -c "cd /tmp/${PROJ} && ddev describe" < /dev/null 2>&1)
+            DESCRIBE_OUTPUT=$(coder ssh ${{ env.WORKSPACE_NAME }} -- ddev describe ${PROJ} < /dev/null 2>&1)
             echo "  Describe output: ${DESCRIBE_OUTPUT}"
             echo "$DESCRIBE_OUTPUT" | grep -qF "${PROJ}.ddev.site" || {
               echo "ERROR: expected URL ${PROJ}.ddev.site not found in ddev describe output" >&2
@@ -254,10 +251,8 @@ jobs:
         run: |
           for N in 1 2; do
             PROJ="ci-site${N}-${{ github.run_id }}"
-            coder ssh ${{ env.WORKSPACE_NAME }} -- \
-              env DDEV_NONINTERACTIVE=${{ env.DDEV_NONINTERACTIVE }} NO_COLOR=${{ env.NO_COLOR }} \
-              bash -c "cd /tmp/${PROJ} && ddev delete --omit-snapshot -y" < /dev/null || true
-            coder ssh ${{ env.WORKSPACE_NAME }} -- rm -rf "/tmp/${PROJ}" < /dev/null || true
+            coder ssh ${{ env.WORKSPACE_NAME }} -- ddev delete ${PROJ} -Oy < /dev/null || true
+            coder ssh ${{ env.WORKSPACE_NAME }} -- rm -rf /tmp/${PROJ} < /dev/null || true
           done
 
       - name: Delete workspace
