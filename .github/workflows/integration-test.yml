@@ -255,8 +255,8 @@ jobs:
           for N in 1 2; do
             PROJ="ci-site${N}-${{ github.run_id }}"
             coder ssh ${{ env.WORKSPACE_NAME }} -- \
-              env DDEV_NONINTERACTIVE=${{ env.DDEV_NONINTERACTIVE }} \
-              bash -c "ddev delete ${PROJ} --omit-snapshot -y" < /dev/null || true
+              env DDEV_NONINTERACTIVE=${{ env.DDEV_NONINTERACTIVE }} NO_COLOR=${{ env.NO_COLOR }} \
+              bash -c "cd /tmp/${PROJ} && ddev delete --omit-snapshot -y" < /dev/null || true
             coder ssh ${{ env.WORKSPACE_NAME }} -- rm -rf "/tmp/${PROJ}" < /dev/null || true
           done
 
