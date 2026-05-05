@@ -98,11 +98,10 @@ while IFS= read -r router; do
 
   if [ "$slug" = "$PROJECT_SLUG" ]; then
     # Primary web service: detected when svc_name=web and port≠8025.
-    # URL first segment must be WORKSPACE (= coder_app slug) so Coder's subdomain
-    # proxy matches it, regardless of what the DDEV project is named.
-    # Note: detect by slug, not by ext_port — DDEV names entrypoints after the internal
-    # port (e.g. http-80) even when the global router-http-port is 8080.
-    CODER_HOST="${WORKSPACE}--${WORKSPACE}--${OWNER}.${DOMAIN}"
+    # Slug = PROJECT_SLUG (= sanitized DDEV project name), which must equal the
+    # coder_app slug declared in the Terraform template.  WORKSPACE is the Coder
+    # workspace name (the second component in the subdomain).
+    CODER_HOST="${PROJECT_SLUG}--${WORKSPACE}--${OWNER}.${DOMAIN}"
     PRIMARY_URL="https://${CODER_HOST}"
     RULE='Host(`'"${CODER_HOST}"'`)'
     RULE="$RULE" SVC="$service" \

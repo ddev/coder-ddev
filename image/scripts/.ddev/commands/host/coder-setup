@@ -57,6 +57,25 @@ if ! grep -qF ".ddev/docker-compose.coder-describe.yaml" ~/.config/git/ignore 2>
   echo "✓ Added .ddev/docker-compose.coder-describe.yaml to ~/.config/git/ignore"
 fi
 
+# Warn if this project's name isn't in the registered project list.
+if [ -n "${CODER_PROJECT_NAMES:-}" ] && [ -n "${DDEV_SITENAME:-}" ]; then
+  IFS=',' read -ra _registered <<< "$CODER_PROJECT_NAMES"
+  _found=false
+  for _name in "${_registered[@]}"; do
+    if [ "$(echo "$_name" | tr -d ' ')" = "$DDEV_SITENAME" ]; then
+      _found=true
+      break
+    fi
+  done
+  if [ "$_found" = "false" ]; then
+    echo ""
+    echo "⚠️  WARNING: DDEV project name '$DDEV_SITENAME' is not in the registered project list: $CODER_PROJECT_NAMES"
+    echo "   Routing will not work until this project name is added."
+    echo "   Edit the workspace and update the 'DDEV project names' parameter to include '$DDEV_SITENAME',"
+    echo "   then restart the workspace to create the matching app button."
+  fi
+fi
+
 echo ""
 echo "Coder routing hook installed. Run 'ddev start' to activate routing."
 echo "The hook runs automatically after every 'ddev start'."

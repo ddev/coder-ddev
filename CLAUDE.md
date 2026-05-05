@@ -19,6 +19,26 @@ This project provides a Coder v2+ template for DDEV-based development environmen
 
 - Use `jq` (not `python3 -m json.tool`) for JSON pretty-printing and querying
 
+## Working with Coder Workspaces via SSH
+
+After running `coder config-ssh --yes`, workspaces are available as SSH hosts named `<workspace>.coder`. Use `scp` to copy files in or out, then `ssh` to execute scripts non-interactively:
+
+```bash
+# Configure SSH (once)
+coder config-ssh --yes
+
+# Copy a file into a workspace
+scp ./local-file.sh mp1.coder:/tmp/
+
+# Execute a script non-interactively (preferred — avoids PTY/pipe issues)
+ssh mp1.coder bash /tmp/local-file.sh
+
+# One-liner for quick commands
+ssh mp1.coder ddev list
+```
+
+When running commands via `coder ssh -- ...` or piped heredocs, the PTY allocation causes interactive prompts and pipe-stall issues. Writing a script to `/tmp/` and executing it via `ssh workspace.coder bash /tmp/script.sh` is reliable for multi-step operations.
+
 ## Essential Commands
 
 ### Template Management

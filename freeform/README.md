@@ -21,7 +21,7 @@ Mailpit: https://mailpit--{workspace}--{owner}.{coder-domain}
 Adminer: https://adminer--{workspace}--{owner}.{coder-domain}  (if enabled)
 ```
 
-The DDEV project name does not need to match the workspace name — the routing script (`ddev coder-routes`) reads the actual DDEV project name from DDEV and maps it to the correct Coder subdomain.
+The web URL always uses the workspace name as its subdomain prefix regardless of what the DDEV project is named internally. `ddev coder-routes` reads the running DDEV project from DDEV and writes a Traefik rule that maps the Coder subdomain to the correct container.
 
 ## Quick Start
 

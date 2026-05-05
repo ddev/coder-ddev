@@ -66,6 +66,16 @@ data "coder_workspace" "me" {}
 data "coder_workspace_owner" "me" {}
 
 # Per-workspace user parameters (shown in workspace creation UI)
+data "coder_parameter" "project_names" {
+  name         = "project_names"
+  display_name = "DDEV project names"
+  description  = "Comma-separated DDEV project names. Each gets its own app button and URL. The DDEV project name must match exactly (case-sensitive). Single project: leave as default (workspace name)."
+  type         = "string"
+  default      = ""
+  mutable      = true
+  order        = 1
+}
+
 data "coder_parameter" "vscode_extensions" {
   name         = "vscode_extensions"
   display_name = "VS Code Extensions"
@@ -92,6 +102,15 @@ locals {
 
   registry_without_version      = replace(var.workspace_image_registry, ":${local.image_version}", "")
   workspace_image_registry_base = replace(local.registry_without_version, ":latest", "")
+
+  # Parse project names from the coder_parameter. Fall back to workspace name when
+  # the value is empty or "[]" (the latter comes from the mock in Terraform tests).
+  _project_names_raw = trimspace(data.coder_parameter.project_names.value)
+  project_names = (
+    local._project_names_raw != "" && local._project_names_raw != "[]"
+    ? [for s in split(",", local._project_names_raw) : trimspace(s) if trimspace(s) != ""]
+    : [data.coder_workspace.me.name]
+  )
 }
 
 variable "vscode_extensions" {
@@ -255,7 +274,7 @@ resource "coder_agent" "main" {
     # DDEV post-start hooks and interactive shells (DDEV exec-host inherits the
     # shell environment, which sources ~/.bashrc for login shells).
     # Use printenv to avoid $${!var} indirect expansion which Terraform parses.
-    for _var in CODER_AGENT_URL VSCODE_PROXY_URI CODER_WORKSPACE_NAME CODER_WORKSPACE_OWNER_NAME CODER_WORKSPACE_OWNER_EMAIL; do
+    for _var in CODER_AGENT_URL VSCODE_PROXY_URI CODER_WORKSPACE_NAME CODER_WORKSPACE_OWNER_NAME CODER_WORKSPACE_OWNER_EMAIL CODER_PROJECT_NAMES; do
       _val=$(printenv "$_var" 2>/dev/null || true)
       if [ -n "$_val" ]; then
         sed -i "/^export $_var=/d" ~/.bashrc || true
@@ -385,12 +404,14 @@ BASHCOMP
     echo ""
     echo "=== Setup Complete ==="
     echo ""
-    echo "Next steps:"
-    echo "  1. Clone or create your project (any directory):"
-    echo "       git clone <repo-url> <yourdir>"
-    echo "       cd <yourdir>"
-    echo "  2. Configure DDEV:"
-    echo "       ddev config --project-type=<type>"
+    echo "Registered DDEV project name(s): $CODER_PROJECT_NAMES"
+    echo ""
+    echo "Next steps (repeat for each project name above):"
+    echo "  1. Clone or create your project directory:"
+    echo "       git clone <repo-url> <project-name>"
+    echo "       cd <project-name>"
+    echo "  2. Configure DDEV — project name MUST match a registered name:"
+    echo "       ddev config --project-name=<project-name> --project-type=<type>"
     echo "  3. Install Coder routing hook (once per project):"
     echo "       ddev coder-setup"
     echo "  4. Start DDEV:"
@@ -405,6 +426,7 @@ BASHCOMP
     CODER_WORKSPACE_NAME        = data.coder_workspace.me.name
     CODER_WORKSPACE_OWNER_NAME  = data.coder_workspace_owner.me.name
     CODER_WORKSPACE_OWNER_EMAIL = data.coder_workspace_owner.me.email
+    CODER_PROJECT_NAMES         = join(",", local.project_names)
     HOME                        = "/home/coder"
   }
 
@@ -432,13 +454,14 @@ module "vscode-web" {
   extensions     = local.selected_extensions
 }
 
-# Slug matches the workspace name. DDEV router HTTP port is 8080 (set via ddev config global in startup).
-# Coder subdomain URL: {workspace_name}--{workspace_name}--{owner}.{domain}
-# Traefik rule in coder-routes.yaml matches this exact host.
-resource "coder_app" "ddev-web" {
+# One coder_app per project name. All route to ddev-router on port 8080.
+# ddev-router dispatches by Host header: {slug}--{workspace}--{owner}.{domain}
+# The DDEV project name must equal the slug for coder-routes to build the correct rule.
+resource "coder_app" "ddev_web" {
+  for_each     = toset(local.project_names)
   agent_id     = coder_agent.main.id
-  slug         = data.coder_workspace.me.name
-  display_name = "DDEV Web"
+  slug         = each.key
+  display_name = each.key
   order        = 1
   url          = "http://localhost:8080"
   icon         = "https://raw.githubusercontent.com/ddev/ddev/main/docs/content/developers/logos/SVG/Logo.svg"
@@ -581,8 +604,8 @@ resource "coder_metadata" "workspace_info" {
     value = "${docker_image.workspace_image.name} (version: ${local.image_version})"
   }
   item {
-    key   = "ddev_project_name"
-    value = data.coder_workspace.me.name
+    key   = "ddev_projects"
+    value = join(", ", local.project_names)
   }
   item {
     key   = "cpu"
