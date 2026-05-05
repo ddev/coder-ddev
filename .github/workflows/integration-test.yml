@@ -189,71 +189,39 @@ jobs:
       - name: Start two PHP projects — freeform routing test
         if: ${{ matrix.template == 'freeform' }}
         run: |
-          cat > /tmp/ci-freeform-setup-${{ github.run_id }}.sh << 'SCRIPT'
-          set -euo pipefail
-          RID="$1"
-          for N in 1 2; do
-            PROJ="ci-site${N}-${RID}"
-            TESTDIR="/tmp/${PROJ}"
-            echo "--- Creating project ${PROJ} ---"
-            mkdir -p "${TESTDIR}/web"
-            cd "${TESTDIR}"
-            ddev config --project-type=php --docroot=web --project-name="${PROJ}"
-            ddev coder-setup
-            ddev start -y
-            echo "--- ${PROJ} started ---"
-          done
-          SCRIPT
           scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
             -o ProxyCommand="coder ssh --stdio ${{ env.WORKSPACE_NAME }}" \
-            /tmp/ci-freeform-setup-${{ github.run_id }}.sh \
-            coder@workspace:/tmp/ci-freeform-setup-${{ github.run_id }}.sh
+            freeform/scripts/test-freeform-start.sh \
+            coder@workspace:/tmp/test-freeform-start.sh
           coder ssh ${{ env.WORKSPACE_NAME }} -- \
             env CI=${{ env.CI }} DDEV_NONINTERACTIVE=${{ env.DDEV_NONINTERACTIVE }} NO_COLOR=${{ env.NO_COLOR }} \
-            bash /tmp/ci-freeform-setup-${{ github.run_id }}.sh "${{ github.run_id }}" < /dev/null
+            bash /tmp/test-freeform-start.sh "${{ github.run_id }}" < /dev/null
 
       - name: Verify freeform — ddev launch and describe per-project URLs
         if: ${{ matrix.template == 'freeform' }}
         run: |
           CODER_DOMAIN="${{ vars.TEST_CODER_URL }}"
           CODER_DOMAIN="${CODER_DOMAIN#https://}"
-          cat > /tmp/ci-freeform-verify-${{ github.run_id }}.sh << 'SCRIPT'
-          set -euo pipefail
-          RID="$1" WORKSPACE="$2" OWNER="$3" DOMAIN="$4"
-          for N in 1 2; do
-            PROJ="ci-site${N}-${RID}"
-            EXPECTED_URL="https://${PROJ}--${WORKSPACE}--${OWNER}.${DOMAIN}"
-            echo "--- ${PROJ}: ddev launch ---"
-            cd /tmp/${PROJ}
-            LAUNCH=$(ddev launch 2>&1)
-            echo "${LAUNCH}"
-            echo "${LAUNCH}" | grep -qF "${EXPECTED_URL}" || { echo "ERROR: expected ${EXPECTED_URL}" >&2; exit 1; }
-            echo "  OK: ddev launch"
-            echo "--- ${PROJ}: ddev describe ---"
-            DESCRIBE=$(ddev describe 2>&1)
-            echo "${DESCRIBE}"
-            echo "${DESCRIBE}" | grep -qF "${PROJ}.ddev.site" || { echo "ERROR: ${PROJ}.ddev.site not found" >&2; exit 1; }
-            echo "  OK: ddev describe"
-          done
-          SCRIPT
           scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
             -o ProxyCommand="coder ssh --stdio ${{ env.WORKSPACE_NAME }}" \
-            /tmp/ci-freeform-verify-${{ github.run_id }}.sh \
-            coder@workspace:/tmp/ci-freeform-verify-${{ github.run_id }}.sh
+            freeform/scripts/test-freeform-verify.sh \
+            coder@workspace:/tmp/test-freeform-verify.sh
           coder ssh ${{ env.WORKSPACE_NAME }} -- \
-            env DDEV_NONINTERACTIVE=true NO_COLOR=1 \
-            bash /tmp/ci-freeform-verify-${{ github.run_id }}.sh \
+            env DDEV_NONINTERACTIVE=${{ env.DDEV_NONINTERACTIVE }} NO_COLOR=${{ env.NO_COLOR }} \
+            bash /tmp/test-freeform-verify.sh \
             "${{ github.run_id }}" "${{ env.WORKSPACE_NAME }}" "${OWNER}" "${CODER_DOMAIN}" \
             < /dev/null
 
       - name: Cleanup freeform PHP projects
         if: ${{ always() && matrix.template == 'freeform' }}
         run: |
-          for N in 1 2; do
-            PROJ="ci-site${N}-${{ github.run_id }}"
-            coder ssh ${{ env.WORKSPACE_NAME }} -- ddev delete ${PROJ} -Oy < /dev/null || true
-            coder ssh ${{ env.WORKSPACE_NAME }} -- rm -rf /tmp/${PROJ} < /dev/null || true
-          done
+          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+            -o ProxyCommand="coder ssh --stdio ${{ env.WORKSPACE_NAME }}" \
+            freeform/scripts/test-freeform-cleanup.sh \
+            coder@workspace:/tmp/test-freeform-cleanup.sh
+          coder ssh ${{ env.WORKSPACE_NAME }} -- \
+            env DDEV_NONINTERACTIVE=${{ env.DDEV_NONINTERACTIVE }} \
+            bash /tmp/test-freeform-cleanup.sh "${{ github.run_id }}" < /dev/null || true
 
       - name: Delete workspace
         if: always()
