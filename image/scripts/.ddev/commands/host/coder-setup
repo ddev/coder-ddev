@@ -50,6 +50,10 @@ if ! grep -qF ".ddev/config.coder.yaml" ~/.config/git/ignore 2>/dev/null; then
   echo ".ddev/config.coder.yaml" >> ~/.config/git/ignore
   echo "✓ Added .ddev/config.coder.yaml to ~/.config/git/ignore"
 fi
+if ! grep -qF ".ddev/docker-compose.coder-describe.yaml" ~/.config/git/ignore 2>/dev/null; then
+  echo ".ddev/docker-compose.coder-describe.yaml" >> ~/.config/git/ignore
+  echo "✓ Added .ddev/docker-compose.coder-describe.yaml to ~/.config/git/ignore"
+fi
 
 echo ""
 echo "Coder routing hook installed. Run 'ddev start' to activate routing."
