@@ -97,12 +97,12 @@ while IFS= read -r router; do
   ext_port="${entrypoints[0]#http-}"
 
   if [ "$slug" = "$PROJECT_SLUG" ]; then
-    # Primary web service: slug equals PROJECT_SLUG (set above when svc_name=web, port≠8025).
-    # Use Host() rule so Coder's coder_app subdomain proxy works.
-    # When PROJECT_SLUG equals WORKSPACE the URL matches the coder_app slug exactly.
+    # Primary web service: detected when svc_name=web and port≠8025.
+    # URL first segment must be WORKSPACE (= coder_app slug) so Coder's subdomain
+    # proxy matches it, regardless of what the DDEV project is named.
     # Note: detect by slug, not by ext_port — DDEV names entrypoints after the internal
     # port (e.g. http-80) even when the global router-http-port is 8080.
-    CODER_HOST="${slug}--${WORKSPACE}--${OWNER}.${DOMAIN}"
+    CODER_HOST="${WORKSPACE}--${WORKSPACE}--${OWNER}.${DOMAIN}"
     PRIMARY_URL="https://${CODER_HOST}"
     RULE='Host(`'"${CODER_HOST}"'`)'
     RULE="$RULE" SVC="$service" \

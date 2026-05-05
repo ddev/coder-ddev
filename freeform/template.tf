@@ -235,8 +235,6 @@ resource "coder_agent" "main" {
         echo 'config.coder.yaml' >> "$HOME/.gitignore_global"
     fi
     mkdir -p ~/.ddev
-    ddev config global --instrumentation-opt-in=true > /dev/null 2>&1 || true
-    ddev config global --router-http-port=8080 > /dev/null 2>&1 || true
     if [ -n "$CODER_WORKSPACE_OWNER_NAME" ]; then
       git config --global user.name "$CODER_WORKSPACE_OWNER_NAME"
     fi
@@ -310,6 +308,10 @@ EOF
     else
       echo "Docker Daemon already running."
     fi
+
+    # Configure DDEV global settings now that Docker is up (ddev config global needs Docker)
+    ddev config global --instrumentation-opt-in=true > /dev/null 2>&1 || true
+    ddev config global --router-http-port=8080 > /dev/null 2>&1 || true
 
     # Create .ddev commands directory
     mkdir -p ~/.ddev/commands/host
