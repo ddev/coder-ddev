@@ -58,6 +58,10 @@ while IFS= read -r router; do
   service=$(yq e ".http.routers.\"${router}\".service // \"\"" "$MERGED")
   [ -z "$service" ] || [ "$service" = "null" ] && continue
 
+  # DDEV's merged config can include routers from all running projects.
+  # Only process services that belong to this project.
+  [[ "$service" == "${DDEV_PROJECT}-"* ]] || continue
+
   # Read entrypoints as a space-separated list
   mapfile -t entrypoints < <(yq e ".http.routers.\"${router}\".entrypoints[]" "$MERGED" 2>/dev/null)
   [ ${#entrypoints[@]} -eq 0 ] && continue
@@ -85,12 +89,15 @@ while IFS= read -r router; do
   ENTRY_LIST=$(printf '"%s",' "${entrypoints[@]}" | sed 's/,$//')
 
   # Determine external port from the entrypoint name (e.g. http-8143 → 8143).
-  # Use this — NOT the service-name port — to decide routing strategy.
+  # Used for PathPrefix (port-forwarding) URLs on dynamic add-on services.
   ext_port="${entrypoints[0]#http-}"
 
-  if [ "$ext_port" = "8080" ]; then
-    # Primary web service: Host() rule so Coder's coder_app subdomain proxy works.
+  if [ "$slug" = "$PROJECT_SLUG" ]; then
+    # Primary web service: slug equals PROJECT_SLUG (set above when svc_name=web, port≠8025).
+    # Use Host() rule so Coder's coder_app subdomain proxy works.
     # When PROJECT_SLUG equals WORKSPACE the URL matches the coder_app slug exactly.
+    # Note: detect by slug, not by ext_port — DDEV names entrypoints after the internal
+    # port (e.g. http-80) even when the global router-http-port is 8080.
     CODER_HOST="${slug}--${WORKSPACE}--${OWNER}.${DOMAIN}"
     RULE='Host(`'"${CODER_HOST}"'`)'
     RULE="$RULE" SVC="$service" \
