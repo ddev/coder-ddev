@@ -186,6 +186,18 @@ jobs:
           coder ssh ${{ env.WORKSPACE_NAME }} -- ddev delete ci-ddev-${{ github.run_id }} --omit-snapshot -y < /dev/null || true
           coder ssh ${{ env.WORKSPACE_NAME }} -- rm -rf /tmp/ci-ddev-${{ github.run_id }} < /dev/null || true
 
+      - name: Inject current-branch DDEV scripts into freeform workspace
+        if: ${{ matrix.template == 'freeform' }}
+        run: |
+          coder ssh ${{ env.WORKSPACE_NAME }} -- mkdir -p /home/coder/.ddev/commands/host < /dev/null
+          for script in coder-routes coder-setup launch; do
+            scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+              -o ProxyCommand="coder ssh --stdio ${{ env.WORKSPACE_NAME }}" \
+              "image/scripts/.ddev/commands/host/${script}" \
+              "coder@workspace:/home/coder/.ddev/commands/host/${script}"
+          done
+          coder ssh ${{ env.WORKSPACE_NAME }} -- chmod +x /home/coder/.ddev/commands/host/coder-routes /home/coder/.ddev/commands/host/coder-setup /home/coder/.ddev/commands/host/launch < /dev/null
+
       - name: Start two PHP projects — freeform routing test
         if: ${{ matrix.template == 'freeform' }}
         run: |
