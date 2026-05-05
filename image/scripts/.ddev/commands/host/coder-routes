@@ -146,10 +146,12 @@ while IFS= read -r router; do
 
 done < <(yq e '.http.routers | keys | .[]' "$MERGED" 2>/dev/null)
 
-yq e '.' /tmp/coder-routes-raw.yaml > "$OUTPUT"
+{ printf '#ddev-silent-no-warn\n'; yq e '.' /tmp/coder-routes-raw.yaml; } > "$OUTPUT"
 echo "✓ Wrote $(basename "$OUTPUT")"
 
-# Write docker-compose.coder-describe.yaml so 'ddev describe' shows Coder URLs.
+# Write docker-compose.coder-describe.yaml with Coder URLs for reference.
+# Note: DDEV currently ignores x-ddev.describe-url-port on the built-in web service;
+# use 'ddev launch' for the canonical Coder URL.
 if [ -n "${DDEV_APPROOT:-}" ] && [ -n "$PRIMARY_URL" ]; then
   DESCRIBE_FILE="$DDEV_APPROOT/.ddev/docker-compose.coder-describe.yaml"
   {

@@ -176,7 +176,7 @@ resource "coder_agent" "main" {
 
   startup_script = <<-EOT
     #!/bin/bash
-    set +e
+    set -euo pipefail
 
     echo "Startup script started..."
 
@@ -316,8 +316,8 @@ EOF
     # Create .ddev commands directory
     mkdir -p ~/.ddev/commands/host
     if [ -d /home/coder-files/.ddev/commands/host ]; then
-      cp -f /home/coder-files/.ddev/commands/host/* ~/.ddev/commands/host/
-      chmod 755 ~/.ddev/commands/host/*
+      cp -f /home/coder-files/.ddev/commands/host/* ~/.ddev/commands/host/ || true
+      chmod 755 ~/.ddev/commands/host/* || true
       echo "✓ DDEV host commands installed"
     fi
 
@@ -376,7 +376,7 @@ BASHCOMP
 
     # npm global directory
     mkdir -p ~/.npm-global
-    npm config set prefix "~/.npm-global"
+    npm config set prefix "~/.npm-global" || true
     export PATH="$HOME/.npm-global/bin:$PATH"
     if ! grep -q "\.npm-global/bin" ~/.bashrc; then
       echo 'export PATH="$HOME/.npm-global/bin:$PATH"' >> ~/.bashrc
