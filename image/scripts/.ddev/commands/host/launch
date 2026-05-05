@@ -21,8 +21,6 @@ else
 fi
 
 # DDEV_SITENAME is the DDEV project name (may differ from the Coder workspace name).
-# Coder URLs always use WORKSPACE (= CODER_WORKSPACE_NAME); PROJECT is only used
-# to look up router keys in coder-routes.yaml (which coder-routes prefixes with DDEV_PROJECT).
 PROJECT="${DDEV_SITENAME}"
 AGENT="${CODER_AGENT_NAME:-main}"
 
@@ -45,43 +43,62 @@ if [ -n "${1:-}" ]; then
   PATH_SUFFIX="/${1#/}"
 fi
 
+# Per-project routes file (written by ddev coder-routes after each ddev start).
+# Falls back to the legacy single-file name for older setups.
+CODER_ROUTES="$HOME/.ddev/traefik/custom-global-config/coder-routes-${PROJECT}.yaml"
+if [ ! -f "$CODER_ROUTES" ]; then
+  CODER_ROUTES="$HOME/.ddev/traefik/custom-global-config/coder-routes.yaml"
+fi
+
+# Sanitize project name the same way coder-routes does, to reconstruct the router key.
+PROJECT_SLUG=$(echo "$PROJECT" | tr '[:upper:]' '[:lower:]' | tr '._' '--' | tr -s '-')
+WEB_ROUTER="${PROJECT}-coder-${PROJECT_SLUG}"
+
 if [ "${MAILPIT}" = "true" ]; then
+  if [ -f "$CODER_ROUTES" ]; then
+    mailpit_rule=$(yq e ".http.routers.\"${PROJECT}-coder-mailpit\".rule // \"\"" "$CODER_ROUTES" 2>/dev/null)
+    if [ -n "$mailpit_rule" ] && [ "$mailpit_rule" != "null" ]; then
+      host=$(echo "$mailpit_rule" | sed -E 's/Host\(`(.+)`\)/\1/')
+      echo "https://${host}"
+      exit 0
+    fi
+  fi
+  # fallback
   echo "https://mailpit--${WORKSPACE}--${OWNER}.${DOMAIN}"
   exit 0
 fi
 
 echo ""
 echo "Coder URLs for project '${PROJECT}':"
-echo "  Web:     https://80--${AGENT}--${WORKSPACE}--${OWNER}.${DOMAIN}${PATH_SUFFIX}"
-echo "  Mailpit: https://mailpit--${WORKSPACE}--${OWNER}.${DOMAIN}"
 
-# Show addon services from the generated coder-routes.yaml.
-# Routers with a Host() rule have a known Coder app (slug subdomain URL).
-# Routers with PathPrefix("/") are dynamic add-ons accessible via port-forwarding:
-# https://{port}--{agent}--{workspace}--{owner}.{domain}
-CODER_ROUTES="$HOME/.ddev/traefik/custom-global-config/coder-routes.yaml"
-if [ -f "$CODER_ROUTES" ]; then
-  while IFS= read -r router; do
-    # Skip web and mailpit — already printed above.
-    # Web router key: {project}-coder-{workspace} (slug = workspace name).
-    [ "$router" = "${PROJECT}-coder-${WORKSPACE}" ] && continue
-    [ "$router" = "${PROJECT}-coder-mailpit" ] && continue
-    # Get first entrypoint and extract port number (http-9100 → 9100)
-    entrypoint=$(yq e ".http.routers.\"${router}\".entrypoints[0] // \"\"" "$CODER_ROUTES" 2>/dev/null)
-    [ -z "$entrypoint" ] || [ "$entrypoint" = "null" ] && continue
-    ext_port="${entrypoint#http-}"
-    # Slug is the router name with "{project}-coder-" prefix stripped
-    slug="${router#${PROJECT}-coder-}"
-    # Determine URL format from the rule type
-    rule=$(yq e ".http.routers.\"${router}\".rule // \"\"" "$CODER_ROUTES" 2>/dev/null)
-    if echo "$rule" | grep -q "^Host"; then
-      # Known Coder app (Host rule): use slug subdomain URL
-      echo "  ${slug}: https://${slug}--${WORKSPACE}--${OWNER}.${DOMAIN}"
-    else
-      # Dynamic add-on (PathPrefix rule): use Coder port-forwarding URL
-      echo "  ${slug}: https://${ext_port}--${AGENT}--${WORKSPACE}--${OWNER}.${DOMAIN}"
-    fi
-  done < <(yq e '.http.routers | keys | .[]' "$CODER_ROUTES" 2>/dev/null)
+if [ ! -f "$CODER_ROUTES" ]; then
+  echo "  (no coder-routes file found; run 'ddev coder-setup' then 'ddev start')"
+  echo ""
+  exit 0
 fi
+
+while IFS= read -r router; do
+  entrypoint=$(yq e ".http.routers.\"${router}\".entrypoints[0] // \"\"" "$CODER_ROUTES" 2>/dev/null)
+  [ -z "$entrypoint" ] || [ "$entrypoint" = "null" ] && continue
+
+  ext_port="${entrypoint#http-}"
+  slug="${router#${PROJECT}-coder-}"
+  rule=$(yq e ".http.routers.\"${router}\".rule // \"\"" "$CODER_ROUTES" 2>/dev/null)
+
+  if echo "$rule" | grep -q "^Host"; then
+    # Extract hostname from Host(`...`) — these use Coder subdomain proxy
+    host=$(echo "$rule" | sed -E 's/Host\(`(.+)`\)/\1/')
+    if [ "$router" = "$WEB_ROUTER" ]; then
+      echo "  Web:     https://${host}${PATH_SUFFIX}"
+    elif [ "$slug" = "mailpit" ]; then
+      echo "  Mailpit: https://${host}"
+    else
+      echo "  ${slug}: https://${host}"
+    fi
+  else
+    # PathPrefix rule — dynamic add-on, accessible via Coder port-forwarding URL
+    echo "  ${slug}: https://${ext_port}--${AGENT}--${WORKSPACE}--${OWNER}.${DOMAIN}"
+  fi
+done < <(yq e '.http.routers | keys | .[]' "$CODER_ROUTES" 2>/dev/null)
 
 echo ""

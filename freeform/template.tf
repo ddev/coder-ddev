@@ -236,6 +236,7 @@ resource "coder_agent" "main" {
     fi
     mkdir -p ~/.ddev
     ddev config global --instrumentation-opt-in=true > /dev/null 2>&1 || true
+    ddev config global --router-http-port=8080 > /dev/null 2>&1 || true
     if [ -n "$CODER_WORKSPACE_OWNER_NAME" ]; then
       git config --global user.name "$CODER_WORKSPACE_OWNER_NAME"
     fi
@@ -429,7 +430,7 @@ module "vscode-web" {
   extensions     = local.selected_extensions
 }
 
-# Slug matches the workspace name, which is also the DDEV project name.
+# Slug matches the workspace name. DDEV router HTTP port is 8080 (set via ddev config global in startup).
 # Coder subdomain URL: {workspace_name}--{workspace_name}--{owner}.{domain}
 # Traefik rule in coder-routes.yaml matches this exact host.
 resource "coder_app" "ddev-web" {
@@ -437,13 +438,13 @@ resource "coder_app" "ddev-web" {
   slug         = data.coder_workspace.me.name
   display_name = "DDEV Web"
   order        = 1
-  url          = "http://localhost:80"
+  url          = "http://localhost:8080"
   icon         = "https://raw.githubusercontent.com/ddev/ddev/main/docs/content/developers/logos/SVG/Logo.svg"
   subdomain    = true
   share        = "owner"
 
   healthcheck {
-    url       = "http://localhost:80"
+    url       = "http://localhost:8080"
     interval  = 10
     threshold = 30
   }

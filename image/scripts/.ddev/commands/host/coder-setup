@@ -39,6 +39,8 @@ web_environment:
 hooks:
   post-start:
     - exec-host: ddev coder-routes
+  post-stop:
+    - exec-host: rm -f $HOME/.ddev/traefik/custom-global-config/coder-routes-\${DDEV_SITENAME}.yaml
 EOF
 echo "✓ Wrote .ddev/config.coder.yaml"
 
