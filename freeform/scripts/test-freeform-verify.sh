@@ -31,9 +31,12 @@ if [ -z "${WORKSPACE}" ] || [ -z "${OWNER}" ] || [ -z "${DOMAIN}" ]; then
   exit 1
 fi
 
+# The coder_app slug is the workspace name, so all projects in this workspace
+# share the same Coder subdomain URL (workspace--workspace--owner.domain).
+EXPECTED_URL="https://${WORKSPACE}--${WORKSPACE}--${OWNER}.${DOMAIN}"
+
 for N in 1 2; do
   PROJ="ci-site${N}-${SUFFIX}"
-  EXPECTED_URL="https://${PROJ}--${WORKSPACE}--${OWNER}.${DOMAIN}"
 
   echo "--- ${PROJ}: ddev launch ---"
   cd "/tmp/${PROJ}"
@@ -48,9 +51,9 @@ for N in 1 2; do
   echo "--- ${PROJ}: ddev describe ---"
   DESCRIBE=$(ddev describe 2>&1)
   echo "${DESCRIBE}"
-  echo "${DESCRIBE}" | grep -qF "${PROJ}.ddev.site" || {
-    echo "ERROR: ${PROJ}.ddev.site not found in ddev describe output" >&2
+  echo "${DESCRIBE}" | grep -qF "${EXPECTED_URL}" || {
+    echo "ERROR: Coder URL ${EXPECTED_URL} not found in ddev describe output" >&2
     exit 1
   }
-  echo "  OK: ddev describe shows correct URL"
+  echo "  OK: ddev describe shows Coder URL"
 done
