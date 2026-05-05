@@ -495,14 +495,25 @@ resource "coder_app" "mailpit" {
   }
 }
 
-# Adminer: database admin UI added by ddev get ddev/ddev-adminer.
-# HTTP_EXPOSE=9100:8080 → ddev-router port 9100 → adminer container port 8080.
-# coder-routes post-start hook adds the Traefik router automatically.
-resource "coder_app" "adminer" {
-  count        = var.enable_adminer ? 1 : 0
+# xhgui is always present in the image (not an add-on). One app per project.
+resource "coder_app" "xhgui" {
+  for_each     = toset(local.project_names)
   agent_id     = coder_agent.main.id
-  slug         = "adminer"
-  display_name = "Adminer"
+  slug         = "xhgui-${each.key}"
+  display_name = "xhgui (${each.key})"
+  url          = "http://localhost:8143"
+  icon         = "/icon/speedometer.svg"
+  subdomain    = true
+  share        = "owner"
+}
+
+# Adminer: optional database admin UI (enable_adminer variable). One app per project.
+# HTTP_EXPOSE=9100:8080 → ddev-router port 9100 → adminer container port 8080.
+resource "coder_app" "adminer" {
+  for_each     = var.enable_adminer ? toset(local.project_names) : toset([])
+  agent_id     = coder_agent.main.id
+  slug         = "adminer-${each.key}"
+  display_name = "Adminer (${each.key})"
   url          = "http://localhost:9100"
   icon         = "/icon/database.svg"
   subdomain    = true

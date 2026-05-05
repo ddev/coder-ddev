@@ -71,7 +71,8 @@ while IFS= read -r router; do
   # Examples (DDEV_PROJECT=myproject, WORKSPACE=myworkspace):
   #   myproject-web-8080    → svc=web  port=8080  → slug=PROJECT_SLUG (primary web)
   #   myproject-web-8025    → svc=web  port=8025  → slug=mailpit-PROJECT_SLUG
-  #   myproject-adminer-9100 → svc=adminer        → slug=adminer
+  #   myproject-xhgui-80    → svc=xhgui          → slug=xhgui-PROJECT_SLUG
+  #   myproject-adminer-9100 → svc=adminer         → slug=adminer-PROJECT_SLUG
   svc_and_port="${service#${DDEV_PROJECT}-}"
   port="${svc_and_port##*-}"
   svc_name="${svc_and_port%-*}"
@@ -80,6 +81,10 @@ while IFS= read -r router; do
     slug="mailpit-${PROJECT_SLUG}"
   elif [ "$svc_name" = "web" ]; then
     slug="$PROJECT_SLUG"
+  elif [ "$svc_name" = "xhgui" ]; then
+    slug="xhgui-${PROJECT_SLUG}"
+  elif [ "$svc_name" = "adminer" ]; then
+    slug="adminer-${PROJECT_SLUG}"
   else
     slug="$svc_name"
   fi
@@ -108,7 +113,7 @@ while IFS= read -r router; do
          .http.routers.\"${ROUTER_NAME}\".tls = false" \
       /tmp/coder-routes-raw.yaml
     echo "  + ${slug}: ${entrypoints[*]} → ${service}  (https://${CODER_HOST})"
-  elif [ "$slug" = "mailpit-${PROJECT_SLUG}" ] || [ "$slug" = "adminer" ]; then
+  elif [ "$slug" = "mailpit-${PROJECT_SLUG}" ] || [ "$slug" = "xhgui-${PROJECT_SLUG}" ] || [ "$slug" = "adminer-${PROJECT_SLUG}" ]; then
     # Known Coder app slugs (defined as coder_app resources in the Terraform template):
     # use Host() rule so the Coder subdomain proxy URL routes correctly.
     CODER_HOST="${slug}--${WORKSPACE}--${OWNER}.${DOMAIN}"
