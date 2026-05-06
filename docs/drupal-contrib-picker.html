@@ -676,10 +676,14 @@
             if (issue.field_project && issue.field_project.field_project_type) {
               projectType = issue.field_project.field_project_type;
             }
-            // Detect Drupal major version from field_issue_version
-            const ver = issue.field_issue_version || '';
-            const verM = ver.match(/^(\d+)\./);
-            if (verM) drupalMajor = verM[1];
+            // Detect Drupal major version from field_issue_version — core issues only.
+            // For contrib, field_issue_version is the MODULE version (e.g. "8.x-1.x"
+            // means module 1.x, not Drupal 8), so we leave drupalMajor at its default.
+            if (!apiProject || apiProject === 'drupal') {
+              const ver = issue.field_issue_version || '';
+              const verM = ver.match(/^(\d+)\./);
+              if (verM) drupalMajor = verM[1];
+            }
           }
         } catch (_) { /* title/version stay as fallback */ }
 
@@ -782,8 +786,6 @@
           // Default to minimal for contrib
           profileSelect.value = 'minimal';
           profileHint.textContent = 'minimal is recommended for contrib development.';
-          // Default Drupal version to 11 if not detected from issue
-          if (drupalMajor === '12' && !hintedProject) drupalMajor = '11';
         } else {
           badge.textContent = 'drupal-core template';
           badge.className = 'template-badge core';
