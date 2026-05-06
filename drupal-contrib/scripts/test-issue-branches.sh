@@ -104,7 +104,7 @@ for SPEC in "${TESTS[@]}"; do
       --project-name "contrib-test-$DIR_KEY" \
       --project-type "drupal$DRUPAL_VERSION" \
       --docroot web 2>&1 | tail -5
-    ddev config global --omit-containers=ddev-router 2>/dev/null || true
+    ddev config global --omit-containers=ddev-router >/dev/null 2>&1 || true
 
     log "Installing ddev-drupal-contrib addon..."
     ddev add-on get ddev/ddev-drupal-contrib 2>&1 | tail -5
