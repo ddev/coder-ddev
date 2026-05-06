@@ -817,7 +817,7 @@ WELCOME_STATIC
       else
         log_setup "✗ Failed to seed from cache ($((SECONDS - _t))s), falling back to full setup..."
         update_status "⚠ Cache seed failed, running full setup..."
-        ddev composer create joachim-n/drupal-core-development-project --no-interaction >> "$SETUP_LOG" 2>&1
+        ddev composer create-project --no-interaction joachim-n/drupal-core-development-project . >> "$SETUP_LOG" 2>&1
         DRUPAL_SETUP_NEEDED=true
       fi
     else
@@ -829,7 +829,7 @@ WELCOME_STATIC
         log_setup "Issue fork: creating project structure (dependencies installed after branch checkout)..."
         update_status "⏳ DDEV composer create-project: In progress..."
 
-        if ddev composer create-project --no-install --no-interaction "joachim-n/drupal-core-development-project:dev-main" . >> "$SETUP_LOG" 2>&1; then
+        if ddev composer create-project --no-install --no-interaction "joachim-n/drupal-core-development-project" . >> "$SETUP_LOG" 2>&1; then
           log_setup "✓ Project structure created ($((SECONDS - _t))s)"
           update_status "✓ DDEV composer create-project: Success"
           DRUPAL_SETUP_NEEDED=true
@@ -845,14 +845,14 @@ WELCOME_STATIC
           update_status "✗ DDEV composer create-project: Failed"
           update_status ""
           update_status "Manual recovery:"
-          update_status "  cd $DRUPAL_DIR && ddev composer create-project --no-install \"joachim-n/drupal-core-development-project:dev-main\" ."
+          update_status "  cd $DRUPAL_DIR && ddev composer create-project --no-install \"joachim-n/drupal-core-development-project\" ."
         fi
       elif [ "$NEEDS_NONMAIN_CHECKOUT" = "true" ]; then
         # Non-main version (10.x/11.x) without cache: create project structure then checkout branch.
         # Must use --no-install (like issue fork) so vendor is resolved for the correct branch.
         log_setup "Creating project structure for Drupal $DRUPAL_VERSION ($DRUPAL_BRANCH), no cache available..."
         update_status "⏳ DDEV composer create-project: In progress..."
-        if ddev composer create-project --no-install --no-interaction "joachim-n/drupal-core-development-project:dev-main" . >> "$SETUP_LOG" 2>&1; then
+        if ddev composer create-project --no-install --no-interaction "joachim-n/drupal-core-development-project" . >> "$SETUP_LOG" 2>&1; then
           log_setup "✓ Project structure created ($((SECONDS - _t))s)"
           update_status "✓ DDEV composer create-project: Success"
           DRUPAL_SETUP_NEEDED=true
@@ -868,23 +868,23 @@ WELCOME_STATIC
           update_status "✗ DDEV composer create-project: Failed"
           update_status ""
           update_status "Manual recovery:"
-          update_status "  cd $DRUPAL_DIR && ddev composer create-project --no-install \"joachim-n/drupal-core-development-project:dev-main\" ."
+          update_status "  cd $DRUPAL_DIR && ddev composer create-project --no-install \"joachim-n/drupal-core-development-project\" ."
         fi
       else
         log_setup "No cache available, running full composer create..."
         update_status "⏳ DDEV composer create: In progress..."
 
-        if ddev composer create joachim-n/drupal-core-development-project --no-interaction >> "$SETUP_LOG" 2>&1; then
+        if ddev composer create-project --no-interaction joachim-n/drupal-core-development-project . >> "$SETUP_LOG" 2>&1; then
           log_setup "✓ Drupal core development project created ($((SECONDS - _t))s)"
-          update_status "✓ DDEV composer create: Success"
+          update_status "✓ DDEV composer create-project: Success"
           DRUPAL_SETUP_NEEDED=true
         else
           log_setup "✗ Failed to create Drupal core development project ($((SECONDS - _t))s)"
           log_setup "Check $SETUP_LOG for details"
-          update_status "✗ DDEV composer create: Failed"
+          update_status "✗ DDEV composer create-project: Failed"
           update_status ""
           update_status "Manual recovery:"
-          update_status "  cd $DRUPAL_DIR && ddev composer create joachim-n/drupal-core-development-project"
+          update_status "  cd $DRUPAL_DIR && ddev composer create-project joachim-n/drupal-core-development-project ."
         fi
       fi
     fi
@@ -951,7 +951,7 @@ WELCOME_STATIC
           fi
 
           # Apply composer.json fixes so ddev composer update resolves correctly.
-          # joachim-n/drupal-core-development-project:dev-main uses "*" for all drupal/*
+          # joachim-n/drupal-core-development-project uses "*" for all drupal/*
           # root constraints and includes repos/drupal/composer/Plugin/* as a glob path repo
           # (so RecipeUnpack is covered). However, transitive constraints BETWEEN path repo
           # issue fork branches need Fix 1+2: e.g. drupal/core-recommended requires drupal/core

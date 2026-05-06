@@ -138,7 +138,7 @@ cd ~/drupal-core
 # Adjust project-type to match your version: drupal10, drupal11, or drupal12
 ddev config --project-type=drupal12 --docroot=web
 ddev start
-ddev composer create joachim-n/drupal-core-development-project
+ddev composer create-project joachim-n/drupal-core-development-project .
 ddev composer require drush/drush
 ddev drush si -y demo_umami --account-pass=admin
 ```

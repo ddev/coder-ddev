@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# test-issue-branches.sh — Test joachim-n/drupal-core-development-project:dev-main
+# test-issue-branches.sh — Test joachim-n/drupal-core-development-project
 # against known Drupal core issue branches to validate composer fix logic.
 #
 # Usage:
@@ -84,11 +84,11 @@ for PAIR in "${TESTS[@]}"; do
     log "DDEV project already configured"
   fi
 
-  # --- composer create-project using dev-main ---
+  # --- composer create-project ---
   if [ ! -f "composer.json" ]; then
-    log "Running composer create-project (dev-main)..."
+    log "Running composer create-project..."
     ddev composer create-project --no-install --no-interaction \
-      "joachim-n/drupal-core-development-project:dev-main" . 2>&1 | tail -20
+      "joachim-n/drupal-core-development-project" . 2>&1 | tail -20
   else
     log "composer.json already present — skipping create-project"
   fi
@@ -143,7 +143,7 @@ for PAIR in "${TESTS[@]}"; do
   fi
 
   # --- Apply composer.json fixes ---
-  # joachim-n/drupal-core-development-project:dev-main uses "*" for all drupal/* constraints.
+  # joachim-n/drupal-core-development-project uses "*" for all drupal/* constraints.
   # Issue fork branches present as dev-ISSUEBRANCH; drupal/core-recommended's N.x-dev
   # requirement won't match that, so Fix 1+2 adds an inline alias for issue forks only.
   # Named release branches (10.6.x, 11.x) present at 10.6.x-dev / 11.x-dev — the "*"
