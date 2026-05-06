@@ -252,11 +252,6 @@ jobs:
             "https://www.drupal.org/api-d7/node/${ISSUE_NUMBER}.json" \
             | jq -r '.field_issue_version // ""')
           DRUPAL_VERSION=$(echo "$RAW_VERSION" | grep -oE '^[0-9]+' || echo "11")
-          # Clamp to supported versions; old issues (8.x, 9.x) default to 11
-          if [[ "$DRUPAL_VERSION" != "10" && "$DRUPAL_VERSION" != "11" && "$DRUPAL_VERSION" != "12" ]]; then
-            echo "Warning: unsupported Drupal version '$DRUPAL_VERSION' from field_issue_version '$RAW_VERSION', defaulting to 11"
-            DRUPAL_VERSION="11"
-          fi
 
           echo "Resolved: fork=${FORK_SLUG}  branch=$ISSUE_BRANCH  drupal_version=$DRUPAL_VERSION"
           echo "ISSUE_NUMBER=$ISSUE_NUMBER"         >> "$GITHUB_ENV"
