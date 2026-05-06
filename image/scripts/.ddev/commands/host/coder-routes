@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+#ddev-silent-no-warn
 
 ## Description: Regenerate Coder Traefik routing rules for this DDEV project
 ## Usage: coder-routes
@@ -22,6 +23,11 @@ if [ -z "$DDEV_PROJECT" ] || [ -z "$OWNER" ] || [ -z "$DOMAIN" ]; then
   exit 1
 fi
 
+# Sanitize DDEV project name for use as a DNS label in Coder subdomain URLs.
+# Replace dots and underscores with dashes, lowercase. E.g. "ddev.com" → "ddev-com".
+# When project name equals workspace name (standard case), the URL matches the coder_app slug.
+PROJECT_SLUG=$(echo "$DDEV_PROJECT" | tr '[:upper:]' '[:lower:]' | tr '._' '--' | tr -s '-')
+
 # Read from the DDEV-generated merged Traefik config — it has all routers and
 # service names already correctly computed (including addons), so we don't need
 # to parse docker-compose files ourselves.
@@ -31,7 +37,11 @@ if [ ! -f "$MERGED" ]; then
   exit 1
 fi
 
-mkdir -p ~/.ddev/traefik/custom-global-config
+ROUTES_DIR="$HOME/.ddev/traefik/custom-global-config"
+mkdir -p "$ROUTES_DIR"
+
+# Write per-project file so multiple projects coexist without overwriting each other.
+OUTPUT="$ROUTES_DIR/coder-routes-${DDEV_PROJECT}.yaml"
 
 # Seed the output file
 printf "http:\n  routers: {}\n" > /tmp/coder-routes-raw.yaml
@@ -49,23 +59,32 @@ while IFS= read -r router; do
   service=$(yq e ".http.routers.\"${router}\".service // \"\"" "$MERGED")
   [ -z "$service" ] || [ "$service" = "null" ] && continue
 
+  # DDEV's merged config can include routers from all running projects.
+  # Only process services that belong to this project.
+  [[ "$service" == "${DDEV_PROJECT}-"* ]] || continue
+
   # Read entrypoints as a space-separated list
   mapfile -t entrypoints < <(yq e ".http.routers.\"${router}\".entrypoints[]" "$MERGED" 2>/dev/null)
   [ ${#entrypoints[@]} -eq 0 ] && continue
 
   # Derive Coder slug from service name: strip {ddev_project}- prefix and -{port} suffix.
   # Examples (DDEV_PROJECT=myproject, WORKSPACE=myworkspace):
-  #   myproject-web-80      → svc=web  port=80   → slug=myworkspace (primary web, uses workspace name)
-  #   myproject-web-8025    → svc=web  port=8025  → slug=mailpit
-  #   myproject-adminer-8080 → svc=adminer        → slug=adminer
+  #   myproject-web-8080    → svc=web  port=8080  → slug=PROJECT_SLUG (primary web)
+  #   myproject-web-8025    → svc=web  port=8025  → slug=mailpit-PROJECT_SLUG
+  #   myproject-xhgui-80    → svc=xhgui          → slug=xhgui-PROJECT_SLUG
+  #   myproject-adminer-9100 → svc=adminer         → slug=adminer-PROJECT_SLUG
   svc_and_port="${service#${DDEV_PROJECT}-}"
   port="${svc_and_port##*-}"
   svc_name="${svc_and_port%-*}"
 
   if [ "$svc_name" = "web" ] && [ "$port" = "8025" ]; then
-    slug="mailpit"
+    slug="mailpit-${PROJECT_SLUG}"
   elif [ "$svc_name" = "web" ]; then
-    slug="$WORKSPACE"
+    slug="$PROJECT_SLUG"
+  elif [ "$svc_name" = "xhgui" ]; then
+    slug="xhgui-${PROJECT_SLUG}"
+  elif [ "$svc_name" = "adminer" ]; then
+    slug="adminer-${PROJECT_SLUG}"
   else
     slug="$svc_name"
   fi
@@ -76,15 +95,15 @@ while IFS= read -r router; do
   ENTRY_LIST=$(printf '"%s",' "${entrypoints[@]}" | sed 's/,$//')
 
   # Determine external port from the entrypoint name (e.g. http-8143 → 8143).
-  # Use this — NOT the service-name port — to decide routing strategy.
-  # Service names encode the container-internal port (e.g. d11-xhgui-80 → 80),
-  # which can differ from the ddev-router entrypoint (e.g. http-8143).
+  # Used for PathPrefix (port-forwarding) URLs on dynamic add-on services.
   ext_port="${entrypoints[0]#http-}"
 
-  if [ "$ext_port" = "80" ]; then
-    # Primary web service: Host() rule so Coder's coder_app subdomain proxy works.
-    # slug=WORKSPACE and host uses WORKSPACE so the URL matches the Coder app subdomain.
-    CODER_HOST="${slug}--${WORKSPACE}--${OWNER}.${DOMAIN}"
+  if [ "$slug" = "$PROJECT_SLUG" ]; then
+    # Primary web service: detected when svc_name=web and port≠8025.
+    # Slug = PROJECT_SLUG (= sanitized DDEV project name), which must equal the
+    # coder_app slug declared in the Terraform template.  WORKSPACE is the Coder
+    # workspace name (the second component in the subdomain).
+    CODER_HOST="${PROJECT_SLUG}--${WORKSPACE}--${OWNER}.${DOMAIN}"
     RULE='Host(`'"${CODER_HOST}"'`)'
     RULE="$RULE" SVC="$service" \
       yq e -i \
@@ -94,7 +113,7 @@ while IFS= read -r router; do
          .http.routers.\"${ROUTER_NAME}\".tls = false" \
       /tmp/coder-routes-raw.yaml
     echo "  + ${slug}: ${entrypoints[*]} → ${service}  (https://${CODER_HOST})"
-  elif [ "$slug" = "mailpit" ] || [ "$slug" = "adminer" ]; then
+  elif [ "$slug" = "mailpit-${PROJECT_SLUG}" ] || [ "$slug" = "xhgui-${PROJECT_SLUG}" ] || [ "$slug" = "adminer-${PROJECT_SLUG}" ]; then
     # Known Coder app slugs (defined as coder_app resources in the Terraform template):
     # use Host() rule so the Coder subdomain proxy URL routes correctly.
     CODER_HOST="${slug}--${WORKSPACE}--${OWNER}.${DOMAIN}"
@@ -111,6 +130,7 @@ while IFS= read -r router; do
     # Dynamic add-on services (no dedicated coder_app): PathPrefix("/") catches any
     # traffic arriving on this entrypoint, enabling Coder port-forwarding URLs:
     # https://{ext_port}--{agent}--{workspace}--{owner}.{domain}
+    AGENT="${CODER_AGENT_NAME:-main}"
     RULE='PathPrefix(`/`)'
     RULE="$RULE" SVC="$service" \
       yq e -i \
@@ -120,18 +140,20 @@ while IFS= read -r router; do
          .http.routers.\"${ROUTER_NAME}\".tls = false |
          .http.routers.\"${ROUTER_NAME}\".priority = 1" \
       /tmp/coder-routes-raw.yaml
-    echo "  + ${slug}: ${entrypoints[*]} → ${service}  (https://${ext_port}--main--${WORKSPACE}--${OWNER}.${DOMAIN})"
+    echo "  + ${slug}: ${entrypoints[*]} → ${service}  (https://${ext_port}--${AGENT}--${WORKSPACE}--${OWNER}.${DOMAIN})"
   fi
 
 done < <(yq e '.http.routers | keys | .[]' "$MERGED" 2>/dev/null)
 
-yq e '.' /tmp/coder-routes-raw.yaml > ~/.ddev/traefik/custom-global-config/coder-routes.yaml
-echo "✓ Wrote coder-routes.yaml"
+{ printf '#ddev-silent-no-warn\n'; yq e '.' /tmp/coder-routes-raw.yaml; } > "$OUTPUT"
+echo "✓ Wrote $(basename "$OUTPUT")"
 
-# Push to running ddev-router; Traefik's watch:true reloads within ~1s
+# Push to running ddev-router; Traefik's watch:true reloads within ~1s.
+# The bind-mount from ~/.ddev/traefik/custom-global-config/ means writing the file
+# is usually sufficient, but docker cp guarantees an immediate reload.
 if docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^ddev-router$"; then
-  docker cp ~/.ddev/traefik/custom-global-config/coder-routes.yaml \
-    ddev-router:/mnt/ddev-global-cache/traefik/config/coder-routes.yaml
+  docker cp "$OUTPUT" \
+    "ddev-router:/mnt/ddev-global-cache/traefik/config/$(basename "$OUTPUT")"
   echo "✓ Pushed to ddev-router (Traefik reloads within ~1s)"
 else
   echo "Note: ddev-router not running; config will be loaded on next ddev start"

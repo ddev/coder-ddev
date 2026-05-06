@@ -43,7 +43,7 @@ jobs:
             extra_vars: ""
       fail-fast: false
     env:
-      VERSION_NAME: ci-${{ github.run_id }}
+      VERSION_NAME: ci-${{ github.run_id }}-${{ github.run_attempt }}
 
     steps:
       - uses: actions/checkout@v6

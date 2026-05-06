@@ -11,7 +11,8 @@ mock_provider "coder" {
       name = "testuser"
     }
   }
-  # vscode_extensions.value is jsondecode()d in locals; must be valid JSON
+  # Default mock for coder_parameter. vscode_extensions expects "[]" (valid JSON array).
+  # project_names falls back to workspace name when value is "[]" (handled in locals).
   mock_data "coder_parameter" {
     defaults = {
       value = "[]"
@@ -30,6 +31,54 @@ run "container_created_when_started" {
   assert {
     condition     = length(docker_container.workspace) == 1
     error_message = "docker_container.workspace must be created when start_count=1"
+  }
+}
+
+run "single_project_default" {
+  command = plan
+  assert {
+    condition     = length(coder_app.ddev_web) == 1
+    error_message = "should have exactly 1 coder_app.ddev_web with default (workspace name)"
+  }
+  assert {
+    condition     = contains(keys(coder_app.ddev_web), "test-workspace")
+    error_message = "default project slug should be the workspace name"
+  }
+}
+
+run "two_projects" {
+  command = plan
+  override_data {
+    target = data.coder_parameter.project_names
+    values = {
+      value = "drupal,wordpress"
+    }
+  }
+  assert {
+    condition     = length(coder_app.ddev_web) == 2
+    error_message = "should have 2 coder_app.ddev_web instances for two project names"
+  }
+  assert {
+    condition     = contains(keys(coder_app.ddev_web), "drupal")
+    error_message = "coder_app.ddev_web[\"drupal\"] should exist"
+  }
+  assert {
+    condition     = contains(keys(coder_app.ddev_web), "wordpress")
+    error_message = "coder_app.ddev_web[\"wordpress\"] should exist"
+  }
+}
+
+run "two_projects_with_spaces" {
+  command = plan
+  override_data {
+    target = data.coder_parameter.project_names
+    values = {
+      value = "drupal, wordpress"
+    }
+  }
+  assert {
+    condition     = length(coder_app.ddev_web) == 2
+    error_message = "spaces around project names should be trimmed"
   }
 }
 

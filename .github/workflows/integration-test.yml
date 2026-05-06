@@ -68,10 +68,12 @@ jobs:
       matrix:
         include:
           - template: user-defined-web
+            ws_name: udw
             extra_vars: ""
             extra_params: ""
             app_slug: "ddev-web"
           - template: freeform
+            ws_name: ff
             extra_vars: ""
             extra_params: ""
             app_slug: ""
@@ -80,7 +82,8 @@ jobs:
       run:
         shell: bash -euo pipefail {0}
     env:
-      WORKSPACE_NAME: ci-${{ matrix.template }}-${{ github.run_id }}
+      CI_TAG: ${{ github.run_id }}-${{ github.run_attempt }}
+      WORKSPACE_NAME: ci-${{ matrix.ws_name }}-${{ github.run_id }}-${{ github.run_attempt }}
       CI: "true"
       DDEV_NONINTERACTIVE: "true"
       NO_COLOR: "1"
@@ -116,18 +119,33 @@ jobs:
           coder templates push ${{ matrix.template }} \
             --directory ${{ matrix.template }} \
             --activate=false \
-            --name ci-${{ github.run_id }} \
+            --name ci-${{ env.CI_TAG }} \
             --yes \
             --variable workspace_image_registry=index.docker.io/ddev/coder-ddev \
             ${{ matrix.extra_vars }}
 
       - name: Create workspace
+        if: ${{ matrix.template != 'freeform' }}
         run: |
           coder create ${{ env.WORKSPACE_NAME }} \
             --template ${{ matrix.template }} \
-            --template-version ci-${{ github.run_id }} \
+            --template-version ci-${{ env.CI_TAG }} \
             --parameter "vscode_extensions=[]" \
             ${{ matrix.extra_params }} \
+            --yes
+
+      - name: Create freeform workspace (with project names)
+        if: ${{ matrix.template == 'freeform' }}
+        run: |
+          cat > /tmp/freeform-params-${{ env.CI_TAG }}.yaml << EOF
+          project_names: "ci-site1-${{ env.CI_TAG }},ci-site2-${{ env.CI_TAG }}"
+          vscode_extensions: "[]"
+          EOF
+          coder create ${{ env.WORKSPACE_NAME }} \
+            --template ${{ matrix.template }} \
+            --template-version ci-${{ env.CI_TAG }} \
+            --rich-parameter-file /tmp/freeform-params-${{ env.CI_TAG }}.yaml \
+            --use-parameter-defaults \
             --yes
 
       - name: Verify workspace — agent connected
@@ -149,9 +167,9 @@ jobs:
         if: ${{ matrix.app_slug != '' }}
         run: |
           # Write start script to runner-local file so we avoid the coder ssh heredoc+PTY hang
-          cat > /tmp/ci-ddev-start-${{ github.run_id }}.sh << 'EOF'
+          cat > /tmp/ci-ddev-start-${{ env.CI_TAG }}.sh << 'EOF'
           set -euo pipefail
-          TESTDIR=/tmp/ci-ddev-${{ github.run_id }}
+          TESTDIR=/tmp/ci-ddev-${{ env.CI_TAG }}
           echo "--- Creating test project in $TESTDIR ---"
           mkdir -p "$TESTDIR/web" && cd "$TESTDIR"
           ddev config --project-type=php --docroot=web
@@ -163,11 +181,11 @@ jobs:
             -o StrictHostKeyChecking=no \
             -o UserKnownHostsFile=/dev/null \
             -o ProxyCommand="coder ssh --stdio ${{ env.WORKSPACE_NAME }}" \
-            /tmp/ci-ddev-start-${{ github.run_id }}.sh \
-            coder@workspace:/tmp/ci-ddev-start-${{ github.run_id }}.sh
+            /tmp/ci-ddev-start-${{ env.CI_TAG }}.sh \
+            coder@workspace:/tmp/ci-ddev-start-${{ env.CI_TAG }}.sh
           coder ssh ${{ env.WORKSPACE_NAME }} -- \
             env CI=${{ env.CI }} DDEV_NONINTERACTIVE=${{ env.DDEV_NONINTERACTIVE }} NO_COLOR=${{ env.NO_COLOR }} \
-            bash /tmp/ci-ddev-start-${{ github.run_id }}.sh < /dev/null
+            bash /tmp/ci-ddev-start-${{ env.CI_TAG }}.sh < /dev/null
 
       - name: Verify workspace — DDEV web externally accessible
         if: ${{ matrix.app_slug != '' }}
@@ -183,8 +201,61 @@ jobs:
       - name: Cleanup DDEV test project
         if: ${{ matrix.app_slug != '' }}
         run: |
-          coder ssh ${{ env.WORKSPACE_NAME }} -- ddev delete ci-ddev-${{ github.run_id }} --omit-snapshot -y < /dev/null || true
-          coder ssh ${{ env.WORKSPACE_NAME }} -- rm -rf /tmp/ci-ddev-${{ github.run_id }} < /dev/null || true
+          coder ssh ${{ env.WORKSPACE_NAME }} -- ddev delete ci-ddev-${{ env.CI_TAG }} --omit-snapshot -y < /dev/null || true
+          coder ssh ${{ env.WORKSPACE_NAME }} -- rm -rf /tmp/ci-ddev-${{ env.CI_TAG }} < /dev/null || true
+
+      - name: Inject current-branch DDEV scripts into freeform workspace
+        if: ${{ matrix.template == 'freeform' }}
+        run: |
+          coder ssh ${{ env.WORKSPACE_NAME }} -- mkdir -p /home/coder/.ddev/commands/host < /dev/null
+          for script in coder-routes coder-setup launch; do
+            scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+              -o ProxyCommand="coder ssh --stdio ${{ env.WORKSPACE_NAME }}" \
+              "image/scripts/.ddev/commands/host/${script}" \
+              "coder@workspace:/home/coder/.ddev/commands/host/${script}"
+          done
+          coder ssh ${{ env.WORKSPACE_NAME }} -- chmod +x /home/coder/.ddev/commands/host/coder-routes /home/coder/.ddev/commands/host/coder-setup /home/coder/.ddev/commands/host/launch < /dev/null
+
+      - name: Start two PHP projects — freeform routing test
+        if: ${{ matrix.template == 'freeform' }}
+        run: |
+          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+            -o ProxyCommand="coder ssh --stdio ${{ env.WORKSPACE_NAME }}" \
+            freeform/scripts/test-freeform-start.sh \
+            coder@workspace:/tmp/test-freeform-start.sh
+          coder ssh ${{ env.WORKSPACE_NAME }} -- \
+            env CI=${{ env.CI }} DDEV_NONINTERACTIVE=${{ env.DDEV_NONINTERACTIVE }} NO_COLOR=${{ env.NO_COLOR }} \
+            bash /tmp/test-freeform-start.sh "${{ env.CI_TAG }}" < /dev/null
+
+      - name: Verify freeform — ddev launch and describe per-project URLs
+        if: ${{ matrix.template == 'freeform' }}
+        run: |
+          CODER_DOMAIN="${{ vars.TEST_CODER_URL }}"
+          CODER_DOMAIN="${CODER_DOMAIN#https://}"
+          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+            -o ProxyCommand="coder ssh --stdio ${{ env.WORKSPACE_NAME }}" \
+            freeform/scripts/test-freeform-verify.sh \
+            coder@workspace:/tmp/test-freeform-verify.sh
+          coder ssh ${{ env.WORKSPACE_NAME }} -- \
+            env DDEV_NONINTERACTIVE=${{ env.DDEV_NONINTERACTIVE }} NO_COLOR=${{ env.NO_COLOR }} \
+            bash /tmp/test-freeform-verify.sh \
+            "${{ env.CI_TAG }}" "${{ env.WORKSPACE_NAME }}" "${OWNER}" "${CODER_DOMAIN}" \
+            < /dev/null
+
+      - name: Cleanup freeform PHP projects
+        if: ${{ always() && matrix.template == 'freeform' }}
+        run: |
+          coder show "${{ env.WORKSPACE_NAME }}" > /dev/null 2>&1 || {
+            echo "Workspace ${{ env.WORKSPACE_NAME }} not found — skipping DDEV cleanup"
+            exit 0
+          }
+          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+            -o ProxyCommand="coder ssh --stdio ${{ env.WORKSPACE_NAME }}" \
+            freeform/scripts/test-freeform-cleanup.sh \
+            coder@workspace:/tmp/test-freeform-cleanup.sh
+          coder ssh ${{ env.WORKSPACE_NAME }} -- \
+            env DDEV_NONINTERACTIVE=${{ env.DDEV_NONINTERACTIVE }} \
+            bash /tmp/test-freeform-cleanup.sh "${{ env.CI_TAG }}" < /dev/null
 
       - name: Delete workspace
         if: always()
@@ -206,4 +277,4 @@ jobs:
 
       - name: Archive CI template version
         if: always()
-        run: coder templates versions archive ${{ matrix.template }} ci-${{ github.run_id }} --yes || true
+        run: coder templates versions archive ${{ matrix.template }} ci-${{ env.CI_TAG }} --yes || true

@@ -21,7 +21,7 @@ Mailpit: https://mailpit--{workspace}--{owner}.{coder-domain}
 Adminer: https://adminer--{workspace}--{owner}.{coder-domain}  (if enabled)
 ```
 
-The DDEV project name does not need to match the workspace name — the routing script (`ddev coder-routes`) reads the actual DDEV project name from DDEV and maps it to the correct Coder subdomain.
+The web URL always uses the workspace name as its subdomain prefix regardless of what the DDEV project is named internally. `ddev coder-routes` reads the running DDEV project from DDEV and writes a Traefik rule that maps the Coder subdomain to the correct container.
 
 ## Quick Start
 
@@ -32,9 +32,9 @@ coder create --template freeform myworkspace
 # SSH in
 coder ssh myworkspace
 
-# Clone your project (or create a new directory)
-git clone git@github.com:your-org/your-project.git ~/myproject
-cd ~/myproject
+# Clone your project into any directory you choose
+git clone git@github.com:your-org/your-project.git <yourdir>
+cd <yourdir>
 
 # Configure DDEV
 ddev config --project-type=wordpress --docroot=web
@@ -50,13 +50,14 @@ Then click **DDEV Web** or **Mailpit** in the Coder dashboard.
 
 ## Project Structure
 
-- `~/myproject/` — your project directory (any name, you create it)
+- `<yourdir>/` — your project directory (any name, any location)
   - `.ddev/config.yaml` — DDEV project configuration
   - `.ddev/config.coder.yaml` — Coder post-start hook (written by `ddev coder-setup`, gitignored)
+  - `.ddev/docker-compose.coder-describe.yaml` — Coder URLs for `ddev describe` (written by `ddev coder-routes`, gitignored)
   - your project files
 - `~/WELCOME.txt`
 - `~/.ddev/global_config.yaml` — DDEV global settings
-- `~/.ddev/traefik/custom-global-config/coder-routes.yaml` — Traefik routing rules (auto-generated)
+- `~/.ddev/traefik/custom-global-config/coder-routes-<project>.yaml` — Traefik routing rules (auto-generated per project)
 
 ## Coder Setup Command
 

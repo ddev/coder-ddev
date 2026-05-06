@@ -4,12 +4,15 @@
 
 This workspace is set up for web development with DDEV.
 
-🌐 PUBLISH YOUR PROJECT
-   Go to the coder project page and configure public access.
+Quick start:
+  git clone <repo-url> <project-name>   # use a registered project name
+  cd <project-name>
+  ddev config --project-name=<project-name> --project-type=<type>
+  ddev coder-setup
+  ddev start
 
-📚 MORE INFORMATION
-   - Projects: ~/projects/README.md
-   - ddev Documentation: https://docs.ddev.com/
+⚠️  The DDEV project name must match a name registered in the workspace.
+   Registered names are shown in the startup log and in CODER_PROJECT_NAMES.
+   To add more projects, edit the workspace and update "DDEV project names".
 
-Good luck with your project!
-
+📚 Documentation: https://github.com/ddev/coder-ddev
