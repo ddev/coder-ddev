@@ -58,9 +58,9 @@ ssh mp1.coder ddev list
 
 When running commands via `coder ssh -- ...` or piped heredocs, the PTY allocation causes interactive prompts and pipe-stall issues. Writing a script to `/tmp/` and executing it via `ssh workspace.coder bash /tmp/script.sh` is reliable for multi-step operations.
 
-**CI scripting rule**: In GitHub Actions, for any `coder ssh` invocation that does more than a single trivial command, push a script file and run it — do not use `bash -c "..."`. Single commands with standard flags (e.g. `git -C /path branch --show-current`, `ddev -p myproject drush status`) are fine inline. Anything with `&&`, pipes, conditionals, or multiple statements belongs in a script file under the template's `scripts/` directory.
+**CI scripting rule**: In GitHub Actions, for any `coder ssh` invocation that does more than a single trivial command, push a script file and run it — do not use `bash -c "..."`. Single commands with standard flags (e.g. `git -C /path branch --show-current`) are fine inline. Anything with `&&`, conditionals, or multiple statements belongs in a script file under the template's `scripts/` directory.
 
-In CI workflows, use `ddev -p <project-name> drush <cmd>` (the `--project` flag) rather than `bash -c "cd /home/coder/<project> && ddev drush <cmd>"` to avoid the shell wrapper entirely.
+To run a command in a specific directory without a shell wrapper, use `env -C <dir> <cmd>` (available on Ubuntu 24.04 via GNU coreutils): `coder ssh ws -- env -C /home/coder/myproject ddev drush status`
 
 ## Essential Commands
 

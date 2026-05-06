@@ -134,7 +134,7 @@ jobs:
 
       - name: Verify workspace — Drush DB connected
         run: |
-          coder ssh ${{ env.WORKSPACE_NAME }} -- ddev -p ${{ matrix.project }} drush status --fields=db-status \
+          coder ssh ${{ env.WORKSPACE_NAME }} -- env -C /home/coder/${{ matrix.project }} ddev drush status --fields=db-status \
             | grep -i connected
 
       - name: Dump setup status
@@ -143,7 +143,7 @@ jobs:
 
       - name: Verify workspace — module enabled
         run: |
-          coder ssh ${{ env.WORKSPACE_NAME }} -- ddev -p ${{ matrix.project }} drush pm:list --status=enabled --format=list \
+          coder ssh ${{ env.WORKSPACE_NAME }} -- env -C /home/coder/${{ matrix.project }} ddev drush pm:list --status=enabled --format=list \
             | grep -ix "${{ matrix.project }}"
 
       - name: Record expected host directory
@@ -311,7 +311,7 @@ jobs:
 
       - name: Verify workspace — Drush DB connected
         run: |
-          coder ssh ${{ env.WORKSPACE_NAME }} -- ddev -p ${{ env.CONTRIB_PROJECT }} drush status --fields=db-status \
+          coder ssh ${{ env.WORKSPACE_NAME }} -- env -C /home/coder/${{ env.CONTRIB_PROJECT }} ddev drush status --fields=db-status \
             | grep -i connected
 
       - name: Dump setup status
