@@ -134,14 +134,16 @@ jobs:
 
       - name: Verify workspace — Drush DB connected
         run: |
-          coder ssh ${{ env.WORKSPACE_NAME }} -- \
-            bash -c "cd /home/coder/${{ matrix.project }} && ddev drush status --fields=db-status" \
+          coder ssh ${{ env.WORKSPACE_NAME }} -- ddev -p ${{ matrix.project }} drush status --fields=db-status \
             | grep -i connected
+
+      - name: Dump setup status
+        if: always()
+        run: coder ssh ${{ env.WORKSPACE_NAME }} -- cat /home/coder/SETUP_STATUS.txt || true
 
       - name: Verify workspace — module enabled
         run: |
-          coder ssh ${{ env.WORKSPACE_NAME }} -- \
-            bash -c "cd /home/coder/${{ matrix.project }} && ddev drush pm:list --status=enabled --format=list" \
+          coder ssh ${{ env.WORKSPACE_NAME }} -- ddev -p ${{ matrix.project }} drush pm:list --status=enabled --format=list \
             | grep -ix "${{ matrix.project }}"
 
       - name: Record expected host directory
@@ -214,6 +216,9 @@ jobs:
       CONTRIB_PROJECT: ${{ vars.CONTRIB_TEST_PROJECT || 'token' }}
       ISSUE_FORK: ${{ vars.CONTRIB_TEST_ISSUE_FORK }}
       CONTRIB_TEST_DRUPAL_VERSION: ${{ vars.CONTRIB_TEST_DRUPAL_VERSION || '11' }}
+      ISSUE_BRANCH: ""
+      ISSUE_NUMBER: ""
+      ISSUE_FORK_VERSION: ""
 
     steps:
       - uses: actions/checkout@v6
@@ -301,21 +306,23 @@ jobs:
       - name: Verify workspace — project repo cloned
         run: coder ssh ${{ env.WORKSPACE_NAME }} -- test -d /home/coder/${{ env.CONTRIB_PROJECT }}/.git
 
-      - name: Verify workspace — issue branch checked out
-        run: |
-          CURRENT=$(coder ssh ${{ env.WORKSPACE_NAME }} -- \
-            bash -c "git -C /home/coder/${{ env.CONTRIB_PROJECT }} branch --show-current" | tr -d '\r\n')
-          echo "Current branch: $CURRENT  Expected: ${{ env.ISSUE_BRANCH }}"
-          [[ "$CURRENT" == "${{ env.ISSUE_BRANCH }}" ]] || { echo "ERROR: wrong branch" >&2; exit 1; }
-
       - name: Verify workspace — Drupal web root exists
         run: coder ssh ${{ env.WORKSPACE_NAME }} -- test -f /home/coder/${{ env.CONTRIB_PROJECT }}/web/index.php
 
       - name: Verify workspace — Drush DB connected
         run: |
-          coder ssh ${{ env.WORKSPACE_NAME }} -- \
-            bash -c "cd /home/coder/${{ env.CONTRIB_PROJECT }} && ddev drush status --fields=db-status" \
+          coder ssh ${{ env.WORKSPACE_NAME }} -- ddev -p ${{ env.CONTRIB_PROJECT }} drush status --fields=db-status \
             | grep -i connected
+
+      - name: Dump setup status
+        if: always()
+        run: coder ssh ${{ env.WORKSPACE_NAME }} -- cat /home/coder/SETUP_STATUS.txt || true
+
+      - name: Verify workspace — issue branch checked out
+        run: |
+          CURRENT=$(coder ssh ${{ env.WORKSPACE_NAME }} -- git -C /home/coder/${{ env.CONTRIB_PROJECT }} branch --show-current | tr -d '\r\n')
+          echo "Current branch: $CURRENT  Expected: ${{ env.ISSUE_BRANCH }}"
+          [[ "$CURRENT" == "${{ env.ISSUE_BRANCH }}" ]] || { echo "ERROR: wrong branch" >&2; exit 1; }
 
       - name: Record expected host directory
         run: |
