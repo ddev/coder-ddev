@@ -192,7 +192,7 @@ jobs:
         run: coder templates versions archive drupal-contrib ${{ env.WORKSPACE_NAME }} --yes || true
 
   contrib-issue-fork:
-    name: Contrib issue fork (${{ vars.CONTRIB_TEST_PROJECT || 'token' }} #${{ vars.CONTRIB_TEST_ISSUE_FORK || 'skip' }})
+    name: Contrib ${{ vars.CONTRIB_TEST_PROJECT || 'token' }} issue fork
     if: |
       vars.CONTRIB_TEST_ISSUE_FORK != '' &&
       github.event_name != 'push' &&
@@ -233,23 +233,28 @@ jobs:
 
       - name: Resolve issue branch and Drupal version from issue number
         run: |
+          # Strip project prefix if the variable was set as e.g. "token-2648180" instead of "2648180"
+          ISSUE_NUMBER="${ISSUE_FORK#${CONTRIB_PROJECT}-}"
+          FORK_SLUG="${CONTRIB_PROJECT}-${ISSUE_NUMBER}"
+
           # Fetch issue branch from the contrib issue fork GitLab API
           ISSUE_BRANCH=$(curl -sf \
-            "https://git.drupalcode.org/api/v4/projects/issue%2F${CONTRIB_PROJECT}-${ISSUE_FORK}" \
+            "https://git.drupalcode.org/api/v4/projects/issue%2F${FORK_SLUG}" \
             | jq -r '.default_branch')
           if [[ -z "$ISSUE_BRANCH" || "$ISSUE_BRANCH" == "null" ]]; then
-            echo "ERROR: Could not resolve default branch for issue fork ${CONTRIB_PROJECT}-${ISSUE_FORK}" >&2
+            echo "ERROR: Could not resolve default branch for issue fork ${FORK_SLUG}" >&2
             exit 1
           fi
 
           # Derive Drupal version from the issue's field_issue_version
           RAW_VERSION=$(curl -sf \
-            "https://www.drupal.org/api-d7/node/${ISSUE_FORK}.json" \
+            "https://www.drupal.org/api-d7/node/${ISSUE_NUMBER}.json" \
             | jq -r '.field_issue_version // ""')
           DRUPAL_VERSION=$(echo "$RAW_VERSION" | grep -oE '^[0-9]+' || echo "11")
 
-          echo "Resolved: branch=$ISSUE_BRANCH  drupal_version=$DRUPAL_VERSION"
-          echo "ISSUE_BRANCH=$ISSUE_BRANCH"        >> "$GITHUB_ENV"
+          echo "Resolved: fork=${FORK_SLUG}  branch=$ISSUE_BRANCH  drupal_version=$DRUPAL_VERSION"
+          echo "ISSUE_NUMBER=$ISSUE_NUMBER"         >> "$GITHUB_ENV"
+          echo "ISSUE_BRANCH=$ISSUE_BRANCH"         >> "$GITHUB_ENV"
           echo "ISSUE_FORK_VERSION=$DRUPAL_VERSION" >> "$GITHUB_ENV"
 
       - name: Copy VERSION into template directory
@@ -273,7 +278,7 @@ jobs:
             --parameter project_name=${{ env.CONTRIB_PROJECT }} \
             --parameter project_type=module \
             --parameter drupal_version=${{ env.ISSUE_FORK_VERSION }} \
-            --parameter issue_fork=${{ env.ISSUE_FORK }} \
+            --parameter issue_fork=${{ env.ISSUE_NUMBER }} \
             --parameter issue_branch=${{ env.ISSUE_BRANCH }} \
             --parameter install_profile=minimal \
             --yes
