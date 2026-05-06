@@ -4,12 +4,20 @@ name: Push Image
 # machines don't need cross-compilation. Triggered manually only.
 #
 # Required repository secrets:
-#   PUSH_SERVICE_ACCOUNT_TOKEN - 1Password service account token
+#   OP_SERVICE_ACCOUNT_TOKEN - 1Password service account token
 # Required repository variables:
 #   DOCKERHUB_USERNAME - Docker Hub username
+# Required 1Password item:
+#   op://push-secrets/DOCKERHUB_TOKEN/credential
 
 on:
   workflow_dispatch:
+    inputs:
+      debug_enabled:
+        description: 'Run the build with tmate set "debug_enabled"'
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
@@ -25,13 +33,20 @@ jobs:
         id: version
         run: echo "version=$(cat VERSION)" >> "$GITHUB_OUTPUT"
 
-      - name: Load 1password secret(s)
+      - name: Load 1Password secrets
         uses: 1password/load-secrets-action@v4
         with:
           export-env: true
         env:
-          OP_SERVICE_ACCOUNT_TOKEN: "${{ secrets.PUSH_SERVICE_ACCOUNT_TOKEN }}"
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
           DOCKERHUB_TOKEN: "op://push-secrets/DOCKERHUB_TOKEN/credential"
+
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        with:
+          limit-access-to-actor: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
