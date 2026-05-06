@@ -575,10 +575,12 @@
           if (issueResp.ok) {
             const issue = await issueResp.json();
             if (issue.title) title = issue.title;
-            // field_issue_version e.g. "10.6.x-dev" or "11.x-dev" → extract major version
+            // field_issue_version is "10.6.x-dev", "11.x-dev", "12.x-dev", or "main"
+            // "main" means the current development branch (D12+); no leading digit → use 12.
             const ver = issue.field_issue_version || '';
             const m = ver.match(/^(\d+)\./);
             if (m) drupalMajor = m[1];
+            else if (ver === 'main' || ver.startsWith('12')) drupalMajor = '12';
           }
         } catch (_) { /* title/version stay as fallback */ }
 
