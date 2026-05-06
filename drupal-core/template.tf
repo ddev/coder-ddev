@@ -198,6 +198,9 @@ locals {
   selected_extensions = jsondecode(data.coder_parameter.vscode_extensions.value)
   issue_fork_clean    = trimprefix(data.coder_parameter.issue_fork.value, "drupal-")
   issue_url           = local.issue_fork_clean != "" ? "https://www.drupal.org/project/drupal/issues/${local.issue_fork_clean}" : ""
+  # Coerce share value — mock_data in tftest returns "[]" for all parameters;
+  # fall back to "owner" if the value is not a valid share level.
+  drupal_site_share   = contains(["owner", "authenticated", "public"], data.coder_parameter.share_drupal_site.value) ? data.coder_parameter.share_drupal_site.value : "owner"
 }
 
 locals {
@@ -1533,7 +1536,7 @@ resource "coder_app" "drupal-site" {
   url          = "http://localhost:80"
   icon         = "https://api.iconify.design/heroicons:check-circle.svg?color=white"
   subdomain    = true
-  share        = data.coder_parameter.share_drupal_site.value
+  share        = local.drupal_site_share
 
   # Healthy only when Drupal returns 200. /user/login returns 500 when the
   # database isn't set up (before drush si) and 200 when Drupal is fully

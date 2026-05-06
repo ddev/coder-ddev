@@ -206,6 +206,9 @@ locals {
   project_dir         = "/home/coder/${data.coder_parameter.project_name.value}"
   issue_fork          = data.coder_parameter.issue_fork.value
   issue_url           = local.issue_fork != "" ? "https://www.drupal.org/project/${local.project_name}/issues/${local.issue_fork}" : ""
+  # Coerce share value — mock_data in tftest returns "[]" for all parameters;
+  # fall back to "owner" if the value is not a valid share level.
+  drupal_site_share   = contains(["owner", "authenticated", "public"], data.coder_parameter.share_drupal_site.value) ? data.coder_parameter.share_drupal_site.value : "owner"
 }
 
 locals {
@@ -985,7 +988,7 @@ resource "coder_app" "drupal-site" {
   url          = "http://localhost:8080"
   icon         = "https://api.iconify.design/heroicons:check-circle.svg?color=white"
   subdomain    = true
-  share        = data.coder_parameter.share_drupal_site.value
+  share        = local.drupal_site_share
 
   healthcheck {
     url       = "http://localhost:8080/user/login"
