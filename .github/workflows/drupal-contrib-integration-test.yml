@@ -139,12 +139,18 @@ jobs:
 
       - name: Dump setup status
         if: always()
-        run: coder ssh ${{ env.WORKSPACE_NAME }} -- cat /home/coder/SETUP_STATUS.txt || true
+        run: |
+          coder ssh ${{ env.WORKSPACE_NAME }} -- cat /home/coder/SETUP_STATUS.txt || true
+          echo "--- last 30 lines of setup log ---"
+          coder ssh ${{ env.WORKSPACE_NAME }} -- tail -30 /tmp/drupal-setup.log || true
 
       - name: Verify workspace — module enabled
         run: |
-          coder ssh ${{ env.WORKSPACE_NAME }} -- env -C /home/coder/${{ matrix.project }} ddev drush pm:list --status=enabled --format=list \
-            | grep -ix "${{ matrix.project }}"
+          MODULES=$(coder ssh ${{ env.WORKSPACE_NAME }} -- env -C /home/coder/${{ matrix.project }} ddev drush pm:list --status=enabled --format=list)
+          echo "--- enabled modules ---"
+          echo "$MODULES"
+          echo "--- end ---"
+          echo "$MODULES" | grep -iw "${{ matrix.project }}"
 
       - name: Record expected host directory
         run: |
@@ -316,7 +322,10 @@ jobs:
 
       - name: Dump setup status
         if: always()
-        run: coder ssh ${{ env.WORKSPACE_NAME }} -- cat /home/coder/SETUP_STATUS.txt || true
+        run: |
+          coder ssh ${{ env.WORKSPACE_NAME }} -- cat /home/coder/SETUP_STATUS.txt || true
+          echo "--- last 30 lines of setup log ---"
+          coder ssh ${{ env.WORKSPACE_NAME }} -- tail -30 /tmp/drupal-setup.log || true
 
       - name: Verify workspace — issue branch checked out
         run: |
