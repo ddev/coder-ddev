@@ -44,7 +44,13 @@ env:
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'drupal-core/**'
+      - 'drupal-contrib/**'
   pull_request:
+    paths-ignore:
+      - 'drupal-core/**'
+      - 'drupal-contrib/**'
   schedule:
     - cron: '0 3 * * *'
   workflow_dispatch:
@@ -82,8 +88,8 @@ jobs:
       run:
         shell: bash -euo pipefail {0}
     env:
-      CI_TAG: ${{ github.run_id }}-${{ github.run_attempt }}
-      WORKSPACE_NAME: ci-${{ matrix.ws_name }}-${{ github.run_id }}-${{ github.run_attempt }}
+      CI_TAG: ${{ github.run_number }}-${{ github.run_attempt }}
+      WORKSPACE_NAME: ci-${{ matrix.ws_name }}-${{ github.run_number }}-${{ github.run_attempt }}
       CI: "true"
       DDEV_NONINTERACTIVE: "true"
       NO_COLOR: "1"

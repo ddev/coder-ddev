@@ -123,7 +123,7 @@ Fully automated Drupal core development environment, including issue fork suppor
 - **Setup**: Automatic (Drupal core cloned and installed, ~30s with seed cache)
 - **Use Case**: Drupal core development, contribution, patch testing
 - **Template Directory**: `drupal-core/`
-- **Issue Picker**: [start.coder.ddev.com/drupal-issue](https://start.coder.ddev.com/drupal-issue) — paste any drupal.org issue URL to launch a workspace with the issue branch pre-checked-out
+- **Issue Picker**: [start.coder.ddev.com/drupal-issue](https://start.coder.ddev.com/drupal-issue) — paste any drupal.org issue URL; the picker auto-detects core vs. contrib and routes to the right template
 - **Includes**:
   - Pre-cloned Drupal core (main branch by default)
   - Issue fork checkout with automatic Composer dependency resolution (Drupal 10, 11, and 12/main)
@@ -136,19 +136,42 @@ Fully automated Drupal core development environment, including issue fork suppor
 coder create --template drupal-core my-drupal-dev
 ```
 
+### drupal-contrib (Drupal Contrib Development)
+
+Automated environment for developing Drupal contrib modules and themes, with optional issue branch support.
+
+- **Setup**: Automatic (module/theme cloned, Drupal installed as dev dependency via `ddev-drupal-contrib`, ~5-10 min)
+- **Use Case**: Contrib module/theme development, issue queue work on any drupal.org project
+- **Template Directory**: `drupal-contrib/`
+- **Issue Picker**: [start.coder.ddev.com/drupal-issue](https://start.coder.ddev.com/drupal-issue) — paste a drupal.org issue or project URL; auto-detects contrib
+- **Includes**:
+  - Any drupal.org project cloned (modules and themes)
+  - Issue fork checkout via `issue_fork` + `issue_branch` parameters
+  - DDEV with [`ddev-drupal-contrib`](https://github.com/ddev/ddev-drupal-contrib) addon (adds `ddev phpunit`, `ddev phpcs`, `ddev phpstan`)
+  - Drupal installed as a dev dependency (module/theme auto-symlinked into web root)
+
+**Create workspace:**
+```bash
+coder create --template drupal-contrib my-contrib-dev \
+  --parameter project_name=token \
+  --parameter drupal_version=11
+```
+
 ### Choosing a Template
 
 - Use **user-defined-web** for:
-  - Contrib module development
-  - Site building
+  - Site building and custom site projects
   - General Drupal/PHP projects
   - Maximum flexibility
 
 - Use **drupal-core** for:
-  - Drupal core patches
-  - Core issue queue work
+  - Drupal core patches and issue queue work
   - Testing Drupal core changes
   - Learning Drupal internals
+
+- Use **drupal-contrib** for:
+  - Contrib module or theme development
+  - Working on drupal.org contrib issue queues
 
 ## Usage
 
@@ -160,6 +183,10 @@ coder create --template user-defined-web <workspace-name>
 
 # Drupal core development environment
 coder create --template drupal-core <workspace-name>
+
+# Drupal contrib module/theme development
+coder create --template drupal-contrib <workspace-name> \
+  --parameter project_name=token --parameter drupal_version=11
 ```
 
 **Access your project:**

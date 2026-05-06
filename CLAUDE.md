@@ -19,6 +19,25 @@ This project provides a Coder v2+ template for DDEV-based development environmen
 
 - Use `jq` (not `python3 -m json.tool`) for JSON pretty-printing and querying
 
+## Before Pushing / Pre-push Checklist
+
+Run these before every push to avoid CI failures:
+
+```bash
+# Terraform formatting (CI runs terraform fmt -check -recursive)
+terraform fmt -recursive
+
+# Terraform validation for each template you touched
+terraform -chdir=drupal-core init -backend=false && terraform -chdir=drupal-core validate
+terraform -chdir=drupal-contrib init -backend=false && terraform -chdir=drupal-contrib validate
+
+# Terraform tests (plan-level, no real infrastructure)
+terraform -chdir=drupal-core test
+terraform -chdir=drupal-contrib test
+```
+
+`terraform fmt -recursive` must be run from the repo root. It is non-destructive (rewrites in place) and the CI check fails with exit code 3 if any file is not formatted.
+
 ## Working with Coder Workspaces via SSH
 
 After running `coder config-ssh --yes`, workspaces are available as SSH hosts named `<workspace>.coder`. Use `scp` to copy files in or out, then `ssh` to execute scripts non-interactively:
@@ -38,6 +57,10 @@ ssh mp1.coder ddev list
 ```
 
 When running commands via `coder ssh -- ...` or piped heredocs, the PTY allocation causes interactive prompts and pipe-stall issues. Writing a script to `/tmp/` and executing it via `ssh workspace.coder bash /tmp/script.sh` is reliable for multi-step operations.
+
+**CI scripting rule**: In GitHub Actions, for any `coder ssh` invocation that does more than a single trivial command, push a script file and run it — do not use `bash -c "..."`. Single commands with standard flags (e.g. `git -C /path branch --show-current`) are fine inline. Anything with `&&`, conditionals, or multiple statements belongs in a script file under the template's `scripts/` directory.
+
+To run a command in a specific directory without a shell wrapper, use `env -C <dir> <cmd>` (available on Ubuntu 24.04 via GNU coreutils): `coder ssh ws -- env -C /home/coder/myproject ddev drush status`
 
 ## Essential Commands
 

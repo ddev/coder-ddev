@@ -135,6 +135,29 @@ data "coder_parameter" "install_profile" {
   }
 }
 
+data "coder_parameter" "share_drupal_site" {
+  name         = "share_drupal_site"
+  display_name = "Drupal Site Sharing"
+  description  = "Who can access the Drupal site URL. Change to 'public' when you want to share a work-in-progress with someone outside Coder."
+  type         = "string"
+  default      = "owner"
+  mutable      = true
+  order        = 90
+
+  option {
+    name  = "Private (owner only)"
+    value = "owner"
+  }
+  option {
+    name  = "Authenticated (any Coder user)"
+    value = "authenticated"
+  }
+  option {
+    name  = "Public (anyone with the link)"
+    value = "public"
+  }
+}
+
 data "coder_parameter" "vscode_extensions" {
   name         = "vscode_extensions"
   display_name = "VS Code Extensions"
@@ -175,6 +198,9 @@ locals {
   selected_extensions = jsondecode(data.coder_parameter.vscode_extensions.value)
   issue_fork_clean    = trimprefix(data.coder_parameter.issue_fork.value, "drupal-")
   issue_url           = local.issue_fork_clean != "" ? "https://www.drupal.org/project/drupal/issues/${local.issue_fork_clean}" : ""
+  # Coerce share value — mock_data in tftest returns "[]" for all parameters;
+  # fall back to "owner" if the value is not a valid share level.
+  drupal_site_share = contains(["owner", "authenticated", "public"], data.coder_parameter.share_drupal_site.value) ? data.coder_parameter.share_drupal_site.value : "owner"
 }
 
 locals {
@@ -1510,7 +1536,7 @@ resource "coder_app" "drupal-site" {
   url          = "http://localhost:80"
   icon         = "https://api.iconify.design/heroicons:check-circle.svg?color=white"
   subdomain    = true
-  share        = "owner"
+  share        = local.drupal_site_share
 
   # Healthy only when Drupal returns 200. /user/login returns 500 when the
   # database isn't set up (before drush si) and 200 when Drupal is fully
