@@ -59,7 +59,7 @@ jobs:
       run:
         shell: bash -euo pipefail {0}
     env:
-      WORKSPACE_NAME: ci-contrib-${{ matrix.project }}-d${{ matrix.drupal_version }}-${{ github.run_id }}
+      WORKSPACE_NAME: cc-${{ matrix.project }}-d${{ matrix.drupal_version }}-${{ github.run_number }}-${{ github.run_attempt }}
       CI: "true"
       DDEV_NONINTERACTIVE: "true"
       NO_COLOR: "1"
@@ -202,7 +202,7 @@ jobs:
       run:
         shell: bash -euo pipefail {0}
     env:
-      WORKSPACE_NAME: ci-contrib-fork-${{ github.run_id }}
+      WORKSPACE_NAME: cc-fork-${{ github.run_number }}-${{ github.run_attempt }}
       CI: "true"
       DDEV_NONINTERACTIVE: "true"
       NO_COLOR: "1"
@@ -260,7 +260,7 @@ jobs:
           coder templates push drupal-contrib \
             --directory drupal-contrib \
             --activate=false \
-            --name ci-contrib-${{ github.run_id }} \
+            --name cc-${{ github.run_number }}-${{ github.run_attempt }} \
             --yes \
             --variable workspace_image_registry=index.docker.io/ddev/coder-ddev
 
@@ -268,7 +268,7 @@ jobs:
         run: |
           coder create ${{ env.WORKSPACE_NAME }} \
             --template drupal-contrib \
-            --template-version ci-contrib-${{ github.run_id }} \
+            --template-version cc-${{ github.run_number }}-${{ github.run_attempt }} \
             --parameter "vscode_extensions=[]" \
             --parameter project_name=${{ env.CONTRIB_PROJECT }} \
             --parameter project_type=module \
@@ -356,4 +356,4 @@ jobs:
 
       - name: Archive CI template version
         if: always()
-        run: coder templates versions archive drupal-contrib ci-contrib-${{ github.run_id }} --yes || true
+        run: coder templates versions archive drupal-contrib cc-${{ github.run_number }}-${{ github.run_attempt }} --yes || true

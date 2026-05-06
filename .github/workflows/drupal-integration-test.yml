@@ -64,7 +64,7 @@ jobs:
       run:
         shell: bash -euo pipefail {0}
     env:
-      WORKSPACE_NAME: ci-drupal-${{ matrix.drupal_version }}-${{ github.run_id }}
+      WORKSPACE_NAME: cd-${{ matrix.drupal_version }}-${{ github.run_number }}-${{ github.run_attempt }}
       CI: "true"
       DDEV_NONINTERACTIVE: "true"
       NO_COLOR: "1"
@@ -204,7 +204,7 @@ jobs:
       run:
         shell: bash -euo pipefail {0}
     env:
-      WORKSPACE_NAME: ci-drupal-fork-${{ github.run_id }}
+      WORKSPACE_NAME: cd-fork-${{ github.run_number }}-${{ github.run_attempt }}
       CI: "true"
       DDEV_NONINTERACTIVE: "true"
       NO_COLOR: "1"
@@ -265,7 +265,7 @@ jobs:
           coder templates push drupal-core \
             --directory drupal-core \
             --activate=false \
-            --name ci-${{ github.run_id }} \
+            --name cd-${{ github.run_number }}-${{ github.run_attempt }} \
             --yes \
             --variable workspace_image_registry=index.docker.io/ddev/coder-ddev \
             --variable cache_path=/tmp/ci-no-cache
@@ -274,7 +274,7 @@ jobs:
         run: |
           coder create ${{ env.WORKSPACE_NAME }} \
             --template drupal-core \
-            --template-version ci-${{ github.run_id }} \
+            --template-version cd-${{ github.run_number }}-${{ github.run_attempt }} \
             --parameter "vscode_extensions=[]" \
             --parameter drupal_version=${{ env.ISSUE_FORK_VERSION }} \
             --parameter issue_fork=${{ env.ISSUE_FORK }} \
@@ -354,4 +354,4 @@ jobs:
 
       - name: Archive CI template version
         if: always()
-        run: coder templates versions archive drupal-core ci-${{ github.run_id }} --yes || true
+        run: coder templates versions archive drupal-core cd-${{ github.run_number }}-${{ github.run_attempt }} --yes || true
