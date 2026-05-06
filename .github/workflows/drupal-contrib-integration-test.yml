@@ -10,9 +10,13 @@ name: Drupal Contrib Integration Tests
 #                         fork, runs nightly only
 #
 # Repository variables (optional, set in GitHub → Settings → Variables):
-#   CONTRIB_TEST_PROJECT      - Module machine name for issue fork test (default: token)
-#   CONTRIB_TEST_ISSUE_FORK   - Issue number on drupal.org for that module (no default;
-#                               skip issue-fork job if unset)
+#   CONTRIB_TEST_PROJECT        - Module machine name for issue fork test (default: token)
+#   CONTRIB_TEST_ISSUE_FORK     - Issue number on drupal.org for that module (no default;
+#                                 skip issue-fork job if unset)
+#   CONTRIB_TEST_DRUPAL_VERSION - Drupal core version for the issue fork test (default: 11).
+#                                 NOTE: field_issue_version for contrib modules is the MODULE
+#                                 version, not the Drupal core version, so it cannot be used
+#                                 to infer the target Drupal version automatically.
 #
 # Requires:
 #   Repository variable: TEST_CODER_URL           - https://staging-coder.ddev.com
@@ -209,6 +213,7 @@ jobs:
       NO_COLOR: "1"
       CONTRIB_PROJECT: ${{ vars.CONTRIB_TEST_PROJECT || 'token' }}
       ISSUE_FORK: ${{ vars.CONTRIB_TEST_ISSUE_FORK }}
+      CONTRIB_TEST_DRUPAL_VERSION: ${{ vars.CONTRIB_TEST_DRUPAL_VERSION || '11' }}
 
     steps:
       - uses: actions/checkout@v6
@@ -247,16 +252,10 @@ jobs:
             exit 1
           fi
 
-          # Derive Drupal version from the issue's field_issue_version
-          RAW_VERSION=$(curl -sf \
-            "https://www.drupal.org/api-d7/node/${ISSUE_NUMBER}.json" \
-            | jq -r '.field_issue_version // ""')
-          DRUPAL_VERSION=$(echo "$RAW_VERSION" | grep -oE '^[0-9]+' || echo "11")
-          # Clamp to supported versions; old issues (8.x, 9.x) default to 11
-          if [[ "$DRUPAL_VERSION" != "10" && "$DRUPAL_VERSION" != "11" && "$DRUPAL_VERSION" != "12" ]]; then
-            echo "Warning: unsupported Drupal version '$DRUPAL_VERSION' from '$RAW_VERSION', defaulting to 11"
-            DRUPAL_VERSION="11"
-          fi
+          # For contrib modules, field_issue_version is the MODULE version (e.g. "8.x-1.x"
+          # for token module 1.x), not the Drupal core version. We cannot reliably infer
+          # Drupal core version from it. Default to 11; override via CONTRIB_TEST_DRUPAL_VERSION.
+          DRUPAL_VERSION="${CONTRIB_TEST_DRUPAL_VERSION:-11}"
 
           echo "Resolved: fork=${FORK_SLUG}  branch=$ISSUE_BRANCH  drupal_version=$DRUPAL_VERSION"
           echo "ISSUE_NUMBER=$ISSUE_NUMBER"         >> "$GITHUB_ENV"
