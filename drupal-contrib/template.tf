@@ -705,13 +705,18 @@ COMPOSE_EOF
             # Enable the module or theme
             log_setup "Enabling $PROJECT_NAME ($PROJECT_TYPE)..."
             if [ "$PROJECT_TYPE" = "theme" ]; then
-              ddev drush theme:enable "$PROJECT_NAME" -y >> "$SETUP_LOG" 2>&1 || \
+              if ddev drush theme:enable "$PROJECT_NAME" -y >> "$SETUP_LOG" 2>&1; then
+                log_setup "✓ $PROJECT_NAME enabled"
+              else
                 log_setup "⚠ Warning: could not enable theme $PROJECT_NAME (may need manual enable)"
+              fi
             else
-              ddev drush en "$PROJECT_NAME" -y >> "$SETUP_LOG" 2>&1 || \
+              if ddev drush en "$PROJECT_NAME" -y >> "$SETUP_LOG" 2>&1; then
+                log_setup "✓ $PROJECT_NAME enabled"
+              else
                 log_setup "⚠ Warning: could not enable module $PROJECT_NAME (may need manual enable)"
+              fi
             fi
-            log_setup "✓ $PROJECT_NAME enabled"
           fi
         fi
       fi
