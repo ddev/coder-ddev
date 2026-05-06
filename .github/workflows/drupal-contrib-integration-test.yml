@@ -110,6 +110,7 @@ jobs:
             --parameter issue_fork= \
             --parameter issue_branch= \
             --parameter install_profile=minimal \
+            --parameter share_drupal_site=owner \
             --yes
 
       - name: Verify workspace — agent connected
@@ -281,6 +282,7 @@ jobs:
             --parameter issue_fork=${{ env.ISSUE_NUMBER }} \
             --parameter issue_branch=${{ env.ISSUE_BRANCH }} \
             --parameter install_profile=minimal \
+            --parameter share_drupal_site=owner \
             --yes
 
       - name: Verify workspace — agent connected
