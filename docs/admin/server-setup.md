@@ -194,6 +194,38 @@ docker --version
 sudo systemctl enable --now docker
 ```
 
+### Configure the firewall
+
+Enable UFW and open the ports needed by Coder and the registry mirror. Port 5665 is for the Icinga2 monitoring agent and should be restricted to the monitoring server's IP:
+
+```bash
+sudo ufw allow 22
+sudo ufw allow 80
+sudo ufw allow 443
+sudo ufw allow 5000
+sudo ufw allow from 45.79.99.253 to any port 5665/tcp
+sudo ufw enable
+sudo ufw status
+```
+
+Expected output:
+
+```text
+Status: active
+
+To                         Action      From
+--                         ------      ----
+443                        ALLOW       Anywhere
+80                         ALLOW       Anywhere
+22                         ALLOW       Anywhere
+5000                       ALLOW       Anywhere
+5665/tcp                   ALLOW       45.79.99.253
+443 (v6)                   ALLOW       Anywhere (v6)
+80 (v6)                    ALLOW       Anywhere (v6)
+22 (v6)                    ALLOW       Anywhere (v6)
+5000 (v6)                  ALLOW       Anywhere (v6)
+```
+
 ---
 
 ## Step 3: Set Up the Registry Mirror

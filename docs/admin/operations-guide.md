@@ -348,6 +348,47 @@ docker run --rm \
   tar -xzf /backup/docker-volume-backup.tar.gz -C /target
 ```
 
+### Disk Space Cleanup
+
+When disk space is running low, reclaim it in this order:
+
+#### 1. List all workspaces (including other users')
+
+```bash
+coder list -a
+```
+
+#### 2. Delete unused workspaces
+
+Stopped or dormant workspaces that are no longer needed can be deleted. This removes the workspace container, Docker volume, and host directory:
+
+```bash
+# Delete a single workspace
+coder delete <owner>/<workspace-name> --yes
+
+# Delete multiple workspaces at once
+coder delete <owner>/<workspace1> <owner>/<workspace2> --yes
+```
+
+Check the Coder dashboard for "Last used" times to identify dormant workspaces before deleting.
+
+#### 3. Prune the Docker BuildKit cache
+
+BuildKit caches can accumulate across workspace image builds:
+
+```bash
+docker buildx prune -f
+```
+
+#### 4. Check remaining disk usage
+
+```bash
+df -h /data /coder-workspaces
+docker system df
+```
+
+---
+
 ### Orphaned Workspace Cleanup
 
 When a workspace is deleted, the destroy provisioner automatically removes the host directory at `/coder-workspaces/<owner>-<workspace>`. Directories can still be orphaned if the provisioner fails or for workspaces deleted before the provisioner was added. Run the cleanup script to reclaim disk space in those cases.
