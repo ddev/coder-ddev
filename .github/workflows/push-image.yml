@@ -4,7 +4,7 @@ name: Push Image
 # machines don't need cross-compilation. Triggered manually only.
 #
 # Required repository secrets:
-#   OP_SERVICE_ACCOUNT_TOKEN - 1Password service account token
+#   PUSH_SERVICE_ACCOUNT_TOKEN - 1Password service account with push-secrets vault access
 # Required repository variables:
 #   DOCKERHUB_USERNAME - Docker Hub username
 # Required 1Password item:
@@ -38,7 +38,7 @@ jobs:
         with:
           export-env: true
         env:
-          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.PUSH_SERVICE_ACCOUNT_TOKEN }}
           DOCKERHUB_TOKEN: "op://push-secrets/DOCKERHUB_TOKEN/credential"
 
       - name: Setup tmate session
