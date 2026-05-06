@@ -702,20 +702,22 @@ COMPOSE_EOF
           fi
 
           if [ "$SETUP_FAILED" = "false" ]; then
-            # Enable the module or theme
+            # Enable the module or theme.
+            # ddev drush en can exit non-zero even when the module ends up enabled
+            # (e.g. a post-install hook in another module throws a fatal), so verify
+            # via pm:list rather than trusting the exit code.
             log_setup "Enabling $PROJECT_NAME ($PROJECT_TYPE)..."
             if [ "$PROJECT_TYPE" = "theme" ]; then
-              if ddev drush theme:enable "$PROJECT_NAME" -y >> "$SETUP_LOG" 2>&1; then
-                log_setup "✓ $PROJECT_NAME enabled"
-              else
-                log_setup "⚠ Warning: could not enable theme $PROJECT_NAME (may need manual enable)"
-              fi
+              ddev drush theme:enable "$PROJECT_NAME" -y >> "$SETUP_LOG" 2>&1 || true
             else
-              if ddev drush en "$PROJECT_NAME" -y >> "$SETUP_LOG" 2>&1; then
-                log_setup "✓ $PROJECT_NAME enabled"
-              else
-                log_setup "⚠ Warning: could not enable module $PROJECT_NAME (may need manual enable)"
-              fi
+              ddev drush en "$PROJECT_NAME" -y >> "$SETUP_LOG" 2>&1 || true
+            fi
+            if ddev drush pm:list --status=enabled --format=list 2>/dev/null | grep -qw "$PROJECT_NAME"; then
+              log_setup "✓ $PROJECT_NAME enabled"
+              update_status "✓ $PROJECT_NAME: Enabled"
+            else
+              log_setup "⚠ Warning: $PROJECT_NAME not found in enabled modules list"
+              update_status "⚠ $PROJECT_NAME: Not enabled (check /tmp/drupal-setup.log)"
             fi
           fi
         fi
