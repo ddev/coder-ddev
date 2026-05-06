@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Drupal Core Issue Picker — DDEV Coder Workspaces</title>
+  <title>Drupal Issue Picker — DDEV Coder Workspaces</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -146,6 +146,7 @@
 
     /* ── Result form ─────────────────────────────────── */
     #result-form { display: none; }
+    #plain-dev-form { display: none; }
 
     .issue-title {
       font-size: 1.05rem;
@@ -168,6 +169,29 @@
       margin-bottom: 0.2rem;
       text-transform: uppercase;
       letter-spacing: 0.06em;
+    }
+
+    .template-badge {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      margin-top: 0.4rem;
+    }
+
+    .template-badge.core {
+      background: #1a2a1a;
+      color: #86efac;
+      border: 1px solid #166534;
+    }
+
+    .template-badge.contrib {
+      background: #1a1a2a;
+      color: #a78bfa;
+      border: 1px solid #3730a3;
     }
 
     .fields {
@@ -208,6 +232,11 @@
       background-repeat: no-repeat;
       background-position: right 1rem center;
       padding-right: 2.5rem;
+    }
+
+    .field input[type="text"][readonly] {
+      color: #aaa;
+      cursor: default;
     }
 
     /* WCAG 2.4.11 Focus Appearance (Level AA): visible focus indicator with 3:1 contrast.
@@ -352,37 +381,39 @@
     <a href="/">DDEV Coder Workspaces</a>
     <!-- Decorative separator — hidden from AT to avoid noise; WCAG 1.3.1 Info and Relationships (Level A) -->
     <span class="sep" aria-hidden="true">/</span>
-    <span class="title">Drupal Core Issue Picker</span>
+    <span class="title">Drupal Issue Picker</span>
   </header>
 
   <!-- id="main-content" is the skip link target (WCAG 2.4.1) -->
   <div class="page" id="main-content">
-    <h1>Drupal Core Issue Picker</h1>
-    <p class="subtitle">Enter a Drupal core issue URL or number to launch a pre-configured workspace.</p>
+    <h1>Drupal Issue Picker</h1>
+    <p class="subtitle">Enter a Drupal issue URL or number to launch a workspace. Also accepts a project URL or machine name for plain contrib development (no specific issue).</p>
 
     <div class="input-row">
       <!-- Explicit <label> associates the field name with the input for screen readers.
            Visually hidden because the heading and subtitle already describe the field.
            WCAG 1.3.1 Info and Relationships / 3.3.2 Labels or Instructions (Level A) -->
-      <label for="issue-input" class="sr-only">Issue number or URL</label>
+      <label for="issue-input" class="sr-only">Issue number, URL, or project name</label>
       <input type="text" id="issue-input"
-        placeholder="e.g. 3568144 or https://www.drupal.org/project/drupal/issues/3568144"
+        placeholder="e.g. 3568144 · drupal.org/project/drupal/issues/3568144 · drupal.org/project/token"
         autofocus>
-      <button class="btn-load" id="load-btn" onclick="loadIssue()">Load Issue</button>
+      <button class="btn-load" id="load-btn" onclick="loadInput()">Load</button>
     </div>
 
     <!-- role="status" announces dynamic updates to screen readers without interrupting current speech.
          WCAG 4.1.3 Status Messages (Level AA) -->
     <div class="status" id="status" role="status" aria-live="polite"></div>
 
-    <!-- Auto-populated form -->
+    <!-- Auto-populated form (issues: both core and contrib) -->
     <div id="result-form">
       <div class="issue-title">
-        <span>Issue</span>
+        <span id="result-label">Issue</span>
         <span id="issue-title-text"></span>
+        <span id="template-badge" class="template-badge"></span>
       </div>
 
       <div class="fields">
+        <!-- Branch selector (issues only) -->
         <div class="field">
           <label for="branch-select">Branch</label>
           <select id="branch-select"></select>
@@ -395,7 +426,7 @@
             <option value="minimal">minimal</option>
             <option value="standard">standard</option>
           </select>
-          <div class="hint">demo_umami uses a pre-built database snapshot. Issue fork workspaces always run a full site install regardless of profile.</div>
+          <div class="hint" id="profile-hint">demo_umami uses a pre-built database snapshot. Issue fork workspaces always run a full site install regardless of profile.</div>
         </div>
 
         <div class="field">
@@ -418,6 +449,45 @@
       <button class="btn-open" onclick="openWorkspace()">Open Dev Environment</button>
     </div>
 
+    <!-- Plain contrib dev form (project URL or machine name, no issue) -->
+    <div id="plain-dev-form">
+      <div class="issue-title">
+        <span>Contrib Project</span>
+        <span id="plain-project-display"></span>
+        <span class="template-badge contrib">drupal-contrib template</span>
+      </div>
+
+      <div class="fields">
+        <div class="field">
+          <label for="plain-drupal-version">Drupal Version</label>
+          <select id="plain-drupal-version">
+            <option value="11">11.x (stable)</option>
+            <option value="12">12.x (HEAD / upcoming)</option>
+            <option value="10">10.x (stable)</option>
+          </select>
+          <div class="hint">Sets the Drupal version installed as a dev dependency.</div>
+        </div>
+
+        <div class="field">
+          <label for="plain-profile">Install Profile</label>
+          <select id="plain-profile">
+            <option value="minimal">minimal</option>
+            <option value="standard">standard</option>
+            <option value="demo_umami">demo_umami</option>
+          </select>
+          <div class="hint">minimal is recommended for contrib development.</div>
+        </div>
+
+        <div class="field">
+          <label for="plain-workspace-name">Workspace Name</label>
+          <input type="text" id="plain-workspace-name" placeholder="my-token-dev">
+          <div class="hint">Must be lowercase letters, numbers, and hyphens only.</div>
+        </div>
+      </div>
+
+      <button class="btn-open" onclick="openPlainDevWorkspace()">Open Dev Environment</button>
+    </div>
+
     <!-- Manual fallback form (shown on API error) -->
     <div id="manual-form">
       <div class="manual-notice">
@@ -428,7 +498,7 @@
         <div class="field">
           <label for="manual-fork">Issue Fork Name</label>
           <input type="text" id="manual-fork" placeholder="drupal-3568144">
-          <div class="hint">Format: drupal-{issue-number}</div>
+          <div class="hint">For core: drupal-{issue}. For contrib: {module}-{issue}</div>
         </div>
 
         <div class="field">
@@ -467,9 +537,11 @@
       <h2>Notes</h2>
       <ul>
         <li>Requires a GitHub account — <a href="https://coder.ddev.com/login" style="color:#a78bfa">sign in at coder.ddev.com</a> first</li>
+        <li>Core issues use the <strong>drupal-core</strong> template; contrib issues use the <strong>drupal-contrib</strong> template — detected automatically</li>
         <li>Issue fork workspaces always run a full <code>ddev drush si</code> (branch code may differ from the cached database)</li>
         <li>The <code>demo_umami</code> fast path (about a minute) is only used for standard Drupal core without an issue fork</li>
         <li>Issue fork must exist on <a href="https://git.drupalcode.org" style="color:#a78bfa">git.drupalcode.org</a> — click "Get push access" on the issue page to create one</li>
+        <li>Contrib dev without an issue: enter a project URL like <code>drupal.org/project/token</code> or just the machine name <code>token</code></li>
       </ul>
     </div>
 
@@ -480,12 +552,16 @@
   </div>
 
   <script>
-    const CODER_BASE = 'https://coder.ddev.com';
-    const CODER_TEMPLATE = 'coder/drupal-core';
+    // Allow overriding the Coder instance via ?coder=https://staging-coder.ddev.com
+    const CODER_BASE = new URLSearchParams(window.location.search).get('coder') || 'https://coder.ddev.com';
+    const CODER_TEMPLATE_CORE   = 'coder/drupal-core';
+    const CODER_TEMPLATE_CONTRIB = 'coder/drupal-contrib';
 
-    let currentIssueFork = '';
+    // State for the current loaded result
+    let currentIssueFork = '';   // fork name: 'drupal-NID' for core, '{module}-NID' for contrib
     let currentNid = '';
-    let currentDrupalMajor = '12';
+    let currentProjectName = ''; // 'drupal' for core, module machine name for contrib
+    let currentIsContrib = false;
 
     function setStatus(msg, type) {
       const el = document.getElementById('status');
@@ -498,13 +574,30 @@
       el.className = 'status';
     }
 
-    function parseIssueNumber(raw) {
+    function hideAllForms() {
+      document.getElementById('result-form').style.display = 'none';
+      document.getElementById('plain-dev-form').style.display = 'none';
+      document.getElementById('manual-form').style.display = 'none';
+    }
+
+    // Returns { type: 'issue'|'project', nid, project } or null
+    function parseInput(raw) {
       const s = raw.trim();
-      // Plain number
-      if (/^\d+$/.test(s)) return s;
-      // URL: .../issues/3568144 or .../issues/3568144/...
-      const m = s.match(/\/issues\/(\d+)/);
-      if (m) return m[1];
+
+      // Plain issue number
+      if (/^\d+$/.test(s)) return { type: 'issue', nid: s, project: null };
+
+      // Full issue URL: .../project/PROJECT/issues/NID
+      const issueUrlM = s.match(/\/project\/([a-z][a-z0-9_]*)\/issues\/(\d+)/);
+      if (issueUrlM) return { type: 'issue', nid: issueUrlM[2], project: issueUrlM[1] };
+
+      // Project URL: .../project/PROJECT (no issue segment)
+      const projUrlM = s.match(/\/project\/([a-z][a-z0-9_]*)(?:\/|$)/);
+      if (projUrlM) return { type: 'project', nid: null, project: projUrlM[1] };
+
+      // Bare machine name (lowercase, no hyphens, no slashes)
+      if (/^[a-z][a-z0-9_]*$/.test(s)) return { type: 'project', nid: null, project: s };
+
       return null;
     }
 
@@ -512,82 +605,125 @@
       return name.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
     }
 
-    async function loadIssue() {
+    async function loadInput() {
       const raw = document.getElementById('issue-input').value;
-      const nid = parseIssueNumber(raw);
+      const parsed = parseInput(raw);
 
-      if (!nid) {
-        setStatus('Could not parse an issue number from that input. Enter a number like 3568144 or a full drupal.org issue URL.', 'error');
+      if (!parsed) {
+        setStatus('Could not parse input. Enter an issue number, a drupal.org issue or project URL, or a module machine name.', 'error');
         return;
       }
 
-      currentNid = nid;
-      document.getElementById('result-form').style.display = 'none';
-      document.getElementById('manual-form').style.display = 'none';
+      hideAllForms();
       document.getElementById('load-btn').disabled = true;
+
+      if (parsed.type === 'project') {
+        await loadPlainProject(parsed.project);
+      } else {
+        await loadIssue(parsed.nid, parsed.project);
+      }
+
+      document.getElementById('load-btn').disabled = false;
+    }
+
+    async function loadPlainProject(projectName) {
+      setStatus('Verifying project ' + projectName + '...', 'loading');
+      // Verify project exists on git.drupalcode.org
+      try {
+        const resp = await fetch(
+          'https://git.drupalcode.org/api/v4/projects/' + encodeURIComponent('project/' + projectName)
+        );
+        if (!resp.ok && resp.status !== 404) {
+          // Non-404 error — just show the form anyway (API might be down)
+          console.warn('git.drupalcode.org project check returned', resp.status);
+        } else if (resp.status === 404) {
+          setStatus('Project "' + projectName + '" not found on git.drupalcode.org. Check the machine name and try again.', 'error');
+          return;
+        }
+      } catch (_) {
+        // Network error — show form anyway with a warning
+        setStatus('Could not verify project (network error). Proceeding anyway.', 'info');
+      }
+
+      clearStatus();
+      document.getElementById('plain-project-display').textContent = projectName;
+      document.getElementById('plain-workspace-name').value = sanitizeWorkspaceName(projectName + '-dev');
+      currentProjectName = projectName;
+      document.getElementById('plain-dev-form').style.display = 'block';
+    }
+
+    async function loadIssue(nid, hintedProject) {
+      currentNid = nid;
       setStatus('Loading issue ' + nid + '...', 'loading');
 
       try {
-        // Issue fork name is always drupal-{nid} by convention on git.drupalcode.org
-        const issueFork = 'drupal-' + nid;
-        const encodedProject = encodeURIComponent('issue/' + issueFork);
-
-        // Step 1: verify fork exists and fetch branches from git.drupalcode.org
-        setStatus('Loading issue fork ' + issueFork + '...', 'loading');
-        const branchResp = await fetch(
-          'https://git.drupalcode.org/api/v4/projects/' + encodedProject + '/repository/branches?per_page=100'
-        );
-        if (branchResp.status === 404) {
-          // Distinguish: issue doesn't exist vs. issue exists but no fork yet
-          try {
-            const checkResp = await fetch('https://www.drupal.org/api-d7/node/' + nid + '.json');
-            if (!checkResp.ok) {
-              setStatus('Issue #' + nid + ' does not exist on drupal.org. Check the issue number and try again.', 'error');
-            } else {
-              // Verify the response is actually a valid node (not a redirect or error page)
-              let nodeData;
-              try { nodeData = await checkResp.json(); } catch (_) { nodeData = null; }
-              const projectName = nodeData && nodeData.field_project && nodeData.field_project.machine_name;
-              if (!nodeData || String(nodeData.nid) !== String(nid)) {
-                setStatus('Issue #' + nid + ' does not exist on drupal.org. Check the issue number and try again.', 'error');
-              } else if (projectName && projectName !== 'drupal') {
-                setStatus('Issue #' + nid + ' is a ' + projectName + ' issue, not a Drupal core issue. At this time this picker only supports Drupal core.', 'error');
-              } else {
-                setStatus('No issue fork exists for #' + nid + ' yet. To work on this issue, visit the issue page on drupal.org and click "Get push access" to create a fork, then come back here.', 'info');
-              }
-            }
-          } catch (_) {
-            setStatus('Issue #' + nid + ' does not appear to exist on drupal.org. Check the issue number and try again.', 'error');
-          }
-          document.getElementById('load-btn').disabled = false;
-          return;
-        }
-        if (!branchResp.ok) throw new Error('git.drupalcode.org API returned ' + branchResp.status);
-        const branches = await branchResp.json();
-
-        currentIssueFork = issueFork;
-
-        // Step 2: fetch issue title and version from Drupal.org API (best-effort — don't block on failure)
+        // Step 1: fetch issue data from Drupal.org to determine project
+        setStatus('Fetching issue data from drupal.org...', 'loading');
+        let projectName = hintedProject;
         let title = 'Issue #' + nid;
-        let drupalMajor = '12';
+        let drupalMajor = '11';
+        let projectType = 'module'; // used later for contrib template hint
+
         try {
           const issueResp = await fetch('https://www.drupal.org/api-d7/node/' + nid + '.json');
           if (issueResp.ok) {
             const issue = await issueResp.json();
             if (issue.title) title = issue.title;
-            // field_issue_version e.g. "10.6.x-dev" or "11.x-dev" → extract major version
+            // Resolve project name from API (overrides URL-hinted project)
+            const apiProject = issue.field_project && issue.field_project.machine_name;
+            if (apiProject) projectName = apiProject;
+            // Detect project type (module vs theme)
+            if (issue.field_project && issue.field_project.field_project_type) {
+              projectType = issue.field_project.field_project_type;
+            }
+            // Detect Drupal major version from field_issue_version
             const ver = issue.field_issue_version || '';
-            const m = ver.match(/^(\d+)\./);
-            if (m) drupalMajor = m[1];
+            const verM = ver.match(/^(\d+)\./);
+            if (verM) drupalMajor = verM[1];
           }
         } catch (_) { /* title/version stay as fallback */ }
 
-        // Step 2.5: Try to get visible branches from Drupal.org issue page.
-        // The drupalorgBranchData settings key lists only non-hidden branches (those with MRs).
-        // Hidden branches exist in GitLab but are suppressed in the Drupal.org UI.
+        // If we still don't know the project, assume it from hinted URL or default to 'drupal'
+        if (!projectName) projectName = 'drupal';
+
+        currentProjectName = projectName;
+        currentIsContrib = (projectName !== 'drupal');
+
+        // Issue fork name: 'drupal-{nid}' for core, '{module}-{nid}' for contrib
+        const issueFork = currentIsContrib ? (projectName + '-' + nid) : ('drupal-' + nid);
+        currentIssueFork = issueFork;
+
+        // Step 2: fetch branches from git.drupalcode.org
+        const encodedFork = encodeURIComponent('issue/' + issueFork);
+        setStatus('Loading issue fork ' + issueFork + '...', 'loading');
+        const branchResp = await fetch(
+          'https://git.drupalcode.org/api/v4/projects/' + encodedFork + '/repository/branches?per_page=100'
+        );
+
+        if (branchResp.status === 404) {
+          // Check if issue exists
+          const issueUrl = 'https://www.drupal.org/project/' + projectName + '/issues/' + nid;
+          if (currentIsContrib) {
+            setStatus(
+              'No issue fork exists for #' + nid + ' on ' + projectName + ' yet. Visit the issue page on drupal.org and click "Get push access" to create a fork, then come back here.',
+              'info'
+            );
+          } else {
+            setStatus(
+              'No issue fork exists for #' + nid + ' yet. To work on this issue, visit the issue page on drupal.org and click "Get push access" to create a fork, then come back here.',
+              'info'
+            );
+          }
+          return;
+        }
+        if (!branchResp.ok) throw new Error('git.drupalcode.org API returned ' + branchResp.status);
+        const branches = await branchResp.json();
+
+        // Step 3: try to get visible branches from Drupal.org issue page (drupalorgBranchData)
+        const issuePageUrl = 'https://www.drupal.org/project/' + projectName + '/issues/' + nid;
         let visibleBranchNames = null;
         try {
-          const pageResp = await fetch('https://www.drupal.org/project/drupal/issues/' + nid);
+          const pageResp = await fetch(issuePageUrl);
           if (pageResp.ok) {
             const html = await pageResp.text();
             const settingsMatch = html.match(/<script[^>]+data-drupal-selector="drupal-settings-json"[^>]*>([\s\S]*?)<\/script>/);
@@ -598,16 +734,12 @@
               }
             }
           }
-        } catch (_) { /* CORS or parse error — fall through to prefix filter */ }
+        } catch (_) { /* CORS or parse error — fall through */ }
 
-        // Filter to visible branches only:
-        // - Primary: use Drupal.org's drupalorgBranchData (excludes hidden branches)
-        // - Fallback: branches matching the issue number prefix (excludes inherited upstream branches)
+        // Filter branches: visible set from drupal.org, or fallback to NID-prefix filter
         const issueBranches = visibleBranchNames
           ? branches.filter(b => visibleBranchNames.has(b.name))
           : branches.filter(b => b.name.startsWith(nid + '-'));
-
-        // Use filtered list, falling back to all branches only if filtering yields nothing
         const displayBranches = issueBranches.length > 0 ? issueBranches : branches;
 
         // Populate branch selector
@@ -620,53 +752,99 @@
           branchSelect.appendChild(opt);
         });
 
-        // Pre-select the most recently committed branch (most actively worked on)
+        // Pre-select the most recently committed branch
         const preferred = displayBranches.reduce((best, b) => {
           if (!best) return b;
           return b.commit.committed_date > best.commit.committed_date ? b : best;
         }, null);
         if (preferred) branchSelect.value = preferred.name;
 
-        // Set issue title with clickable link
+        // Set issue title with link
         const titleEl = document.getElementById('issue-title-text');
         titleEl.innerHTML = '';
         const issueLink = document.createElement('a');
-        issueLink.href = 'https://www.drupal.org/project/drupal/issues/' + nid;
+        issueLink.href = issuePageUrl;
         issueLink.target = '_blank';
         issueLink.textContent = '#' + nid + ': ' + title;
         issueLink.style.cssText = 'color: inherit; text-decoration: underline;';
         titleEl.appendChild(issueLink);
 
-        // Store and display detected Drupal version
-        currentDrupalMajor = drupalMajor;
-        document.getElementById('drupal-version-select').value = drupalMajor;
+        // Template badge and form customization
+        const badge = document.getElementById('template-badge');
+        const resultLabel = document.getElementById('result-label');
+        const profileHint = document.getElementById('profile-hint');
+        const profileSelect = document.getElementById('profile-select');
 
-        // Pre-fill workspace name
-        const wsName = document.getElementById('workspace-name');
-        wsName.value = 'issue-' + nid;
+        if (currentIsContrib) {
+          badge.textContent = 'drupal-contrib template · ' + projectName;
+          badge.className = 'template-badge contrib';
+          resultLabel.textContent = 'Contrib Issue (' + projectName + ')';
+          // Default to minimal for contrib
+          profileSelect.value = 'minimal';
+          profileHint.textContent = 'minimal is recommended for contrib development.';
+          // Default Drupal version to 11 if not detected from issue
+          if (drupalMajor === '12' && !hintedProject) drupalMajor = '11';
+        } else {
+          badge.textContent = 'drupal-core template';
+          badge.className = 'template-badge core';
+          resultLabel.textContent = 'Issue';
+          profileSelect.value = 'demo_umami';
+          profileHint.textContent = 'demo_umami uses a pre-built database snapshot. Issue fork workspaces always run a full site install regardless of profile.';
+        }
+
+        document.getElementById('drupal-version-select').value = drupalMajor;
+        document.getElementById('workspace-name').value = 'issue-' + nid;
 
         clearStatus();
         document.getElementById('result-form').style.display = 'block';
 
       } catch (err) {
         console.error(err);
-        // Show manual fallback
         setStatus('Could not load issue data automatically (' + err.message + '). Enter values below.', 'error');
         document.getElementById('manual-workspace-name').value = 'issue-' + nid;
-        document.getElementById('manual-fork').value = 'drupal-' + nid;
+        document.getElementById('manual-fork').value = (currentIsContrib && currentProjectName)
+          ? (currentProjectName + '-' + nid) : ('drupal-' + nid);
         document.getElementById('manual-form').style.display = 'block';
       }
-
-      document.getElementById('load-btn').disabled = false;
     }
 
-    function buildCoderUrl(issueFork, issueBranch, installProfile, drupalVersion, workspaceName) {
-      const base = CODER_BASE + '/templates/' + CODER_TEMPLATE + '/workspace';
+    function buildCoreUrl(issueFork, issueBranch, installProfile, drupalVersion, workspaceName) {
+      const base = CODER_BASE + '/templates/' + CODER_TEMPLATE_CORE + '/workspace';
       const params = new URLSearchParams({
         mode: 'manual',
         name: sanitizeWorkspaceName(workspaceName),
         'param.issue_fork': issueFork,
         'param.issue_branch': issueBranch,
+        'param.install_profile': installProfile,
+        'param.drupal_version': drupalVersion,
+      });
+      return base + '?' + params.toString();
+    }
+
+    function buildContribIssueUrl(projectName, issueNumber, issueBranch, installProfile, drupalVersion, workspaceName) {
+      const base = CODER_BASE + '/templates/' + CODER_TEMPLATE_CONTRIB + '/workspace';
+      const params = new URLSearchParams({
+        mode: 'manual',
+        name: sanitizeWorkspaceName(workspaceName),
+        'param.project_name': projectName,
+        'param.project_type': 'module', // will be overridden manually for themes
+        'param.issue_fork': issueNumber,
+        'param.issue_branch': issueBranch,
+        'param.install_profile': installProfile,
+        'param.drupal_version': drupalVersion,
+      });
+      return base + '?' + params.toString();
+    }
+
+    function buildContribPlainUrl(projectName, drupalVersion, installProfile, workspaceName) {
+      const base = CODER_BASE + '/templates/' + CODER_TEMPLATE_CONTRIB + '/workspace';
+      const params = new URLSearchParams({
+        mode: 'manual',
+        name: sanitizeWorkspaceName(workspaceName),
+        'param.project_name': projectName,
+        'param.project_type': 'module',
+        'param.issue_fork': '',
+        'param.issue_branch': '',
         'param.install_profile': installProfile,
         'param.drupal_version': drupalVersion,
       });
@@ -684,7 +862,26 @@
         return;
       }
 
-      const url = buildCoderUrl(currentIssueFork, branch, profile, drupalVersion, wsName);
+      let url;
+      if (currentIsContrib) {
+        url = buildContribIssueUrl(currentProjectName, currentNid, branch, profile, drupalVersion, wsName);
+      } else {
+        url = buildCoreUrl(currentIssueFork, branch, profile, drupalVersion, wsName);
+      }
+      window.open(url, '_blank');
+    }
+
+    function openPlainDevWorkspace() {
+      const drupalVersion = document.getElementById('plain-drupal-version').value;
+      const profile = document.getElementById('plain-profile').value;
+      const wsName = document.getElementById('plain-workspace-name').value || (currentProjectName + '-dev');
+
+      if (!currentProjectName) {
+        setStatus('No project loaded. Enter a project URL or machine name first.', 'error');
+        return;
+      }
+
+      const url = buildContribPlainUrl(currentProjectName, drupalVersion, profile, wsName);
       window.open(url, '_blank');
     }
 
@@ -700,13 +897,24 @@
         return;
       }
 
-      const url = buildCoderUrl(fork, branch, profile, drupalVersion, wsName);
+      // Detect if this is a core fork (drupal-NID) or contrib (MODULE-NID)
+      const isCoreManual = fork.startsWith('drupal-');
+      let url;
+      if (isCoreManual) {
+        url = buildCoreUrl(fork, branch, profile, drupalVersion, wsName);
+      } else {
+        // Extract project name from fork name (MODULE-NID → MODULE)
+        const forkParts = fork.match(/^([a-z][a-z0-9_]*)-(\d+)$/);
+        const project = forkParts ? forkParts[1] : 'unknown';
+        const nidFromFork = forkParts ? forkParts[2] : currentNid;
+        url = buildContribIssueUrl(project, nidFromFork, branch, profile, drupalVersion, wsName);
+      }
       window.open(url, '_blank');
     }
 
     // Allow Enter key in input
     document.getElementById('issue-input').addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') loadIssue();
+      if (e.key === 'Enter') loadInput();
     });
   </script>
 

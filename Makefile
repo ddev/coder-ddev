@@ -7,7 +7,7 @@ DOCKERFILE_DIR := image
 DOCKERFILE := $(DOCKERFILE_DIR)/Dockerfile
 
 # Template directories (name == directory name == Coder template name)
-TEMPLATES := user-defined-web drupal-core freeform
+TEMPLATES := user-defined-web drupal-core drupal-contrib freeform
 
 # Host path to the drupal-core seed cache (bind-mounted read-only into workspaces).
 # This path is specific to the server where the template is deployed.
@@ -30,6 +30,7 @@ IMAGE_LATEST := $(IMAGE_NAME):latest
 TEMPLATE_VARS_user-defined-web := --variable workspace_image_registry=index.docker.io/$(IMAGE_NAME)
 TEMPLATE_VARS_drupal-core      := --variable workspace_image_registry=index.docker.io/$(IMAGE_NAME) \
                                    --variable cache_path=$(DRUPAL_CACHE_PATH)
+TEMPLATE_VARS_drupal-contrib   := --variable workspace_image_registry=index.docker.io/$(IMAGE_NAME)
 TEMPLATE_VARS_freeform         := --variable workspace_image_registry=index.docker.io/$(IMAGE_NAME)
 
 # Per-template display metadata set via `coder templates edit` after push
@@ -37,6 +38,8 @@ TEMPLATE_VARS_freeform         := --variable workspace_image_registry=index.dock
 TEMPLATE_EDIT_user-defined-web := --display-name "DDEV Web Workspace"
 TEMPLATE_EDIT_drupal-core      := --display-name "Drupal Core Development" \
                                    --description "Drupal core dev environment: full DDEV stack, core clone, Umami demo site. Ready in about a minute."
+TEMPLATE_EDIT_drupal-contrib   := --display-name "Drupal Contrib Development" \
+                                   --description "Drupal contrib module/theme dev: clone any drupal.org project, optional issue branch checkout. Ready in 5-10 minutes."
 TEMPLATE_EDIT_freeform         := --display-name "DDEV Freeform (Traefik)" --default-ttl 24h
 
 # Shared recipe for pushing any template (call with template name as argument)
@@ -167,12 +170,16 @@ push-template-user-defined-web: ## Push user-defined-web template to Coder
 push-template-drupal-core: ## Push drupal-core template to Coder
 	$(call push_template,drupal-core)
 
+.PHONY: push-template-drupal-contrib
+push-template-drupal-contrib: ## Push drupal-contrib template to Coder
+	$(call push_template,drupal-contrib)
+
 .PHONY: push-template-freeform
 push-template-freeform: ## Push freeform template to Coder
 	$(call push_template,freeform)
 
 .PHONY: push-all-templates
-push-all-templates: push-template-user-defined-web push-template-drupal-core push-template-freeform ## Push all templates to Coder (no image build)
+push-all-templates: push-template-user-defined-web push-template-drupal-core push-template-drupal-contrib push-template-freeform ## Push all templates to Coder (no image build)
 	@echo "All templates pushed!"
 
 # --- Deploy targets ---
@@ -188,6 +195,10 @@ deploy-user-defined-web-no-cache: build-and-push-no-cache push-template-user-def
 .PHONY: deploy-drupal-core
 deploy-drupal-core: push-template-drupal-core ## Deploy drupal-core template (uses existing image)
 	@echo "Deployment of drupal-core complete!"
+
+.PHONY: deploy-drupal-contrib
+deploy-drupal-contrib: push-template-drupal-contrib ## Deploy drupal-contrib template (uses existing image)
+	@echo "Deployment of drupal-contrib complete!"
 
 .PHONY: deploy-freeform
 deploy-freeform: push-template-freeform ## Deploy freeform template (uses existing image)

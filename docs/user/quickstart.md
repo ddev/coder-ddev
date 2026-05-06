@@ -66,7 +66,7 @@ ddev ssh
 
 ## Working on a Drupal issue
 
-The fastest way: use the **[Drupal Issue Picker](https://start.coder.ddev.com/drupal-issue)**. Paste a drupal.org issue URL or bare issue number — it fetches the available branches, lets you pick one, and opens a pre-configured workspace with the issue branch already checked out and all Composer dependencies resolved for that branch.
+The fastest way: use the **[Drupal Issue Picker](https://start.coder.ddev.com/drupal-issue)**. Paste a drupal.org issue URL, issue number, or project URL — it auto-detects whether the issue is for Drupal core or a contrib module/theme, fetches the available branches, and opens a pre-configured workspace with the issue branch already checked out. Entering a project URL (e.g. `drupal.org/project/token`) or bare machine name launches a plain contrib dev workspace without a specific issue.
 
 When working on an issue, the workspace surfaces issue info in several places:
 

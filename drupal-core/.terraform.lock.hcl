@@ -3,9 +3,10 @@
 
 provider "registry.terraform.io/coder/coder" {
   version     = "2.13.1"
-  constraints = ">= 0.23.0, >= 2.5.0, >= 2.13.0"
+  constraints = ">= 2.5.0, >= 2.13.0"
   hashes = [
     "h1:oo6ST/RHdch2u6x7OV3ojkQCM1EmBF3KrEuiJehT23E=",
+    "h1:wVR3Sg+hRjNbIiWLAPbolmoBMHqCFsNSOR71GW16YzQ=",
     "zh:04e38e4e37c89b78401c7689ade07a708635340138974bc12840920deed24c1b",
     "zh:0b32684dcc4d8f24a9535649d47c74a116e9682dc73551f429a98a774981b98f",
     "zh:0cb5ae4b1f1ae0e7d8a3a8c50ce516c230c1ba4853500d6b83b8cbb144e70f84",
@@ -24,10 +25,30 @@ provider "registry.terraform.io/coder/coder" {
   ]
 }
 
+provider "registry.terraform.io/hashicorp/null" {
+  version = "3.2.4"
+  hashes = [
+    "h1:L5V05xwp/Gto1leRryuesxjMfgZwjb7oool4WS1UEFQ=",
+    "zh:59f6b52ab4ff35739647f9509ee6d93d7c032985d9f8c6237d1f8a59471bbbe2",
+    "zh:78d5eefdd9e494defcb3c68d282b8f96630502cac21d1ea161f53cfe9bb483b3",
+    "zh:795c897119ff082133150121d39ff26cb5f89a730a2c8c26f3a9c1abf81a9c43",
+    "zh:7b9c7b16f118fbc2b05a983817b8ce2f86df125857966ad356353baf4bff5c0a",
+    "zh:85e33ab43e0e1726e5f97a874b8e24820b6565ff8076523cc2922ba671492991",
+    "zh:9d32ac3619cfc93eb3c4f423492a8e0f79db05fec58e449dee9b2d5873d5f69f",
+    "zh:9e15c3c9dd8e0d1e3731841d44c34571b6c97f5b95e8296a45318b94e5287a6e",
+    "zh:b4c2ab35d1b7696c30b64bf2c0f3a62329107bd1a9121ce70683dec58af19615",
+    "zh:c43723e8cc65bcdf5e0c92581dcbbdcbdcf18b8d2037406a5f2033b1e22de442",
+    "zh:ceb5495d9c31bfb299d246ab333f08c7fb0d67a4f82681fbf47f2a21c3e11ab5",
+    "zh:e171026b3659305c558d9804062762d168f50ba02b88b231d20ec99578a6233f",
+    "zh:ed0fe2acdb61330b01841fa790be00ec6beaac91d41f311fb8254f74eb6a711f",
+  ]
+}
+
 provider "registry.terraform.io/kreuzwerker/docker" {
   version     = "3.6.2"
   constraints = "~> 3.0"
   hashes = [
+    "h1:/Oe7tViXf/xyQ4Pg8cDifMlD3RthOYkslwQiRgx7BTE=",
     "h1:1K3j0xUY2D0+E+DBDQc6k1u6Al9MkuNWrIC9rnvwFSM=",
     "zh:22b51a8fb63481d290bdad9a221bc8c9e45d66d1a0cd45beed3f3627bf1debd8",
     "zh:2b902eb80a1ae033af1135cc165d192668820a7f8ea15beb5472f811c18bea1f",
