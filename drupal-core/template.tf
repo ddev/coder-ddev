@@ -200,7 +200,7 @@ locals {
   issue_url           = local.issue_fork_clean != "" ? "https://www.drupal.org/project/drupal/issues/${local.issue_fork_clean}" : ""
   # Coerce share value — mock_data in tftest returns "[]" for all parameters;
   # fall back to "owner" if the value is not a valid share level.
-  drupal_site_share   = contains(["owner", "authenticated", "public"], data.coder_parameter.share_drupal_site.value) ? data.coder_parameter.share_drupal_site.value : "owner"
+  drupal_site_share = contains(["owner", "authenticated", "public"], data.coder_parameter.share_drupal_site.value) ? data.coder_parameter.share_drupal_site.value : "owner"
 }
 
 locals {

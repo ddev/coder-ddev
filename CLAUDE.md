@@ -19,6 +19,25 @@ This project provides a Coder v2+ template for DDEV-based development environmen
 
 - Use `jq` (not `python3 -m json.tool`) for JSON pretty-printing and querying
 
+## Before Pushing / Pre-push Checklist
+
+Run these before every push to avoid CI failures:
+
+```bash
+# Terraform formatting (CI runs terraform fmt -check -recursive)
+terraform fmt -recursive
+
+# Terraform validation for each template you touched
+terraform -chdir=drupal-core init -backend=false && terraform -chdir=drupal-core validate
+terraform -chdir=drupal-contrib init -backend=false && terraform -chdir=drupal-contrib validate
+
+# Terraform tests (plan-level, no real infrastructure)
+terraform -chdir=drupal-core test
+terraform -chdir=drupal-contrib test
+```
+
+`terraform fmt -recursive` must be run from the repo root. It is non-destructive (rewrites in place) and the CI check fails with exit code 3 if any file is not formatted.
+
 ## Working with Coder Workspaces via SSH
 
 After running `coder config-ssh --yes`, workspaces are available as SSH hosts named `<workspace>.coder`. Use `scp` to copy files in or out, then `ssh` to execute scripts non-interactively:
