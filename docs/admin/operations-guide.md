@@ -83,6 +83,29 @@ make info
 
 See `image/README.md` for details on customizing the Docker image.
 
+### Using GitHub Actions (push-image workflow)
+
+The repository has a manually triggered workflow (`.github/workflows/push-image.yml`) that builds and pushes the image to Docker Hub from GitHub's infrastructure. This is the preferred approach for official releases.
+
+**Prerequisites — configure once in GitHub repository settings:**
+
+- **Secret** `PUSH_SERVICE_ACCOUNT_TOKEN` — 1Password service account token (from the `push-secrets` vault)
+- **Variable** `DOCKERHUB_USERNAME` — Docker Hub username (e.g. `ddev`)
+
+The workflow reads `DOCKERHUB_TOKEN` from 1Password at `op://push-secrets/DOCKERHUB_TOKEN/credential` using the service account token.
+
+**To trigger a push:**
+
+1. Update `VERSION` and commit/merge to the branch you want to build from.
+2. Go to **Actions → Push Image → Run workflow** in the GitHub UI, select the branch, and click **Run workflow**.
+3. The workflow builds `linux/amd64`, tags the image as both `ddev/coder-ddev:<version>` and `ddev/coder-ddev:latest`, and pushes to Docker Hub.
+
+Alternatively, trigger via the CLI:
+
+```bash
+gh workflow run push-image.yml --ref <branch>
+```
+
 ## Deploying the Template
 
 ### Using the Makefile
