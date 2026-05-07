@@ -357,7 +357,7 @@ docker system df
 coder list --user <username>
 
 # 2. Delete all user workspaces
-coder delete <workspace1> <workspace2> --yes
+for ws in $(coder list --user <username> -c workspace | grep -v WORKSPACE); do coder delete "$ws" --yes; done
 
 # 3. Remove user account
 coder users delete <username>

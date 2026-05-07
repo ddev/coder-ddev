@@ -389,8 +389,11 @@ Stopped or dormant workspaces that are no longer needed can be deleted. This rem
 # Delete a single workspace
 coder delete <owner>/<workspace-name> --yes
 
-# Delete multiple workspaces at once
-coder delete <owner>/<workspace1> <owner>/<workspace2> --yes
+# Delete multiple workspaces
+for ws in <owner>/<workspace1> <owner>/<workspace2>; do coder delete "$ws" --yes; done
+
+# Delete all workspaces (use with caution)
+for ws in $(coder list -a -c workspace | grep -v WORKSPACE); do coder delete "$ws" --yes; done
 ```
 
 Check the Coder dashboard for "Last used" times to identify dormant workspaces before deleting.
