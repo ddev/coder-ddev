@@ -1,0 +1,11 @@
+vcs:
+  type: git
+agents:
+  available:
+  - claude
+  auto_commit: true
+project:
+  uuid: 595dcc83-8eee-4a87-8644-84d94a4b531c
+  slug: coder-ddev
+  node_id: a1b8182ad705
+  build_id: ea439b9d-ce91-4e8c-a458-0f28a54b80bc
