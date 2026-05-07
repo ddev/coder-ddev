@@ -95,7 +95,7 @@ coder organizations members add <org-name> <username>
 # Deploy template to specific organization
 coder templates push \
   --directory user-defined-web \
-  --organization <org-name> \
+  --org <org-name> \
   user-defined-web \
   --yes
 
@@ -122,17 +122,12 @@ Users need SSH keys for Git operations inside workspaces.
 3. Add public key
 4. SSH key is automatically available in all workspaces
 
-**Or via CLI:**
+**Or via CLI** (shows your Coder Git SSH public key):
 ```bash
-# Add SSH key
-coder publickey add ~/.ssh/id_rsa.pub
-
-# List keys
-coder publickey list
-
-# Remove key
-coder publickey remove <key-id>
+coder publickey
 ```
+
+SSH key management (add/remove keys) is done via the Coder web UI under **Account → SSH Keys**.
 
 ### Git SSH Configuration
 
@@ -158,8 +153,8 @@ coder ssh my-workspace
 # Run command via SSH
 coder ssh my-workspace -- ddev describe
 
-# Port forwarding via SSH
-coder ssh my-workspace --forward 8080:localhost:8080
+# Port forwarding
+coder port-forward my-workspace --tcp 8080:8080
 ```
 
 **Generate SSH config:**
@@ -187,13 +182,13 @@ Users need API tokens for CLI access and automation.
 **Via CLI:**
 ```bash
 # Create token
-coder tokens create <token-name>
+coder tokens create --name <token-name>
 
 # List tokens
 coder tokens list
 
-# Revoke token
-coder tokens revoke <token-id>
+# Remove token
+coder tokens remove <token-id>
 ```
 
 ### Using Tokens
@@ -354,17 +349,17 @@ docker system df
 
 ```bash
 # 1. List user's workspaces
-coder list --user <username>
+coder list -a --search "owner:<username>"
 
 # 2. Delete all user workspaces
-for ws in $(coder list --user <username> -c workspace | grep -v WORKSPACE); do coder delete "$ws" --yes; done
+for ws in $(coder list -a --search "owner:<username>" -c workspace | grep -v WORKSPACE); do coder delete "$ws" --yes; done
 
 # 3. Remove user account
 coder users delete <username>
 
-# 4. Revoke user tokens
-coder tokens list --user <username>
-coder tokens revoke <token-id>
+# 4. Remove user tokens (list all tokens as owner, identify by user)
+coder tokens list -a
+coder tokens remove <token-id>
 ```
 
 ### Data Retention
@@ -445,7 +440,7 @@ For departing users:
 coder users show <username>
 
 # Check template access
-coder templates list --organization <org>
+coder templates list --org <org>
 ```
 
 ### User Can't SSH into Workspace
@@ -484,15 +479,12 @@ coder ssh my-workspace -- coder gitssh --help
 
 **Check:**
 - User role and permissions: `coder users show <username>`
-- Template access restrictions: `coder templates show user-defined-web`
-- Organization membership: `coder organizations members list <org>`
+- Template access restrictions: check Coder web UI under **Templates → Settings**
+- Organization membership: `coder organizations members list`
 
 ```bash
 # Check user details
 coder users show <username>
-
-# Check template permissions (if using Coder Enterprise)
-coder templates show user-defined-web --json | grep -i allow
 ```
 
 ## Additional Resources

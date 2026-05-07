@@ -268,7 +268,7 @@ coder delete my-workspace
 coder delete my-workspace --yes
 
 # Delete multiple workspaces
-coder delete workspace1 workspace2 workspace3 --yes
+for ws in workspace1 workspace2 workspace3; do coder delete "$ws" --yes; done
 ```
 
 **Deleting a workspace removes:**

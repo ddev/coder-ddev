@@ -15,6 +15,20 @@ This project provides a Coder v2+ template for DDEV-based development environmen
 
 **Note:** User-facing documentation has moved to `/docs/`. This file focuses on developer/contributor guidance.
 
+## Coder CLI Commands in Docs
+
+When writing or reviewing `coder` CLI commands in documentation, **always verify against the actual CLI** (`coder <subcommand> --help`) and the [Coder CLI reference docs](https://coder.com/docs/reference/cli). Common past mistakes to avoid:
+
+- `coder delete` takes only **one** workspace argument — use a `for` loop for multiple
+- `coder stop` / `coder start` take only **one** workspace argument
+- `coder scp` does **not exist** — use `scp` after `coder config-ssh`
+- `coder templates show` does **not exist** — use `coder templates list -o json | jq ...`
+- `coder publickey` has no `add`/`list`/`remove` subcommands — it only outputs your key
+- `coder list` has no `--user` flag — use `--search "owner:<username>"` with `-a`
+- `coder tokens` uses `remove` not `revoke`; `create` takes `--name`, not a positional arg
+- `coder templates list` has no `--organization` flag — use the global `--org`
+- `coder sharing add` requires `--user <username>:<role>` (role required)
+
 ## Tool Preferences
 
 - Use `jq` (not `python3 -m json.tool`) for JSON pretty-printing and querying
