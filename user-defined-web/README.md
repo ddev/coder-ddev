@@ -1,5 +1,7 @@
 # User-Defined Web DDEV Template
 
+> **Deprecated:** This template is no longer recommended. Use the **`freeform`** template instead — it provides the same functionality with a cleaner setup. Existing workspaces continue to work, but new workspaces should be created from `freeform`.
+
 General-purpose DDEV workspace for developing any project type supported by DDEV (PHP, WordPress, Laravel, Drupal, Magento, and more). Provides a full Docker environment via Sysbox with VS Code for Web and DDEV pre-configured.
 
 ## Features
