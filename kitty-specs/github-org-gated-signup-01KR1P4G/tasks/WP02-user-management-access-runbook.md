@@ -11,7 +11,7 @@ requirement_refs:
 - FR-009
 planning_base_branch: 20260507_speckitty
 merge_target_branch: 20260507_speckitty
-branch_strategy: Implement directly on branch 20260507_speckitty. No worktree needed.
+branch_strategy: Planning artifacts for this feature were generated on 20260507_speckitty. During /spec-kitty.implement this WP may branch from a dependency-specific base, but completed changes must merge back into 20260507_speckitty unless the human explicitly redirects the landing branch.
 subtasks:
 - T006
 - T007

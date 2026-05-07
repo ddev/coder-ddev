@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "mission_slug": "github-org-gated-signup-01KR1P4G",
+  "mission_id": "01KR1P4G5AJEBQMAZH1DKNQZHV",
+  "mission_branch": "kitty/mission-github-org-gated-signup-01KR1P4G",
+  "target_branch": "20260507_speckitty",
+  "lanes": [
+    {
+      "lane_id": "lane-a",
+      "wp_ids": [
+        "WP01"
+      ],
+      "write_scope": [
+        "docs/admin/server-setup.md"
+      ],
+      "predicted_surfaces": [
+        "api"
+      ],
+      "depends_on_lanes": [],
+      "parallel_group": 0
+    },
+    {
+      "lane_id": "lane-b",
+      "wp_ids": [
+        "WP02"
+      ],
+      "write_scope": [
+        "docs/admin/user-management.md"
+      ],
+      "predicted_surfaces": [
+        "artifact-rendering",
+        "legacy-cleanup",
+        "workspace"
+      ],
+      "depends_on_lanes": [],
+      "parallel_group": 0
+    },
+    {
+      "lane_id": "lane-planning",
+      "wp_ids": [
+        "WP03",
+        "WP04"
+      ],
+      "write_scope": [
+        "docs/admin/blog-post-draft.md",
+        "docs/admin/coder-ddev-com/**"
+      ],
+      "predicted_surfaces": [
+        "planning"
+      ],
+      "depends_on_lanes": [],
+      "parallel_group": 0
+    }
+  ],
+  "computed_at": "2026-05-07T18:04:47.239797+00:00",
+  "computed_from": "dependency_graph+ownership",
+  "planning_artifact_wps": [
+    "WP03",
+    "WP04"
+  ]
+}
