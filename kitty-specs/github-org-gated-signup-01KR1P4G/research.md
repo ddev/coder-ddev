@@ -83,6 +83,7 @@ No Terraform, shell, or Dockerfile changes needed.
 | ------- | -------------- | --------------- |
 | Tag1 | $1,000 | `tag1consulting` |
 | Upsun / Platform.sh | ~$1,162 | `upsun` and `platformsh` (Platform.sh rebranded to Upsun; both orgs added) |
+| 8mylez | ~$96 (annual $1,153) | `8mylez` — included at operator discretion despite being slightly under $100/month equivalent |
 | Institute for Advanced Studies | $500 | `Institute-for-Advanced-Studies` (org exists; no public name/description to confirm — needs operator verification) |
 | CPS-IT | ~$118 | `CPS-IT` |
 | Redfin Solutions | $100 | `redfinsolutions` |
@@ -92,17 +93,11 @@ No Terraform, shell, or Dockerfile changes needed.
 | Cambrico | $100 (annual $1.2k) | `Cambrico` |
 | Centarro | $100 (annual $1.2k) | `centarro` |
 
-### Needs operator verification
+### No GitHub org found — excluded
 
 | Company | Monthly equiv. | Notes |
 | ------- | -------------- | ----- |
-| LetsTalk | $100 | GitHub org `lets-talk` exists (name: "Let's Talk") — plausible match but unverified; operator should confirm |
-
-### Below $100/month threshold — excluded
-
-| Company | Monthly equiv. | Notes |
-| ------- | -------------- | ----- |
-| 8mylez | ~$96 (annual $1,153) | Annual equivalent is ~$96/month, just under the $100 threshold |
+| LetsTalk | $100 | `lets-talk` GitHub org exists but is not the correct org for this sponsor; no confirmed GitHub org found — individual access via `coder-ddev-com` membership instead |
 
 ### GitHub Sponsors orgs (github.com/sponsors/ddev)
 
@@ -111,6 +106,6 @@ Sponsors via GitHub Sponsors at $100+/month tier require a token with `read:user
 ### Resulting `ALLOWED_ORGS` value (staging/production)
 
 ```bash
-CODER_OAUTH2_GITHUB_ALLOWED_ORGS=ddev,coder-ddev-com,tag1consulting,upsun,platformsh,Institute-for-Advanced-Studies,CPS-IT,redfinsolutions,Lullabot,b13,pixelandtonic,Cambrico,centarro
-# Add lets-talk after operator confirms it is the correct LetsTalk org
+CODER_OAUTH2_GITHUB_ALLOWED_ORGS=ddev,coder-ddev-com,tag1consulting,upsun,platformsh,Institute-for-Advanced-Studies,CPS-IT,redfinsolutions,Lullabot,b13,pixelandtonic,Cambrico,centarro,8mylez
+# LetsTalk has no confirmed GitHub org; grant access by adding individuals to coder-ddev-com instead
 ```

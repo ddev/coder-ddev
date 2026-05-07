@@ -91,12 +91,16 @@ This feature decomposes into three types of work:
    - Draft issue template for the access-request repo (e.g., `coder-ddev-com/access-requests`): name, GitHub username, reason for access
    - Draft README for the access-request repo explaining how to open a request and what to expect
 
-4. **Resolve $100+ sponsor GitHub org names and update server-setup.md**
+4. **Draft sponsor notification message**
+   - Write a short email/message template announcing the access benefit to sponsor orgs: what coder.ddev.com is, that their org members can now log in with GitHub, link to the getting-started doc, and DDEV Discord/issues for support
+   - Store draft in `docs/admin/` or as a committed template for the operator to send
+
+5. **Resolve $100+ sponsor GitHub org names and update server-setup.md**
    - Identify which current $100+/month sponsors are GitHub organizations (vs. individuals): cross-reference the invoiced list (cps-it, Redfin Solutions, LetsTalk, Institute for Advanced Studies, Tag1, Upsun, B13, Lullabot, 8mylez, Cambrico, Centarro, Pixel & Tonic) against GitHub org slugs
    - Update `docs/admin/server-setup.md` to document the sponsor-org access policy and show the full example `ALLOWED_ORGS` value including sponsor org slugs
    - Update the sponsors-to-orgs mapping as a maintained comment or table in `docs/admin/server-setup.md` (since `invoiced-sponsorships.jsonc` has no GitHub org field)
 
-5. **Update ddev.com blog post** (`ddev/ddev.com` repo — separate PR required)
+6. **Update ddev.com blog post** (`ddev/ddev.com` repo — separate PR required)
    - Update the "Log In with GitHub" section: replace "No separate account needed" with an explanation that signups are restricted to `ddev` and `coder-ddev-com` org members
    - Add a paragraph explaining how users outside the `ddev` org can request access by opening an issue in the `coder-ddev-com/access-requests` repo
    - Add a link to the access-request repo
@@ -108,6 +112,7 @@ This feature decomposes into three types of work:
 3. **Register production OAuth App** under `ddev` org with callback `https://coder.ddev.com/api/v2/users/oauth2/github/callback`
 4. **Apply config to staging**: update `/etc/coder.d/coder.env` with `ALLOWED_ORGS=ddev,coder-ddev-com,<sponsor-org-1>,...`, restart `coder` service, validate all scenarios from spec
 5. **Apply config to production**: repeat after staging validation passes
+6. **Notify sponsor orgs**: reach out to each org in `ALLOWED_ORGS` (excluding `ddev` and `coder-ddev-com`) to let them know their members now have access — what coder.ddev.com is, how to use it, and where to get help (DDEV Discord, issues). Draft notification message as part of Type A work.
 
 ### Staging validation scenarios (must all pass before production)
 

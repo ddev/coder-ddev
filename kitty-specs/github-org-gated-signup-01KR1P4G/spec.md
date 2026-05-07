@@ -65,6 +65,7 @@ The same org-restriction configuration is applied to staging-coder.ddev.com, so 
 | FR-012 | The ddev.com blog post announcing coder.ddev.com is updated to explain that signups are now restricted, how the `coder-ddev-com` org works, and where to open an access request. | Approved |
 | FR-013 | GitHub organizations that sponsor DDEV at $100+/month (via GitHub Sponsors or invoiced billing) are eligible for access: all members of those orgs can sign in to coder.ddev.com without individual `coder-ddev-com` membership. | Approved |
 | FR-014 | A runbook documents how to identify the GitHub org name for a new $100+ sponsor and add it to the allowed-orgs list on both environments. | Approved |
+| FR-015 | Each sponsor org that has been granted access is notified about the benefit — what access they have, how to use it, and who to contact if they need help. | Approved |
 
 ---
 
@@ -102,6 +103,7 @@ The same org-restriction configuration is applied to staging-coder.ddev.com, so 
 6. A prospective user who is not in `ddev` or `coder-ddev-com` can find the access-request issue tracker without assistance.
 7. The ddev.com blog post no longer implies open signup; it accurately describes the access model and links to the access-request repo.
 8. Members of at least one confirmed $100+/month sponsor org can sign in to coder.ddev.com without being explicitly added to `coder-ddev-com`.
+9. Each sponsor org listed in `ALLOWED_ORGS` has been notified of the access benefit before or shortly after the production rollout.
 
 ---
 
