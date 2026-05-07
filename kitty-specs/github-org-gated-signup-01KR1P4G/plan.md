@@ -1,108 +1,105 @@
-# Implementation Plan: [FEATURE]
-*Path: [templates/plan-template.md](templates/plan-template.md)*
+# Implementation Plan: GitHub Org-Gated Signup
 
+**Branch**: `20260507_speckitty` | **Date**: 2026-05-07 | **Spec**: [spec.md](spec.md)
 
-**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
-**Input**: Feature specification from `/kitty-specs/[###-feature-name]/spec.md`
+**Branch contract**: Planning base `20260507_speckitty` → merge target `20260507_speckitty`.
 
-**Note**: This template is filled in by the `/spec-kitty.plan` command. See `src/specify_cli/missions/software-dev/command-templates/plan.md` for the execution workflow.
-
-The planner will not begin until all planning questions have been answered—capture those answers in this document before progressing to later phases.
+---
 
 ## Summary
 
-[Extract from feature spec: primary requirement + technical approach from research]
+Restrict new account signups on coder.ddev.com and staging-coder.ddev.com to members of the `ddev` and `coder-ddev-com` GitHub organizations. The Coder server is deployed via the apt deb package and managed by systemd; its runtime configuration lives in `/etc/coder.d/coder.env` on the server host (not committed to this repo). The docs in this repo (`docs/admin/server-setup.md`, `docs/admin/user-management.md`) are the authoritative operator reference and will be updated to reflect the new configuration. Two separate GitHub OAuth Apps (one per environment) will be registered under the `ddev` GitHub org for credential isolation. The `coder-ddev-com` GitHub org will be created as the managed access list for non-ddev-org users.
+
+---
 
 ## Technical Context
 
-<!--
-  ACTION REQUIRED: Replace the content in this section with the technical details
-  for the project. The structure here is presented in advisory capacity to guide
-  the iteration process.
--->
+**Language/Version**: Markdown (documentation updates)
+**Primary Dependencies**: Coder server env vars in `/etc/coder.d/coder.env` (managed on host, not in repo)
+**Storage**: N/A
+**Testing**: Manual scenario tests against staging-coder.ddev.com; existing BATS integration test suite
+**Target Platform**: Ubuntu server running Coder via apt deb package + systemd
+**Project Type**: Ops change + documentation update
+**Performance Goals**: No increase in login round-trip time (under 10 seconds)
+**Constraints**: Password auth must remain enabled; staging must be validated before production; OAuth credentials must not be committed to the repo
 
-**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
-**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
-**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
-**Testing**: [Project-specific test approach or NEEDS CLARIFICATION]
-**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
-**Project Type**: [single/web/mobile - determines source structure]  
-**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
-**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
-**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
+---
 
 ## Charter Check
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+- **All changes via PR**: ✓ — plan tracked in `kitty-specs/`, doc changes committed via PR on `20260507_speckitty`
+- **Staging before production**: ✓ — explicit work package gate between staging validation and production rollout
+- **No credentials in repo**: ✓ — `/etc/coder.d/coder.env` is a server-side file; client ID/secret documented as operator-supplied values only
+- **Integration tests run against staging**: ✓ — staging validation WP includes manual scenario testing; BATS suite run post-config
 
-[Gates determined based on charter file]
+No charter violations.
+
+---
 
 ## Project Structure
 
-### Documentation (this feature)
+### Spec artifacts
 
 ```
-kitty-specs/[###-feature]/
-├── plan.md              # This file (/spec-kitty.plan command output)
-├── research.md          # Phase 0 output (/spec-kitty.plan command)
-├── data-model.md        # Phase 1 output (/spec-kitty.plan command)
-├── quickstart.md        # Phase 1 output (/spec-kitty.plan command)
-├── contracts/           # Phase 1 output (/spec-kitty.plan command)
-└── tasks.md             # Phase 2 output (/spec-kitty.tasks command - NOT created by /spec-kitty.plan)
+kitty-specs/github-org-gated-signup-01KR1P4G/
+├── spec.md              ✓ complete
+├── plan.md              ← this file
+├── research.md          ← Phase 0 output
+└── tasks/               ← populated by /spec-kitty.tasks
 ```
 
-### Source Code (repository root)
-<!--
-  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
-  for this feature. Delete unused options and expand the chosen structure with
-  real paths (e.g., apps/admin, packages/something). The delivered plan must
-  not include Option labels.
--->
+### Source changes (repo root)
 
-```
-# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
-src/
-├── models/
-├── services/
-├── cli/
-└── lib/
-
-tests/
-├── contract/
-├── integration/
-└── unit/
-
-# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
-backend/
-├── src/
-│   ├── models/
-│   ├── services/
-│   └── api/
-└── tests/
-
-frontend/
-├── src/
-│   ├── components/
-│   ├── pages/
-│   └── services/
-└── tests/
-
-# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
-api/
-└── [same as backend above]
-
-ios/ or android/
-└── [platform-specific structure: feature modules, UI flows, platform tests]
+```text
+docs/admin/
+├── server-setup.md      ← update: add coder-ddev-com to ALLOWED_ORGS, staging OAuth App section
+└── user-management.md   ← update: add access management runbook section
 ```
 
-**Structure Decision**: [Document the selected structure and reference the real
-directories captured above]
+No Terraform, shell script, or Dockerfile changes required. All Coder server configuration changes are applied on the host via `/etc/coder.d/coder.env`.
 
-## Complexity Tracking
+---
 
-*Fill ONLY if Charter Check has violations that must be justified*
+## Phase 0: Research
 
-| Violation | Why Needed | Simpler Alternative Rejected Because |
-|-----------|------------|-------------------------------------|
-| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
-| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
+See [research.md](research.md).
+
+Key findings: all open questions resolved. No `[NEEDS CLARIFICATION]` markers remain.
+
+---
+
+## Phase 1: Work Package Approach
+
+This feature decomposes into three types of work:
+
+### Type A — Repository changes (agent-implementable)
+
+1. **Update `docs/admin/server-setup.md`**
+   - Change `CODER_OAUTH2_GITHUB_ALLOWED_ORGS=ddev` to `CODER_OAUTH2_GITHUB_ALLOWED_ORGS=ddev,coder-ddev-com`
+   - Add a staging OAuth App sub-section (separate app with staging callback URL)
+   - Add a note explaining the `coder-ddev-com` org purpose and how to manage membership
+   - Add a note explaining why two separate OAuth Apps are used (credential isolation between environments)
+
+2. **Update `docs/admin/user-management.md`**
+   - Add a new "Access Management" section covering:
+     - How to add a user to the `coder-ddev-com` GitHub org (grants self-serve signup)
+     - How to pre-create a password exception account (for users who cannot use GitHub OAuth)
+     - Note: private org membership is sufficient — users do not need to publicize membership
+
+### Type B — Ops tasks (operator-executed, documented in runbook)
+
+1. **Create `coder-ddev-com` GitHub org** — one-time action; org owner adds members as needed
+2. **Register staging OAuth App** under `ddev` org with callback `https://staging-coder.ddev.com/api/v2/users/oauth2/github/callback`
+3. **Register production OAuth App** under `ddev` org with callback `https://coder.ddev.com/api/v2/users/oauth2/github/callback`
+4. **Apply config to staging**: update `/etc/coder.d/coder.env`, restart `coder` service, validate all 5 scenarios from spec
+5. **Apply config to production**: repeat after staging validation passes
+
+### Staging validation scenarios (must all pass before production)
+
+| # | Scenario | Expected |
+| - | -------- | -------- |
+| 1 | `ddev` org member signs in via GitHub | Account created, dashboard loads |
+| 2 | `coder-ddev-com` org member signs in via GitHub | Account created, dashboard loads |
+| 3 | Unauthorized GitHub user attempts sign-in | Error shown, no account created |
+| 4 | Existing user (pre-existing account) logs in | Access unchanged |
+| 5 | Exception account via password | Password login succeeds |
