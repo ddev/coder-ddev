@@ -19,12 +19,17 @@ requirement_refs:
 planning_base_branch: 20260507_speckitty
 merge_target_branch: 20260507_speckitty
 branch_strategy: Planning artifacts for this feature were generated on 20260507_speckitty. During /spec-kitty.implement this WP may branch from a dependency-specific base, but completed changes must merge back into 20260507_speckitty unless the human explicitly redirects the landing branch.
+base_branch: kitty/mission-github-org-gated-signup-01KR1P4G
+base_commit: e125c1d60f5ea0f1c84475d06a5947d15b201b60
+created_at: '2026-05-07T18:56:26.245758+00:00'
 subtasks:
 - T001
 - T002
 - T003
 - T004
 - T005
+shell_pid: "25745"
+agent: "claude"
 history:
 - date: '2026-05-07'
   event: created
@@ -264,3 +269,9 @@ When a new organization reaches the $100+/month sponsorship level:
 
 - The `ALLOWED_ORGS` value is long; a typo in a slug silently excludes that org's members. Verify the slug list against `kitty-specs/github-org-gated-signup-01KR1P4G/research.md` before committing.
 - `Institute-for-Advanced-Studies` is unverified — note this clearly in the doc.
+
+## Activity Log
+
+- 2026-05-07T18:56:27Z – claude – shell_pid=25745 – Assigned agent via action command
+- 2026-05-07T18:58:51Z – claude – shell_pid=25745 – Ready for review: server-setup.md updated with full 27-org ALLOWED_ORGS, staging OAuth App section, coder-ddev-com management docs, sponsor table, and runbook
+- 2026-05-07T19:03:03Z – claude – shell_pid=25745 – Review passed: all subtasks complete and verified
