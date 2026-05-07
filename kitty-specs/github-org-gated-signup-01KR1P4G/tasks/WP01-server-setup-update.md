@@ -28,7 +28,8 @@ subtasks:
 - T003
 - T004
 - T005
-shell_pid: '25745'
+shell_pid: "25745"
+agent: "claude"
 history:
 - date: '2026-05-07'
   event: created
@@ -268,3 +269,7 @@ When a new organization reaches the $100+/month sponsorship level:
 
 - The `ALLOWED_ORGS` value is long; a typo in a slug silently excludes that org's members. Verify the slug list against `kitty-specs/github-org-gated-signup-01KR1P4G/research.md` before committing.
 - `Institute-for-Advanced-Studies` is unverified — note this clearly in the doc.
+
+## Activity Log
+
+- 2026-05-07T18:56:27Z – claude – shell_pid=25745 – Assigned agent via action command
