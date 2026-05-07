@@ -5,7 +5,7 @@ name: Drupal Contrib Integration Tests
 #
 # Two jobs:
 #   contrib-plain       — matrix of known modules on D11, runs on every
-#                         push to drupal-contrib/** and nightly
+#                         push to main and nightly
 #   contrib-issue-fork  — single workspace using a real drupal.org contrib issue
 #                         fork, runs nightly only
 #
@@ -35,8 +35,6 @@ on:
     - cron: '0 5 * * *'
   push:
     branches: [main]
-    paths:
-      - 'drupal-contrib/**'
   pull_request:
   workflow_dispatch:
     inputs:
