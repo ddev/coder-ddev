@@ -84,6 +84,8 @@ No Terraform, shell, or Dockerfile changes needed.
 | Tag1 | $1,000 | `tag1consulting` |
 | Upsun / Platform.sh | ~$1,162 | `upsun` and `platformsh` (Platform.sh rebranded to Upsun; both orgs added) |
 | 8mylez | ~$96 (annual $1,153) | `8mylez` — included at operator discretion despite being slightly under $100/month equivalent |
+| dkd Internet Service GmbH | $100 (GitHub Sponsors) | `dkd` |
+| Liip | $100 (GitHub Sponsors) | `liip` |
 | Institute for Advanced Studies | $500 | `Institute-for-Advanced-Studies` (org exists; no public name/description to confirm — needs operator verification) |
 | CPS-IT | ~$118 | `CPS-IT` |
 | Redfin Solutions | $100 | `redfinsolutions` |
@@ -99,13 +101,16 @@ No Terraform, shell, or Dockerfile changes needed.
 | ------- | -------------- | ----- |
 | LetsTalk | $100 | `lets-talk` GitHub org exists but is not the correct org for this sponsor; no confirmed GitHub org found — individual access via `coder-ddev-com` membership instead |
 
-### GitHub Sponsors orgs (github.com/sponsors/ddev)
+### GitHub Sponsors individual at $100/month
 
-Sponsors via GitHub Sponsors at $100+/month tier require a token with `read:user` scope on the `ddev` org owner account to enumerate via the GraphQL API. Resolve manually or in a follow-up mission.
+One individual (not an org) sponsors at $100/month via GitHub Sponsors. Because they have a personal account (not a GitHub org), they cannot be added to `CODER_OAUTH2_GITHUB_ALLOWED_ORGS`. Grant access by adding their GitHub username to the `coder-ddev-com` org directly.
+
+Identified as `dougvann` via [ddev/ddev.com#626](https://github.com/ddev/ddev.com/pull/626). Add `dougvann` to `coder-ddev-com` org directly after org creation.
 
 ### Resulting `ALLOWED_ORGS` value (staging/production)
 
 ```bash
-CODER_OAUTH2_GITHUB_ALLOWED_ORGS=ddev,coder-ddev-com,tag1consulting,upsun,platformsh,Institute-for-Advanced-Studies,CPS-IT,redfinsolutions,Lullabot,b13,pixelandtonic,Cambrico,centarro,8mylez
-# LetsTalk has no confirmed GitHub org; grant access by adding individuals to coder-ddev-com instead
+CODER_OAUTH2_GITHUB_ALLOWED_ORGS=ddev,coder-ddev-com,tag1consulting,upsun,platformsh,Institute-for-Advanced-Studies,CPS-IT,redfinsolutions,Lullabot,b13,pixelandtonic,Cambrico,centarro,8mylez,dkd,liip
+# LetsTalk: no confirmed GitHub org — add individuals to coder-ddev-com instead
+# dougvann ($100/month individual GitHub Sponsor): add to coder-ddev-com directly
 ```

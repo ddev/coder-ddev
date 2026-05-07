@@ -107,7 +107,7 @@ This feature decomposes into three types of work:
 
 ### Type B — Ops tasks (operator-executed, documented in runbook)
 
-1. **Create `coder-ddev-com` GitHub org** — one-time action; org owner adds members as needed
+1. **Create `coder-ddev-com` GitHub org** — one-time action; add `dougvann` (individual $100/month GitHub Sponsor) as an initial member; LetsTalk contact added when identified
 2. **Register staging OAuth App** under `ddev` org with callback `https://staging-coder.ddev.com/api/v2/users/oauth2/github/callback`
 3. **Register production OAuth App** under `ddev` org with callback `https://coder.ddev.com/api/v2/users/oauth2/github/callback`
 4. **Apply config to staging**: update `/etc/coder.d/coder.env` with `ALLOWED_ORGS=ddev,coder-ddev-com,<sponsor-org-1>,...`, restart `coder` service, validate all scenarios from spec
