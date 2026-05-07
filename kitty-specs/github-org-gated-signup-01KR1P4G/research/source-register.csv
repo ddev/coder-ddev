@@ -1,0 +1,25 @@
+# Source Register: Master list of all research sources
+#
+# Column Definitions:
+# - source_id: Unique identifier (lowercase, no spaces, e.g., "smith2024")
+# - citation: Full citation (BibTeX or APA format)
+# - url: Direct link to source (DOI, arXiv, or web URL)
+# - accessed_date: Date source was accessed (YYYY-MM-DD)
+# - relevance: high | medium | low (to primary research question)
+# - status: reviewed | pending | archived
+#
+# Usage: Add sources when discovered, update status as research progresses
+# Validation: source_id must be unique
+source_id,citation,url,accessed_date,relevance,status
+coder-external-auth,"Coder Documentation. External Auth / GitHub OAuth.",https://coder.com/docs/admin/external-auth,2026-05-07,high,reviewed
+coder-custom-oauth-app,"Coder Documentation. Custom GitHub OAuth App recommendation.",https://coder.com/docs/admin/external-auth,2026-05-07,high,reviewed
+github-oauth-scopes,"GitHub Documentation. Scopes for OAuth apps.",https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/scopes-for-oauth-apps,2026-05-07,high,reviewed
+coder-device-flow,"Coder Documentation. Device Flow warning for ALLOWED_ORGS.",https://coder.com/docs/admin/external-auth,2026-05-07,high,reviewed
+coder-install-server,"Coder Documentation. Server installation (apt, systemd, coder.env).",https://coder.com/docs/install/server,2026-05-07,high,reviewed
+ddev-sponsorship-data,"DDEV internal. invoiced-sponsorships.jsonc (ddev/sponsorship-data repo).",(internal repo),2026-05-07,high,reviewed
+ddev-ddev-com-sponsors,"DDEV website. Featured sponsors page. https://ddev.com/support/sponsors",https://ddev.com/support/sponsors,2026-05-07,high,reviewed
+ddev-ddev-com-pr626,"ddev/ddev.com PR #626. Sponsor listing confirming dougvann as individual $100/month.",https://github.com/ddev/ddev.com/pull/626,2026-05-07,medium,reviewed
+github-org-search,"GitHub org search (manual lookups, 2026-05-07). Resolved sponsor company names to org slugs.",(manual lookup),2026-05-07,medium,reviewed
+github-issue-64,"ddev/coder-ddev issue #64. User creation and authentication control.",https://github.com/ddev/coder-ddev/issues/64,2026-05-07,high,reviewed
+github-issue-54,"ddev/coder-ddev issue #54. Offer additional login options.",https://github.com/ddev/coder-ddev/issues/54,2026-05-07,medium,reviewed
+github-org-ownership,"GitHub Documentation. About organizations / transferring ownership.",https://docs.github.com/en/organizations,2026-05-07,medium,reviewed

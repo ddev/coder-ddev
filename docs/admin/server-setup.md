@@ -659,14 +659,34 @@ The initial admin account must be created with username/password via the web UI 
 
 **1. Create a GitHub OAuth App**
 
-Create the app under your **GitHub organization**, not your personal account — apps created under a personal account show "by \<username\>" on the authorization screen instead of "by \<org\>". Go to **github.com/organizations/\<your-org\>/settings/applications → New OAuth App** and fill in:
+Create the app under your **GitHub organization**, not your personal account — apps created under a personal account show "by \<username\>" on the authorization screen instead of "by \<org\>". Go to **github.com/organizations/ddev/settings/applications → New OAuth App** and fill in:
 
-- **Application name**: `Coder (coder.ddev.com)` (or similar)
+- **Application name**: `Coder (coder.ddev.com)`
 - **Homepage URL**: `https://coder.ddev.com`
 - **Authorization callback URL**: `https://coder.ddev.com/api/v2/users/oauth2/github/callback`
 - **Enable Device Flow**: leave unchecked (see note below)
 
 After creating the app, generate a client secret. Note the **Client ID** and **Client Secret**.
+
+#### Two OAuth Apps: staging and production
+
+Register **two separate OAuth Apps** — one for staging, one for production. Separate apps isolate credentials between environments so that a staging secret compromise cannot affect production, and secret rotation on one environment does not require touching the other.
+
+**Staging app settings:**
+
+- **Application name**: `Coder (staging-coder.ddev.com)`
+- **Homepage URL**: `https://staging-coder.ddev.com`
+- **Authorization callback URL**: `https://staging-coder.ddev.com/api/v2/users/oauth2/github/callback`
+- **Enable Device Flow**: leave unchecked
+
+**Production app settings** (same as above):
+
+- **Application name**: `Coder (coder.ddev.com)`
+- **Homepage URL**: `https://coder.ddev.com`
+- **Authorization callback URL**: `https://coder.ddev.com/api/v2/users/oauth2/github/callback`
+- **Enable Device Flow**: leave unchecked
+
+Use the staging app's Client ID and Client Secret in `/etc/coder.d/coder.env` on staging-coder.ddev.com, and the production app's credentials on coder.ddev.com.
 
 **2. Add to `/etc/coder.d/coder.env`**
 
@@ -678,8 +698,9 @@ CODER_OAUTH2_GITHUB_CLIENT_SECRET=your-client-secret
 # Allow sign-ups via GitHub (new users are created automatically on first login)
 CODER_OAUTH2_GITHUB_ALLOW_SIGNUPS=true
 
-# Restrict to members of a specific GitHub org (recommended):
-CODER_OAUTH2_GITHUB_ALLOWED_ORGS=ddev
+# Access control: ddev org members, coder-ddev-com managed list, and $100+/month sponsor orgs
+# Institute-for-Advanced-Studies is included but not yet verified — confirm the org identity before deploying
+CODER_OAUTH2_GITHUB_ALLOWED_ORGS=ddev,coder-ddev-com,tag1consulting,upsun,platformsh,Institute-for-Advanced-Studies,CPS-IT,redfinsolutions,Lullabot,b13,pixelandtonic,Cambrico,centarro,8mylez,dkd,liip,i-gelb,FameHelsinki,Gizra,mobilistics,OPTASY,passbolt,vaersaagod,affinitybridge,AGILEDROP,NPO-Applications-GmbH,AtenDesignGroup
 
 # Or allow any GitHub user (not recommended for a shared server):
 # CODER_OAUTH2_GITHUB_ALLOW_EVERYONE=true
@@ -705,6 +726,82 @@ sudo systemctl restart coder
 ```
 
 There is also a toggle in the Coder admin UI at **Admin → Security** that can override the env var. Check that user sign-ups are not disabled there.
+
+### Managing individual access via `coder-ddev-com`
+
+The `coder-ddev-com` GitHub organization is the managed access list for individuals who do not belong to the `ddev` org or one of the sponsor orgs. Adding someone to `coder-ddev-com` grants them signup access to coder.ddev.com without requiring a Coder server restart.
+
+**To grant access to an individual:**
+
+1. Go to **github.com/coder-ddev-com** → **People** → **Invite member**
+2. Enter the person's GitHub username and send the invitation
+3. Once they accept, they can log in to coder.ddev.com via GitHub OAuth
+
+**Initial members** (add these when creating the org):
+
+- `dougvann` — individual $100/month GitHub Sponsor
+- `claudiu-cristea` — Webikon sponsor (linked as individual on ddev.com)
+- Add LetsTalk, Amedick Sommer, and Pottkinder GmbH contacts when their GitHub usernames are confirmed
+
+**Note on private membership:** Users do not need to make their `coder-ddev-com` membership public. Private membership is sufficient — the `read:org` OAuth scope allows Coder to verify membership regardless of visibility setting.
+
+### Sponsor org access policy
+
+All $100+/month DDEV sponsors receive access as an org-level benefit: every member of a sponsor's GitHub org can sign in to coder.ddev.com without individual enrollment in `coder-ddev-com`. MacStadium and JetBrains are excluded (in-kind, not cash sponsors).
+
+| Company | GitHub org | Source |
+| ------- | ---------- | ------ |
+| Tag1 | `tag1consulting` | invoiced |
+| Upsun | `upsun` | invoiced |
+| Platform.sh (Upsun predecessor) | `platformsh` | invoiced |
+| Institute for Advanced Studies | `Institute-for-Advanced-Studies` ⚠️ | invoiced |
+| CPS-IT | `CPS-IT` | invoiced |
+| Redfin Solutions | `redfinsolutions` | invoiced + featured |
+| Lullabot | `Lullabot` | invoiced |
+| B13 | `b13` | invoiced + featured |
+| Pixel & Tonic (Craft CMS) | `pixelandtonic` | invoiced + featured |
+| Cambrico | `Cambrico` | invoiced + featured |
+| Centarro | `centarro` | invoiced + featured |
+| 8mylez | `8mylez` | invoiced |
+| dkd Internet Service GmbH | `dkd` | GitHub Sponsors |
+| Liip | `liip` | GitHub Sponsors |
+| i-gelb GmbH | `i-gelb` | featured |
+| Fame Helsinki | `FameHelsinki` | featured |
+| Gizra | `Gizra` | featured |
+| mobilistics GmbH | `mobilistics` | featured |
+| OPTASY | `OPTASY` | featured |
+| Passbolt | `passbolt` | featured |
+| Værsågod | `vaersaagod` | featured |
+| Affinity Bridge | `affinitybridge` | featured |
+| Agiledrop | `AGILEDROP` | featured |
+| NPO Applications GmbH | `NPO-Applications-GmbH` | featured |
+| Aten Design Group | `AtenDesignGroup` | featured |
+
+⚠️ `Institute-for-Advanced-Studies` — GitHub org exists but has no public name or description. Confirm with an operator that this is the correct org before deploying.
+
+Sponsors with no confirmed GitHub org (access via `coder-ddev-com` individual membership instead): LetsTalk, Amedick Sommer, Pottkinder GmbH.
+
+#### Adding a new sponsor org
+
+When a new organization reaches the $100+/month sponsorship level:
+
+1. **Find their GitHub org slug**: Check the sponsor's GitHub profile or ask them directly. Verify with `gh api orgs/<slug> --jq '.login'` — if the command returns the slug, the org exists.
+
+2. **Add the slug to `ALLOWED_ORGS`** on both staging and production:
+
+   ```bash
+   # On the server, edit /etc/coder.d/coder.env
+   # Append the new slug to CODER_OAUTH2_GITHUB_ALLOWED_ORGS (comma-separated, no spaces)
+   sudo systemctl restart coder
+   ```
+
+3. **Test on staging first**: Ask someone from the org to attempt login on staging-coder.ddev.com before updating production.
+
+4. **Update the table above**: Add the org to the sponsor org table so the list stays accurate.
+
+5. **Notify the sponsor**: Send the sponsor notification (see `docs/admin/coder-ddev-com/sponsor-notification.md`) letting them know their org members now have access.
+
+**If the sponsor has no GitHub org**: Add their individual GitHub username to the `coder-ddev-com` org instead (see "Managing individual access" above). No server restart needed.
 
 ### Fix cert permissions and test renewal
 

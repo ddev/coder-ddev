@@ -1,0 +1,49 @@
+{
+  "event_count": 24,
+  "last_event_id": "01KR1X720HBERH8WV858JGT87Z",
+  "materialized_at": "2026-05-07T19:04:15.121111+00:00",
+  "mission_number": "1",
+  "mission_slug": "github-org-gated-signup-01KR1P4G",
+  "mission_type": "software-dev",
+  "summary": {
+    "approved": 4,
+    "blocked": 0,
+    "canceled": 0,
+    "claimed": 0,
+    "done": 0,
+    "for_review": 0,
+    "in_progress": 0,
+    "in_review": 0,
+    "planned": 0
+  },
+  "work_packages": {
+    "WP01": {
+      "actor": "user",
+      "force_count": 1,
+      "lane": "approved",
+      "last_event_id": "01KR1X4VMFF2143XS72GZD5KW6",
+      "last_transition_at": "2026-05-07T19:03:03.055895+00:00"
+    },
+    "WP02": {
+      "actor": "user",
+      "force_count": 1,
+      "lane": "approved",
+      "last_event_id": "01KR1X5G55FJ8762EW7PCQVRZ4",
+      "last_transition_at": "2026-05-07T19:03:24.069266+00:00"
+    },
+    "WP03": {
+      "actor": "user",
+      "force_count": 1,
+      "lane": "approved",
+      "last_event_id": "01KR1X6MC85P9D1GT7TKMYXNS9",
+      "last_transition_at": "2026-05-07T19:04:01.160896+00:00"
+    },
+    "WP04": {
+      "actor": "user",
+      "force_count": 1,
+      "lane": "approved",
+      "last_event_id": "01KR1X720HBERH8WV858JGT87Z",
+      "last_transition_at": "2026-05-07T19:04:15.121111+00:00"
+    }
+  }
+}
