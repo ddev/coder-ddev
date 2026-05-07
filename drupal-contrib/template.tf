@@ -684,10 +684,30 @@ COMPOSE_EOF
         fi
 
         if [ "$SETUP_FAILED" = "false" ]; then
-          # Restart triggers ddev symlink-project automatically
+          # Restart triggers ddev symlink-project automatically.
+          # symlink-project creates web/modules/custom/<project> -> project root.
+          # Without this symlink drush cannot discover the module.
           log_setup "Restarting DDEV to trigger symlink-project..."
-          ddev restart >> "$SETUP_LOG" 2>&1 || true
+          update_status "⏳ DDEV restart: In progress..."
+          if ddev restart >> "$SETUP_LOG" 2>&1; then
+            log_setup "✓ DDEV restarted"
+            update_status "✓ DDEV restart: Success"
+          else
+            log_setup "✗ DDEV restart failed — trying stop + start..."
+            update_status "⚠ DDEV restart: Retrying..."
+            ddev stop >> "$SETUP_LOG" 2>&1 || true
+            if ddev start >> "$SETUP_LOG" 2>&1; then
+              log_setup "✓ DDEV started (after restart failure)"
+              update_status "✓ DDEV restart: Success (via stop+start)"
+            else
+              log_setup "✗ DDEV start failed after restart failure"
+              update_status "✗ DDEV restart: Failed"
+              SETUP_FAILED=true
+            fi
+          fi
+        fi
 
+        if [ "$SETUP_FAILED" = "false" ]; then
           # Install Drupal
           INSTALL_PROFILE="${data.coder_parameter.install_profile.value}"
           log_setup "Installing Drupal ($INSTALL_PROFILE profile)..."
@@ -717,8 +737,9 @@ COMPOSE_EOF
               log_setup "✓ $PROJECT_NAME enabled"
               update_status "✓ $PROJECT_NAME: Enabled"
             else
-              log_setup "⚠ Warning: $PROJECT_NAME not found in enabled modules list"
-              update_status "⚠ $PROJECT_NAME: Not enabled (check /tmp/drupal-setup.log)"
+              log_setup "✗ $PROJECT_NAME not found in enabled modules — enable failed"
+              update_status "✗ $PROJECT_NAME: Not enabled (check /tmp/drupal-setup.log)"
+              SETUP_FAILED=true
             fi
           fi
         fi
