@@ -19,12 +19,16 @@ requirement_refs:
 planning_base_branch: 20260507_speckitty
 merge_target_branch: 20260507_speckitty
 branch_strategy: Planning artifacts for this feature were generated on 20260507_speckitty. During /spec-kitty.implement this WP may branch from a dependency-specific base, but completed changes must merge back into 20260507_speckitty unless the human explicitly redirects the landing branch.
+base_branch: kitty/mission-github-org-gated-signup-01KR1P4G
+base_commit: e125c1d60f5ea0f1c84475d06a5947d15b201b60
+created_at: '2026-05-07T18:56:26.245758+00:00'
 subtasks:
 - T001
 - T002
 - T003
 - T004
 - T005
+shell_pid: '25745'
 history:
 - date: '2026-05-07'
   event: created

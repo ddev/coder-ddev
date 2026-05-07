@@ -1,7 +1,7 @@
 {
-  "event_count": 4,
-  "last_event_id": "01KR1ST5R57BNZQ55XMMB3WG64",
-  "materialized_at": "2026-05-07T18:04:47.237340+00:00",
+  "event_count": 6,
+  "last_event_id": "01KR1WRR7EDJNJ3QKMNGWQKN4C",
+  "materialized_at": "2026-05-07T18:56:26.350632+00:00",
   "mission_number": "",
   "mission_slug": "github-org-gated-signup-01KR1P4G",
   "mission_type": "software-dev",
@@ -12,17 +12,17 @@
     "claimed": 0,
     "done": 0,
     "for_review": 0,
-    "in_progress": 0,
+    "in_progress": 1,
     "in_review": 0,
-    "planned": 4
+    "planned": 3
   },
   "work_packages": {
     "WP01": {
-      "actor": "finalize-tasks",
+      "actor": "implement-command",
       "force_count": 1,
-      "lane": "planned",
-      "last_event_id": "01KR1ST5NXMPC2VG8WH5J2C72X",
-      "last_transition_at": "2026-05-07T18:04:47.165313+00:00"
+      "lane": "in_progress",
+      "last_event_id": "01KR1WRR7EDJNJ3QKMNGWQKN4C",
+      "last_transition_at": "2026-05-07T18:56:26.350632+00:00"
     },
     "WP02": {
       "actor": "finalize-tasks",
