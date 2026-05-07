@@ -1,0 +1,23 @@
+# Evidence Log: Track all research findings with citations
+#
+# Column Definitions:
+# - timestamp: When evidence was collected (ISO format: YYYY-MM-DDTHH:MM:SS)
+# - source_type: journal | conference | book | web | preprint
+# - citation: Full citation (BibTeX, APA, or Simple format)
+# - key_finding: Main takeaway from this source (1-2 sentences)
+# - confidence: high | medium | low (based on source quality and clarity)
+# - notes: Additional context, caveats, or methodological notes
+#
+# Validation: Citations must be non-empty, source_type must be valid
+# Format: BibTeX (@article{...}) or APA (Author (Year). Title.) recommended
+timestamp,source_type,citation,key_finding,confidence,notes
+2026-05-07T17:00:00,web,"Coder Docs. GitHub OAuth. https://coder.com/docs/admin/external-auth",CODER_OAUTH2_GITHUB_ALLOWED_ORGS restricts new signups to members of listed GitHub orgs.,high,Primary reference for env var names and behavior
+2026-05-07T17:00:00,web,"Coder Docs. GitHub OAuth — Custom App. https://coder.com/docs/admin/external-auth","For production, Coder strongly recommends a custom GitHub OAuth App to avoid sharing org membership data with Coder the company.",high,Quoted directly in research.md
+2026-05-07T17:00:00,web,"GitHub Docs. OAuth scopes. https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/scopes-for-oauth-apps",The read:org scope allows reading private org membership without requiring users to publicize it.,high,Satisfies NFR-002
+2026-05-07T17:00:00,web,"Coder Docs. Device Flow warning. https://coder.com/docs/admin/external-auth",Device flow (CODER_OAUTH2_GITHUB_DEVICE_FLOW=true) does not request read:org; enabling it alongside ALLOWED_ORGS causes 403 errors on org membership checks.,high,Already documented in server-setup.md; must remain in runbook
+2026-05-07T17:00:00,web,"ddev/ddev.com PR #626. https://github.com/ddev/ddev.com/pull/626","Individual GitHub Sponsor dougvann confirmed at $100/month tier; no associated org, so add to coder-ddev-com.",medium,Used to resolve individual vs org ambiguity for dougvann
+2026-05-07T17:00:00,web,"ddev/sponsorship-data invoiced-sponsorships.jsonc (repo internal)",invoiced-sponsorships.jsonc records billing tiers and company names but does not contain GitHub org slugs; manual mapping required.,high,Constraint C-007 in spec
+2026-05-07T17:00:00,web,"GitHub org search and API lookups (manual, 2026-05-07)",Resolved 24 sponsor org slugs via GitHub org search. Institute-for-Advanced-Studies org exists but unverified — requires operator confirmation.,medium,See sponsor table in research.md for full mapping
+2026-05-07T17:00:00,web,"ddev.com /support/sponsors page (featured sponsors list)",Featured sponsors on ddev.com are all at $100+/month. MacStadium and JetBrains are in-kind (excluded). Webikon link points to individual claudiu-cristea (excluded from ALLOWED_ORGS).,high,Cross-referenced with invoiced-sponsorships.jsonc
+2026-05-07T17:00:00,web,"GitHub org ownership docs. https://docs.github.com/en/organizations",Registering OAuth App under an org shows 'by <org>' on auth screen and survives individual departures.,high,Satisfies FR-007; institutional ownership requirement
+2026-05-07T17:00:00,web,"Coder apt install docs. https://coder.com/docs/install/server",Coder installed via apt reads /etc/coder.d/coder.env at systemd startup; no image rebuild needed to apply env changes.,high,Informs deployment model — config-only change

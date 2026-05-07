@@ -1,0 +1,74 @@
+work_packages:
+  - id: WP01
+    title: "Update server-setup.md for Org-Gated Auth"
+    dependencies: []
+    owned_files:
+      - "docs/admin/server-setup.md"
+    requirement_refs:
+      - FR-001
+      - FR-005
+      - FR-006
+      - FR-007
+      - FR-013
+      - FR-014
+      - C-005
+      - C-006
+      - C-007
+    subtasks:
+      - T001
+      - T002
+      - T003
+      - T004
+      - T005
+    prompt_file: "tasks/WP01-server-setup-update.md"
+
+  - id: WP02
+    title: "Update user-management.md with Access Runbook"
+    dependencies: []
+    owned_files:
+      - "docs/admin/user-management.md"
+    requirement_refs:
+      - FR-002
+      - FR-003
+      - FR-004
+      - FR-009
+      - NFR-002
+      - C-001
+    subtasks:
+      - T006
+      - T007
+      - T008
+      - T009
+    prompt_file: "tasks/WP02-user-management-access-runbook.md"
+
+  - id: WP03
+    title: "coder-ddev-com Org Content Drafts"
+    dependencies: []
+    owned_files:
+      - "docs/admin/coder-ddev-com/**"
+    requirement_refs:
+      - FR-010
+      - FR-011
+      - FR-015
+      - C-002
+    subtasks:
+      - T010
+      - T011
+      - T012
+      - T013
+    prompt_file: "tasks/WP03-coder-ddev-com-org-content.md"
+
+  - id: WP04
+    title: "Blog Post Update Draft"
+    dependencies:
+      - WP03
+    owned_files:
+      - "docs/admin/blog-post-draft.md"
+    requirement_refs:
+      - FR-012
+      - FR-008
+    subtasks:
+      - T014
+      - T015
+      - T016
+    prompt_file: "tasks/WP04-blog-post-draft.md"
