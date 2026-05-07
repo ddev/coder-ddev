@@ -20,7 +20,8 @@ subtasks:
 - T007
 - T008
 - T009
-shell_pid: '29068'
+shell_pid: "29068"
+agent: "claude"
 history:
 - date: '2026-05-07'
   event: created
@@ -231,3 +232,7 @@ When the `coder-ddev-com` GitHub org is created, add these initial members:
 
 - The `coder users create` CLI syntax should be verified against the current Coder CLI (`coder users create --help`) before committing — flags may differ across Coder versions.
 - Avoid adding the "Access Management" section in a location that breaks the existing document flow. Insert it after the "User Roles" content, not at the very end.
+
+## Activity Log
+
+- 2026-05-07T18:59:06Z – claude – shell_pid=29068 – Assigned agent via action command
