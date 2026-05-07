@@ -1,0 +1,79 @@
+schema_version: "1.0.0"
+mission: "software-dev"
+profile: "comprehensive"
+answers:
+  project_intent: >
+    Manage and deploy coder.ddev.com — a cloud-hosted DDEV environment for
+    web developers. The project owns the Coder workspace templates (Terraform HCL),
+    the base Docker image, and the supporting shell scripts that enable
+    Docker-in-Docker development via Sysbox runtime. A breaking change means
+    developers cannot create or use workspaces; risk level is high for end users
+    who depend on the service.
+
+  languages_frameworks: >
+    Terraform (HCL), Shell (Bash), Dockerfile (Ubuntu 24.04 base),
+    bats-core (BATS test framework for shell-level integration tests),
+    Go toolchain (available in image for future use).
+
+  testing_requirements: >
+    Integration tests are BATS scripts that run against a live staging Coder
+    instance (staging-coder.ddev.com) before any deployment to production.
+    Plan-level tests use `terraform test` (no real infrastructure required).
+    CI also runs `terraform fmt -check -recursive` and `terraform validate`
+    for each touched template. There is no unit-test coverage percentage target —
+    correctness is verified by staging promotion.
+
+  quality_gates: >
+    All changes require a pull request. CI must pass before merge.
+    CI gates: `terraform fmt -check`, `terraform validate`, `terraform test`
+    for each template. Integration test scripts run against staging before
+    promoting to production. No direct commits to main.
+
+  review_policy: >
+    Every change requires a pull request. Single maintainer project currently,
+    but PRs still required for traceability and CI gating. Conventional commit
+    messages are preferred.
+
+  performance_targets: >
+    No quantitative latency targets. Workspace startup should complete within
+    a reasonable time (under 5 minutes) as a qualitative target. CLI commands
+    (terraform, make) should not timeout during CI runs.
+
+  deployment_constraints: >
+    Two environments: staging-coder.ddev.com and production coder.ddev.com.
+    Templates are promoted staging → production only after integration tests
+    pass on staging. The main branch reflects the production-ready state.
+    Feature branches are used for all development work.
+
+  documentation_policy: >
+    User-facing documentation lives in /docs/. CLAUDE.md documents developer
+    and contributor guidance. Changes to template behavior or CLI commands
+    must be reflected in docs before merge. Doc-only changes are low-risk
+    but still require PRs.
+
+  risk_boundaries: >
+    High-risk changes: modifications to startup scripts, Sysbox runtime
+    configuration, Docker daemon setup, or base image layers — these affect
+    all workspaces. Medium-risk: template variable changes or new templates.
+    Low-risk: documentation, Makefile targets, version bumps.
+    Any change that affects running workspaces requires staging validation.
+
+  amendment_process: >
+    Charter amendments follow the same PR process as code changes.
+    Significant governance changes should be discussed in the PR description.
+
+  exception_policy: >
+    Hotfixes for production incidents may bypass staging testing with explicit
+    maintainer acknowledgment in the PR, but must still pass CI.
+
+selected_paradigms: []
+
+selected_directives: []
+
+available_tools:
+  - git
+  - spec-kitty
+  - terraform
+  - docker
+  - make
+  - bats
