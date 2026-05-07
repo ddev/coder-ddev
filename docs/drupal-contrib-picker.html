@@ -683,6 +683,7 @@
               const ver = issue.field_issue_version || '';
               const verM = ver.match(/^(\d+)\./);
               if (verM) drupalMajor = verM[1];
+              else if (ver === 'main' || ver.startsWith('12')) drupalMajor = '12';
             }
           }
         } catch (_) { /* title/version stay as fallback */ }
