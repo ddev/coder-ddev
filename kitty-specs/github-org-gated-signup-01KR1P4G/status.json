@@ -2,7 +2,7 @@
   "event_count": 24,
   "last_event_id": "01KR1X720HBERH8WV858JGT87Z",
   "materialized_at": "2026-05-07T19:04:15.121111+00:00",
-  "mission_number": "",
+  "mission_number": "1",
   "mission_slug": "github-org-gated-signup-01KR1P4G",
   "mission_type": "software-dev",
   "summary": {
