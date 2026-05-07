@@ -35,7 +35,9 @@ TEMPLATE_VARS_freeform         := --variable workspace_image_registry=index.dock
 
 # Per-template display metadata set via `coder templates edit` after push
 # (coder templates push only supports --name, not --description)
-TEMPLATE_EDIT_user-defined-web := --display-name "DDEV Web Workspace"
+TEMPLATE_EDIT_user-defined-web := --display-name "[DEPRECATED] DDEV Web Workspace" \
+                                   --description "Deprecated: use the freeform template instead. Existing workspaces continue to work." \
+                                   --deprecated "Deprecated: use the freeform template instead. Existing workspaces continue to work."
 TEMPLATE_EDIT_drupal-core      := --display-name "Drupal Core Development" \
                                    --description "Drupal core dev environment: full DDEV stack, core clone, Umami demo site. Ready in about a minute."
 TEMPLATE_EDIT_drupal-contrib   := --display-name "Drupal Contrib Development" \
