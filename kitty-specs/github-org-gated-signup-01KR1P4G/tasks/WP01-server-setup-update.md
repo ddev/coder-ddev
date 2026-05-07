@@ -12,6 +12,7 @@ requirement_refs:
 - FR-005
 - FR-006
 - FR-007
+- FR-008
 - FR-009
 - FR-013
 - FR-014
