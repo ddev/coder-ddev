@@ -6,6 +6,7 @@ requirement_refs:
 - C-001
 - FR-001
 - FR-002
+- FR-003
 - FR-004
 - FR-009
 planning_base_branch: 20260507_speckitty
