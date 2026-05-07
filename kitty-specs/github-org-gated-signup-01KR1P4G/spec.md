@@ -60,6 +60,9 @@ The same org-restriction configuration is applied to staging-coder.ddev.com, so 
 | FR-007 | The OAuth App is registered under the `ddev` GitHub organization so credentials are DDEV-controlled, not held by an individual account. | Approved |
 | FR-008 | Authorized users from both orgs can create and use workspaces on both environments. | Approved |
 | FR-009 | An operator runbook documents how to add a user to the `coder-ddev-com` org and how to pre-create exception accounts with password credentials. | Approved |
+| FR-010 | The `coder-ddev-com` GitHub org has a README (in its `.github` or dedicated `about` repo) explaining the org's purpose, who it is for, and how access works. | Approved |
+| FR-011 | A public repository in the `coder-ddev-com` org provides an issue tracker where prospective users can request access by opening a GitHub issue. | Approved |
+| FR-012 | The ddev.com blog post announcing coder.ddev.com is updated to explain that signups are now restricted, how the `coder-ddev-com` org works, and where to open an access request. | Approved |
 
 ---
 
@@ -92,6 +95,8 @@ The same org-restriction configuration is applied to staging-coder.ddev.com, so 
 3. An admin can grant access to a new non-ddev-org user by adding them to `coder-ddev-com`, with no Coder server change required.
 4. At least one pre-existing user account continues to function after the rollout (no accounts locked out).
 5. Staging-coder.ddev.com and coder.ddev.com enforce the same restriction after both are reconfigured.
+6. A prospective user who is not in `ddev` or `coder-ddev-com` can find the access-request issue tracker without assistance.
+7. The ddev.com blog post no longer implies open signup; it accurately describes the access model and links to the access-request repo.
 
 ---
 

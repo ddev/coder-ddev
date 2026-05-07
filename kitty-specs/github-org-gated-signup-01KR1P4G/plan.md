@@ -40,7 +40,7 @@ No charter violations.
 
 ### Spec artifacts
 
-```
+```text
 kitty-specs/github-org-gated-signup-01KR1P4G/
 ├── spec.md              ✓ complete
 ├── plan.md              ← this file
@@ -85,6 +85,16 @@ This feature decomposes into three types of work:
      - How to add a user to the `coder-ddev-com` GitHub org (grants self-serve signup)
      - How to pre-create a password exception account (for users who cannot use GitHub OAuth)
      - Note: private org membership is sufficient — users do not need to publicize membership
+
+3. **Write `coder-ddev-com` org README and access-request repo**
+   - Draft content for the `coder-ddev-com` org README (`.github/profile/README.md` in the org): org purpose, who qualifies, how membership grants Coder access
+   - Draft issue template for the access-request repo (e.g., `coder-ddev-com/access-requests`): name, GitHub username, reason for access
+   - Draft README for the access-request repo explaining how to open a request and what to expect
+
+4. **Update ddev.com blog post** (`ddev/ddev.com` repo — separate PR required)
+   - Update the "Log In with GitHub" section: replace "No separate account needed" with an explanation that signups are restricted to `ddev` and `coder-ddev-com` org members
+   - Add a paragraph explaining how users outside the `ddev` org can request access by opening an issue in the `coder-ddev-com/access-requests` repo
+   - Add a link to the access-request repo
 
 ### Type B — Ops tasks (operator-executed, documented in runbook)
 
