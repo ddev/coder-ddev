@@ -34,4 +34,4 @@ We aim to respond to requests within a few business days. If you have not heard 
 
 ## Questions
 
-Visit the [DDEV Discord](https://discord.ddev.com) or open an issue in [ddev/ddev](https://github.com/ddev/ddev/issues).
+Visit the [DDEV Discord](https://ddev.com/s/discord) or open an issue in [ddev/coder-ddev](https://github.com/ddev/coder-ddev/issues).
