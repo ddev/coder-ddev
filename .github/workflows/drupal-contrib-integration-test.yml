@@ -7,7 +7,7 @@ name: Drupal Contrib Integration Tests
 #   contrib-plain       — matrix of known modules on D11, runs on every
 #                         push to main and nightly
 #   contrib-issue-fork  — single workspace using a real drupal.org contrib issue
-#                         fork, runs nightly only
+#                         fork, runs on every push to main, PRs, and nightly
 #
 # Repository variables (optional, set in GitHub → Settings → Variables):
 #   CONTRIB_TEST_PROJECT        - Module machine name for issue fork test (default: token)
@@ -204,10 +204,7 @@ jobs:
 
   contrib-issue-fork:
     name: Contrib ${{ vars.CONTRIB_TEST_PROJECT || 'token' }} issue fork
-    if: |
-      vars.CONTRIB_TEST_ISSUE_FORK != '' &&
-      github.event_name != 'push' &&
-      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.owner.login == github.repository_owner)
+    if: ${{ vars.CONTRIB_TEST_ISSUE_FORK != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.owner.login == github.repository_owner) }}
     runs-on: [self-hosted, sysbox]
     defaults:
       run:

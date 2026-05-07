@@ -7,7 +7,7 @@ name: Drupal Integration Tests
 #   drupal-plain       — matrix of D11 and D12, no issue fork, runs on every
 #                        push to main and nightly
 #   drupal-issue-fork  — single workspace using a real drupal.org issue fork,
-#                        runs nightly only
+#                        runs on every push to main, PRs, and nightly
 #
 # Repository variable:
 #   DRUPAL_TEST_ISSUE_FORK  - drupal.org issue number (bare, e.g. 3585397) or
@@ -195,9 +195,7 @@ jobs:
 
   drupal-issue-fork:
     name: Drupal issue fork ${{ vars.DRUPAL_TEST_ISSUE_FORK || '3585397' }}
-    if: |
-      github.event_name != 'push' &&
-      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.owner.login == github.repository_owner)
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.owner.login == github.repository_owner }}
     runs-on: [self-hosted, sysbox]
     defaults:
       run:
