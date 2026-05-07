@@ -392,6 +392,7 @@ jobs:
           - project: pathauto
             drupal_version: "11"
       fail-fast: false
+      max-parallel: 1
     defaults:
       run:
         shell: bash -euo pipefail {0}

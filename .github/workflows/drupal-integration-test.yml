@@ -201,6 +201,7 @@ jobs:
       matrix:
         drupal_version: ["12", "11"]
       fail-fast: false
+      max-parallel: 1
     defaults:
       run:
         shell: bash -euo pipefail {0}
