@@ -29,6 +29,25 @@ When writing or reviewing `coder` CLI commands in documentation, **always verify
 - `coder templates list` has no `--organization` flag — use the global `--org`
 - `coder sharing add` requires `--user <username>:<role>` (role required)
 
+## DDEV Command Gotchas
+
+- `ddev composer create` is **obsolete** — always use `ddev composer create-project <package> .` (note the trailing `.` for current directory)
+- Do **not** pin packages to `:dev-main` (e.g. `package:dev-main`) — omit the version constraint and let Composer resolve it
+- All templates omit `ddev-router` via `ddev config global --omit-containers=ddev-router`; each template uses direct port binding instead
+
+## Template Architecture Overview
+
+Four templates exist, each with a distinct routing model:
+
+| Template             | Web port | Routing model                                         |
+| -------------------- | -------- | ----------------------------------------------------- |
+| `user-defined-web`   | 80       | Direct bind, no ddev-router                           |
+| `drupal-core`        | 80       | Direct bind, no ddev-router                           |
+| `drupal-contrib`     | 8080     | Direct bind, no ddev-router                           |
+| `freeform`           | 8080     | ddev-router on 8080, Host-header dispatch per project |
+
+The `freeform` template is unique: it keeps ddev-router running so multiple DDEV projects can coexist in one workspace, distinguished by Host header.
+
 ## Tool Preferences
 
 - Use `jq` (not `python3 -m json.tool`) for JSON pretty-printing and querying
@@ -42,12 +61,15 @@ Run these before every push to avoid CI failures:
 terraform fmt -recursive
 
 # Terraform validation for each template you touched
+terraform -chdir=user-defined-web init -backend=false && terraform -chdir=user-defined-web validate
 terraform -chdir=drupal-core init -backend=false && terraform -chdir=drupal-core validate
 terraform -chdir=drupal-contrib init -backend=false && terraform -chdir=drupal-contrib validate
+terraform -chdir=freeform init -backend=false && terraform -chdir=freeform validate
 
 # Terraform tests (plan-level, no real infrastructure)
 terraform -chdir=drupal-core test
 terraform -chdir=drupal-contrib test
+terraform -chdir=freeform test
 ```
 
 `terraform fmt -recursive` must be run from the repo root. It is non-destructive (rewrites in place) and the CI check fails with exit code 3 if any file is not formatted.
@@ -80,11 +102,17 @@ To run a command in a specific directory without a shell wrapper, use `env -C <d
 
 ### Template Management
 ```bash
-# Deploy or update the drupal-core template (no image build needed)
-make push-template-drupal-core
+# Push all four templates (no image build — use when only HCL changed)
+make push-all-templates
 
-# Deploy or update template (example: user-defined-web)
-coder templates push --directory user-defined-web user-defined-web --yes
+# Push a single template
+make push-template-drupal-core
+make push-template-drupal-contrib
+make push-template-freeform
+make push-template-user-defined-web
+
+# Build image + push image + push template (user-defined-web only)
+make deploy-user-defined-web
 
 # List all templates
 coder templates list
@@ -321,13 +349,14 @@ Additional logs in workspace:
 
 ## Important Code Locations
 
-- `user-defined-web/template.tf` - Main Terraform template definition (startup script is inline in coder_agent)
-- `user-defined-web/template.tf` - Coder agent configuration with inline startup script
-- `user-defined-web/template.tf` - VS Code for Web module (official Coder module)
-- `user-defined-web/template.tf` - Graceful DDEV shutdown script (coder_script resource)
-- `user-defined-web/template.tf` - Docker container resource
-- `image/Dockerfile` - Base image build instructions
-- `image/scripts/.ddev/global_config.yaml` - DDEV defaults
-- `VERSION` - Image version used by template (read automatically)
+- `user-defined-web/template.tf` - Generic user-defined workspace template
+- `drupal-core/template.tf` - Drupal core development template (most actively developed)
+- `drupal-contrib/template.tf` - Drupal contributed module development template
+- `freeform/template.tf` - Multi-project freeform workspace template (keeps ddev-router)
+- `image/Dockerfile` - Base image build instructions (shared by all templates)
+- `image/scripts/.ddev/global_config.yaml` - DDEV defaults copied into workspaces
+- `scripts/coder-delete-workspace-dir.sh` - Sudo wrapper for workspace host dir cleanup (must be installed on server)
+- `scripts/cleanup-deleted-workspaces.sh` - Manual cleanup for orphaned workspace dirs/volumes
+- `VERSION` - Image version used by all templates (read automatically by Makefile)
 - `openspec/project.md` - Project conventions and constraints
 - `openspec/AGENTS.md` - OpenSpec workflow instructions
