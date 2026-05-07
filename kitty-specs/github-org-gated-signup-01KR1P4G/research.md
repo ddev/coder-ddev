@@ -75,25 +75,42 @@ No Terraform, shell, or Dockerfile changes needed.
 
 ## $100+/month sponsor GitHub org names
 
-**Finding**: The `ddev/sponsorship-data` `invoiced-sponsorships.jsonc` file records billing tiers and company names in comments but contains no `github_org` field. GitHub org slugs must be resolved manually.
+**Finding**: The `ddev/sponsorship-data` `invoiced-sponsorships.jsonc` file records billing tiers and company names in comments but no `github_org` field. Slugs resolved by GitHub API lookup below.
 
-**Known $100+/month invoiced sponsors** (from the data file comments) that need GitHub org slug mapping:
+### Confirmed — GitHub org verified
 
-| Company | Monthly amount | GitHub org slug (TBD) |
-| ------- | -------------- | --------------------- |
-| cps-it | ~$118 | TBD |
-| Redfin Solutions | $100 | TBD |
-| LetsTalk | $100 | TBD |
-| Institute for Advanced Studies | $500 | TBD |
-| Tag1 | $1,000 | TBD |
-| Upsun | ~$1,162 | TBD |
-| B13 | annual ($2,000/yr) | TBD |
-| Lullabot | annual ($2,000/yr) | TBD |
-| 8mylez | annual (~$1,153/yr) | TBD |
-| Cambrico | annual ($1,200/yr) | TBD |
-| Centarro | annual ($1,200/yr) | TBD |
-| Pixel & Tonic | annual ($1,200/yr) | TBD |
+| Company | Monthly equiv. | GitHub org slug |
+| ------- | -------------- | --------------- |
+| Tag1 | $1,000 | `tag1consulting` |
+| Upsun / Platform.sh | ~$1,162 | `upsun` and `platformsh` (Platform.sh rebranded to Upsun; both orgs added) |
+| Institute for Advanced Studies | $500 | `Institute-for-Advanced-Studies` (org exists; no public name/description to confirm — needs operator verification) |
+| CPS-IT | ~$118 | `CPS-IT` |
+| Redfin Solutions | $100 | `redfinsolutions` |
+| Lullabot | ~$167 (annual $2k) | `Lullabot` |
+| B13 | ~$167 (annual $2k) | `b13` |
+| Pixel & Tonic | $100 (annual $1.2k) | `pixelandtonic` |
+| Cambrico | $100 (annual $1.2k) | `Cambrico` |
+| Centarro | $100 (annual $1.2k) | `centarro` |
 
-**Action required (operator)**: Confirm GitHub org slug for each before adding to `ALLOWED_ORGS`. Some may not have a GitHub org (individuals or companies without a public GitHub presence).
+### Needs operator verification
 
-**GitHub Sponsors orgs** (sponsoring via github.com/sponsors/ddev at $100+/month tier): requires a token with `read:user` scope on the `ddev` org owner account to enumerate via the GraphQL API. Out of scope for this mission's automated resolution — resolve manually or in a follow-up.
+| Company | Monthly equiv. | Notes |
+| ------- | -------------- | ----- |
+| LetsTalk | $100 | GitHub org `lets-talk` exists (name: "Let's Talk") — plausible match but unverified; operator should confirm |
+
+### Below $100/month threshold — excluded
+
+| Company | Monthly equiv. | Notes |
+| ------- | -------------- | ----- |
+| 8mylez | ~$96 (annual $1,153) | Annual equivalent is ~$96/month, just under the $100 threshold |
+
+### GitHub Sponsors orgs (github.com/sponsors/ddev)
+
+Sponsors via GitHub Sponsors at $100+/month tier require a token with `read:user` scope on the `ddev` org owner account to enumerate via the GraphQL API. Resolve manually or in a follow-up mission.
+
+### Resulting `ALLOWED_ORGS` value (staging/production)
+
+```bash
+CODER_OAUTH2_GITHUB_ALLOWED_ORGS=ddev,coder-ddev-com,tag1consulting,upsun,platformsh,Institute-for-Advanced-Studies,CPS-IT,redfinsolutions,Lullabot,b13,pixelandtonic,Cambrico,centarro
+# Add lets-talk after operator confirms it is the correct LetsTalk org
+```
