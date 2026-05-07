@@ -5,7 +5,7 @@ name: Drupal Integration Tests
 #
 # Two jobs:
 #   drupal-plain       — matrix of D11 and D12, no issue fork, runs on every
-#                        push to drupal-core/** and nightly
+#                        push to main and nightly
 #   drupal-issue-fork  — single workspace using a real drupal.org issue fork,
 #                        runs nightly only
 #
@@ -40,8 +40,6 @@ on:
     - cron: '0 4 * * *'
   push:
     branches: [main]
-    paths:
-      - 'drupal-core/**'
   pull_request:
   workflow_dispatch:
     inputs:
