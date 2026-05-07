@@ -864,7 +864,7 @@ Check workspace startup logs in the Coder dashboard or at `/tmp/drupal-setup.log
 **Cache not being used:**
 
 - Verify the seed directory exists and is populated: `ls $SEED_DIR/composer.json $SEED_DIR/vendor`
-- Confirm `cache_path` in the deployed template matches your actual seed directory (check with `coder templates show drupal-core`)
+- Confirm `cache_path` in the deployed template matches your actual seed directory (check with `coder templates versions list drupal-core`)
 - Check the workspace startup log for the "Cache mount check" diagnostic block — it shows exactly which files were found or missing at the bind mount path
 - Look for "Cache hit" in the log; "No cache available" means the path is absent or the seed was never initialized
 

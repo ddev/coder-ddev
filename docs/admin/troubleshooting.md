@@ -61,7 +61,7 @@ coder templates push --directory user-defined-web user-defined-web --yes --verbo
 coder templates list
 
 # Check template organization
-coder templates show user-defined-web --json | grep organization
+coder templates list -o json | jq '.[] | select(.name=="user-defined-web") | .organization_name'
 
 # Check user's organization
 coder users show <username> --json | grep organization
@@ -824,15 +824,15 @@ coder ssh my-workspace -- ddev describe
 # 1. Backup data if possible
 coder ssh my-workspace -- tar -czf ~/backup.tar.gz ~/projects
 
-# 2. Copy backup to local machine
-coder scp my-workspace:~/backup.tar.gz ./
+# 2. Copy backup to local machine (requires coder config-ssh)
+scp my-workspace.coder:~/backup.tar.gz ./
 
 # 3. Delete and recreate workspace
 coder delete my-workspace --yes
 coder create --template user-defined-web my-workspace --yes
 
 # 4. Restore data
-coder scp ./backup.tar.gz my-workspace:~/
+scp ./backup.tar.gz my-workspace.coder:~/
 coder ssh my-workspace -- tar -xzf ~/backup.tar.gz
 ```
 

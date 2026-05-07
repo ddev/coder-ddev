@@ -721,7 +721,7 @@ source ~/.bashrc
 
 - **Commit to Git** regularly (safest backup)
 - **Export databases**: `ddev export-db --file=backup.sql.gz`
-- **Download files** via VS Code or `coder scp`
+- **Download files** via VS Code or `scp` (after `coder config-ssh`)
 
 ### Performance
 

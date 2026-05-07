@@ -95,7 +95,7 @@ coder ssh my-first-workspace
 coder ssh my-second-workspace
 
 # Stop all workspaces
-coder stop my-first-workspace my-second-workspace
+for ws in my-first-workspace my-second-workspace; do coder stop "$ws"; done
 ```
 
 **Use cases for multiple workspaces:**
@@ -681,14 +681,14 @@ You can share a running workspace with another user for pair programming or revi
 
 **Via the CLI:**
 ```bash
-# Share with another user (read-only by default)
-coder sharing add <owner>/<workspace> --user <username>
+# Share with another user (specify role: view or admin)
+coder sharing add <owner>/<workspace> --user <username>:<role>
 
 # Example
-coder sharing add rfay/issue-3453474 --user stasadev
+coder sharing add rfay/issue-3453474 --user stasadev:view
 
 # List current shares
-coder sharing list rfay/issue-3453474
+coder sharing status rfay/issue-3453474
 
 # Remove a share
 coder sharing remove rfay/issue-3453474 --user stasadev
@@ -710,16 +710,12 @@ You can share a specific port (e.g., a site you're working on) without sharing t
 3. Click the share icon next to the port you want to expose
 4. Set visibility: **Owner** (private), **Authenticated** (any logged-in user), or **Public** (anyone with the URL)
 
-**Via the CLI:**
+**Via the CLI** (forward a port to your local machine):
 ```bash
-# List open ports
-coder port-forward <workspace> --list
-
-# Open a port publicly (share the printed URL)
-coder open url <workspace> --port 8080
+coder port-forward <workspace> --tcp 8080:8080
 ```
 
-Public port sharing is handy for quickly showing a site to someone without a Coder account.
+Port visibility (public/authenticated/owner) is managed via the Coder web UI dashboard.
 
 ## Common Tasks
 
@@ -741,8 +737,8 @@ ddev import-db --file=backup.sql.gz
 # Option 1: Via VS Code drag-and-drop
 # Open VS Code, drag project folder into file explorer
 
-# Option 2: Via SCP
-coder scp ./local-project my-workspace:~/projects/
+# Option 2: Via SCP (requires coder config-ssh)
+scp -r ./local-project my-workspace.coder:~/projects/
 
 # Then in workspace:
 cd ~/projects/local-project
@@ -777,19 +773,19 @@ ddev snapshot restore
 
 ### File Sync and Backup
 
-**Download files from workspace:**
+**Download files from workspace** (requires `coder config-ssh`):
 ```bash
 # Via SCP
-coder scp my-workspace:~/projects/my-site ./local-backup/
+scp -r my-workspace.coder:~/projects/my-site ./local-backup/
 
 # Via VS Code
 # Right-click file/folder → Download
 ```
 
-**Upload files to workspace:**
+**Upload files to workspace** (requires `coder config-ssh`):
 ```bash
 # Via SCP
-coder scp ./local-files my-workspace:~/projects/my-site/
+scp -r ./local-files my-workspace.coder:~/projects/my-site/
 
 # Via VS Code drag-and-drop
 ```
@@ -800,9 +796,9 @@ coder scp ./local-files my-workspace:~/projects/my-site/
 cd ~/projects
 tar -czf my-site-backup.tar.gz my-site/
 
-# Download
+# Download (requires coder config-ssh)
 exit
-coder scp my-workspace:~/projects/my-site-backup.tar.gz ./
+scp my-workspace.coder:~/projects/my-site-backup.tar.gz ./
 ```
 
 ### Package Management
