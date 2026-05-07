@@ -261,6 +261,7 @@ Key template variables in `user-defined-web/template.tf`:
 ### Git Workflow
 - This is an **infrastructure repository** managing Coder templates
 - Use feature branches for changes
+- **Never use the local `main` branch** — always `git fetch upstream` and base branches on `upstream/main`. Use `upstream/main` for comparisons (e.g. `git diff upstream/main...HEAD`), not local `main`.
 - Always use OpenSpec for architectural changes (see AGENTS.md)
 
 ### OpenSpec Integration
