@@ -70,3 +70,30 @@ CODER_OAUTH2_GITHUB_ALLOWED_ORGS=ddev,coder-ddev-com
 | `docs/admin/user-management.md` | Add "Access Management" section: how to add users to `coder-ddev-com`, how to pre-create password exception accounts |
 
 No Terraform, shell, or Dockerfile changes needed.
+
+---
+
+## $100+/month sponsor GitHub org names
+
+**Finding**: The `ddev/sponsorship-data` `invoiced-sponsorships.jsonc` file records billing tiers and company names in comments but contains no `github_org` field. GitHub org slugs must be resolved manually.
+
+**Known $100+/month invoiced sponsors** (from the data file comments) that need GitHub org slug mapping:
+
+| Company | Monthly amount | GitHub org slug (TBD) |
+| ------- | -------------- | --------------------- |
+| cps-it | ~$118 | TBD |
+| Redfin Solutions | $100 | TBD |
+| LetsTalk | $100 | TBD |
+| Institute for Advanced Studies | $500 | TBD |
+| Tag1 | $1,000 | TBD |
+| Upsun | ~$1,162 | TBD |
+| B13 | annual ($2,000/yr) | TBD |
+| Lullabot | annual ($2,000/yr) | TBD |
+| 8mylez | annual (~$1,153/yr) | TBD |
+| Cambrico | annual ($1,200/yr) | TBD |
+| Centarro | annual ($1,200/yr) | TBD |
+| Pixel & Tonic | annual ($1,200/yr) | TBD |
+
+**Action required (operator)**: Confirm GitHub org slug for each before adding to `ALLOWED_ORGS`. Some may not have a GitHub org (individuals or companies without a public GitHub presence).
+
+**GitHub Sponsors orgs** (sponsoring via github.com/sponsors/ddev at $100+/month tier): requires a token with `read:user` scope on the `ddev` org owner account to enumerate via the GraphQL API. Out of scope for this mission's automated resolution — resolve manually or in a follow-up.

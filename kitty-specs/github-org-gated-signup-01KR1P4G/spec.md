@@ -63,6 +63,8 @@ The same org-restriction configuration is applied to staging-coder.ddev.com, so 
 | FR-010 | The `coder-ddev-com` GitHub org has a README (in its `.github` or dedicated `about` repo) explaining the org's purpose, who it is for, and how access works. | Approved |
 | FR-011 | A public repository in the `coder-ddev-com` org provides an issue tracker where prospective users can request access by opening a GitHub issue. | Approved |
 | FR-012 | The ddev.com blog post announcing coder.ddev.com is updated to explain that signups are now restricted, how the `coder-ddev-com` org works, and where to open an access request. | Approved |
+| FR-013 | GitHub organizations that sponsor DDEV at $100+/month (via GitHub Sponsors or invoiced billing) are eligible for access: all members of those orgs can sign in to coder.ddev.com without individual `coder-ddev-com` membership. | Approved |
+| FR-014 | A runbook documents how to identify the GitHub org name for a new $100+ sponsor and add it to the allowed-orgs list on both environments. | Approved |
 
 ---
 
@@ -85,6 +87,8 @@ The same org-restriction configuration is applied to staging-coder.ddev.com, so 
 | C-003 | The custom GitHub OAuth App must request at minimum: `read:user`, `user:email`, and `read:org` scopes. The `read:org` scope is required for Coder to verify org membership. | Approved |
 | C-004 | The change must be applied to staging first and validated before applying to production. | Approved |
 | C-005 | OAuth App credentials (client ID and client secret) must be stored as server-level secrets, not committed to the repository. | Approved |
+| C-006 | Sponsor orgs are added to `CODER_OAUTH2_GITHUB_ALLOWED_ORGS` directly (not proxied via `coder-ddev-com` membership), so all members of a sponsor org benefit automatically without individual enrollment. | Approved |
+| C-007 | The `invoiced-sponsorships.jsonc` data file does not contain GitHub org names; a manual or scripted mapping from company name to GitHub org name is required before any sponsor org can be added. | Approved |
 
 ---
 
@@ -97,6 +101,7 @@ The same org-restriction configuration is applied to staging-coder.ddev.com, so 
 5. Staging-coder.ddev.com and coder.ddev.com enforce the same restriction after both are reconfigured.
 6. A prospective user who is not in `ddev` or `coder-ddev-com` can find the access-request issue tracker without assistance.
 7. The ddev.com blog post no longer implies open signup; it accurately describes the access model and links to the access-request repo.
+8. Members of at least one confirmed $100+/month sponsor org can sign in to coder.ddev.com without being explicitly added to `coder-ddev-com`.
 
 ---
 
