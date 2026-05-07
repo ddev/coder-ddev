@@ -1,10 +1,12 @@
 {
   "created_at": "2026-05-07T17:00:31.394646+00:00",
-  "friendly_name": "github org gated signup",
+  "friendly_name": "GitHub Org-Gated Signup",
   "mission_id": "01KR1P4G5AJEBQMAZH1DKNQZHV",
   "mission_number": null,
   "mission_slug": "github-org-gated-signup-01KR1P4G",
   "mission_type": "software-dev",
   "slug": "github-org-gated-signup-01KR1P4G",
-  "target_branch": "20260507_speckitty"
+  "source_description": "Restrict new account creation on coder.ddev.com and staging-coder.ddev.com to members of the ddev and coder-ddev-com GitHub organizations. References issues #64 and #54.",
+  "target_branch": "20260507_speckitty",
+  "vcs": "git"
 }
