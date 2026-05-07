@@ -487,6 +487,64 @@ coder ssh my-workspace -- coder gitssh --help
 coder users show <username>
 ```
 
+## Access Management
+
+New account creation on coder.ddev.com and staging-coder.ddev.com is restricted to members of two GitHub organizations: the `ddev` org and the `coder-ddev-com` org. Additionally, members of $100+/month DDEV sponsor organizations can sign in directly.
+
+Existing accounts created before this restriction was applied remain active. Password authentication remains available for manually pre-created exception accounts.
+
+### Granting access via `coder-ddev-com` org membership
+
+The `coder-ddev-com` GitHub organization is the access list for individuals who are not members of the `ddev` org or a sponsor org. Adding someone to this org grants signup access without any Coder server change.
+
+**Steps:**
+
+1. Go to **github.com/coder-ddev-com** → **People** → **Invite member**
+2. Enter the person's GitHub username and send the invitation
+3. Once they accept the invitation, they can visit coder.ddev.com and sign in with GitHub
+
+**Note on private membership:** Users do not need to make their `coder-ddev-com` membership public. Private membership is sufficient — Coder uses the `read:org` OAuth scope to verify membership regardless of visibility.
+
+### Pre-creating password exception accounts
+
+For users who cannot authenticate via GitHub OAuth (e.g., users without a GitHub account, or accounts needed before org configuration is complete), an admin can pre-create a password-based account directly.
+
+**Via CLI:**
+
+```bash
+# Create the account
+coder users create <username> --email user@example.com
+
+# Set a password interactively
+coder users create <username> --email user@example.com --set-password
+```
+
+**Via Web UI:**
+
+1. Log in as admin
+2. Navigate to **Admin → Users → Create User**
+3. Fill in username, email, and password
+4. Assign the **Member** role
+
+The user logs in at coder.ddev.com with their username and password — GitHub OAuth is not required for password accounts.
+
+> **Important:** `CODER_DISABLE_PASSWORD_AUTH` must never be set to `true`. Password authentication must remain available for these exception accounts.
+
+### Private org membership and the `read:org` scope
+
+Users who are members of `ddev`, `coder-ddev-com`, or a sponsor org do not need to make that membership public. Coder requests the `read:org` GitHub OAuth scope, which allows it to verify private org membership during authentication. Users are prompted to grant this scope when they first click "Sign in with GitHub."
+
+### Initial `coder-ddev-com` members
+
+Add these individuals when creating the `coder-ddev-com` org:
+
+| GitHub username | Reason |
+| --------------- | ------ |
+| `dougvann` | Individual $100/month GitHub Sponsor |
+| `claudiu-cristea` | Webikon sponsor (linked as individual on ddev.com) |
+
+The following sponsor contacts should also be added once their GitHub usernames are confirmed: LetsTalk, Amedick Sommer, Pottkinder GmbH.
+
 ## Additional Resources
 
 - [Operations Guide](./operations-guide.md) - Template deployment and management
