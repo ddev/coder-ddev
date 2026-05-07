@@ -273,3 +273,4 @@ When a new organization reaches the $100+/month sponsorship level:
 ## Activity Log
 
 - 2026-05-07T18:56:27Z – claude – shell_pid=25745 – Assigned agent via action command
+- 2026-05-07T18:58:51Z – claude – shell_pid=25745 – Ready for review: server-setup.md updated with full 27-org ALLOWED_ORGS, staging OAuth App section, coder-ddev-com management docs, sponsor table, and runbook
