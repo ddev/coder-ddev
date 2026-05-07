@@ -77,40 +77,59 @@ No Terraform, shell, or Dockerfile changes needed.
 
 **Finding**: The `ddev/sponsorship-data` `invoiced-sponsorships.jsonc` file records billing tiers and company names in comments but no `github_org` field. Slugs resolved by GitHub API lookup below.
 
-### Confirmed — GitHub org verified
+### Confirmed — add to `ALLOWED_ORGS`
 
-| Company | Monthly equiv. | GitHub org slug |
-| ------- | -------------- | --------------- |
-| Tag1 | $1,000 | `tag1consulting` |
-| Upsun / Platform.sh | ~$1,162 | `upsun` and `platformsh` (Platform.sh rebranded to Upsun; both orgs added) |
-| 8mylez | ~$96 (annual $1,153) | `8mylez` — included at operator discretion despite being slightly under $100/month equivalent |
-| dkd Internet Service GmbH | $100 (GitHub Sponsors) | `dkd` |
-| Liip | $100 (GitHub Sponsors) | `liip` |
-| Institute for Advanced Studies | $500 | `Institute-for-Advanced-Studies` (org exists; no public name/description to confirm — needs operator verification) |
-| CPS-IT | ~$118 | `CPS-IT` |
-| Redfin Solutions | $100 | `redfinsolutions` |
-| Lullabot | ~$167 (annual $2k) | `Lullabot` |
-| B13 | ~$167 (annual $2k) | `b13` |
-| Pixel & Tonic | $100 (annual $1.2k) | `pixelandtonic` |
-| Cambrico | $100 (annual $1.2k) | `Cambrico` |
-| Centarro | $100 (annual $1.2k) | `centarro` |
+All featured sponsors on ddev.com are at the $100/month level. MacStadium and JetBrains are in-kind (not cash) sponsors and are excluded. The ddev.com sponsor link for Webikon points to the individual `claudiu-cristea`, so the org is excluded and the individual gets `coder-ddev-com` membership instead.
 
-### No GitHub org found — excluded
+| Company | Source | GitHub org slug |
+| ------- | ------ | --------------- |
+| Tag1 | invoiced | `tag1consulting` |
+| Upsun | invoiced | `upsun` |
+| Platform.sh (rebranded to Upsun) | invoiced | `platformsh` |
+| Institute for Advanced Studies | invoiced | `Institute-for-Advanced-Studies` ⚠️ org exists but unverified — confirm with operator |
+| CPS-IT | invoiced | `CPS-IT` |
+| Redfin Solutions | invoiced + featured | `redfinsolutions` |
+| Lullabot | invoiced | `Lullabot` |
+| B13 | invoiced + featured | `b13` |
+| Pixel & Tonic (Craft CMS) | invoiced + featured | `pixelandtonic` |
+| Cambrico | invoiced + featured | `Cambrico` |
+| Centarro | invoiced + featured | `centarro` |
+| 8mylez | invoiced | `8mylez` |
+| dkd Internet Service GmbH | GitHub Sponsors | `dkd` |
+| Liip | GitHub Sponsors | `liip` |
+| i-gelb GmbH | featured | `i-gelb` |
+| Fame Helsinki | featured | `FameHelsinki` |
+| Gizra | featured | `Gizra` |
+| mobilistics GmbH | featured | `mobilistics` |
+| OPTASY | featured | `OPTASY` |
+| Passbolt | featured | `passbolt` |
+| Værsågod | featured | `vaersaagod` |
+| Affinity Bridge | featured | `affinitybridge` |
+| Agiledrop | featured | `AGILEDROP` |
+| NPO Applications GmbH | featured | `NPO-Applications-GmbH` |
+| Aten Design Group | featured | `AtenDesignGroup` |
 
-| Company | Monthly equiv. | Notes |
-| ------- | -------------- | ----- |
-| LetsTalk | $100 | `lets-talk` GitHub org exists but is not the correct org for this sponsor; no confirmed GitHub org found — individual access via `coder-ddev-com` membership instead |
+### Individual/unresolved — add to `coder-ddev-com` org
 
-### GitHub Sponsors individual at $100/month
+| Sponsor | Notes |
+| ------- | ----- |
+| `dougvann` | Individual $100/month GitHub Sponsor — confirmed via [ddev/ddev.com#626](https://github.com/ddev/ddev.com/pull/626) |
+| claudiu-cristea (Webikon) | ddev.com sponsor link points to individual, not org |
+| LetsTalk | No confirmed GitHub org (`lets-talk` is wrong org); add individual GitHub username when known |
+| Amedick Sommer | No GitHub org found; add individual GitHub username when known |
+| Pottkinder GmbH | No GitHub org found; add individual GitHub username when known |
 
-One individual (not an org) sponsors at $100/month via GitHub Sponsors. Because they have a personal account (not a GitHub org), they cannot be added to `CODER_OAUTH2_GITHUB_ALLOWED_ORGS`. Grant access by adding their GitHub username to the `coder-ddev-com` org directly.
+### Excluded
 
-Identified as `dougvann` via [ddev/ddev.com#626](https://github.com/ddev/ddev.com/pull/626). Add `dougvann` to `coder-ddev-com` org directly after org creation.
+| Sponsor | Reason |
+| ------- | ------ |
+| MacStadium | In-kind (hardware), not cash sponsor |
+| JetBrains | In-kind (licenses), not cash sponsor |
 
 ### Resulting `ALLOWED_ORGS` value (staging/production)
 
 ```bash
-CODER_OAUTH2_GITHUB_ALLOWED_ORGS=ddev,coder-ddev-com,tag1consulting,upsun,platformsh,Institute-for-Advanced-Studies,CPS-IT,redfinsolutions,Lullabot,b13,pixelandtonic,Cambrico,centarro,8mylez,dkd,liip
-# LetsTalk: no confirmed GitHub org — add individuals to coder-ddev-com instead
-# dougvann ($100/month individual GitHub Sponsor): add to coder-ddev-com directly
+CODER_OAUTH2_GITHUB_ALLOWED_ORGS=ddev,coder-ddev-com,tag1consulting,upsun,platformsh,Institute-for-Advanced-Studies,CPS-IT,redfinsolutions,Lullabot,b13,pixelandtonic,Cambrico,centarro,8mylez,dkd,liip,i-gelb,FameHelsinki,Gizra,mobilistics,OPTASY,passbolt,vaersaagod,affinitybridge,AGILEDROP,NPO-Applications-GmbH,AtenDesignGroup
+# Webikon: sponsor link is individual claudiu-cristea — add to coder-ddev-com instead
+# LetsTalk, Amedick Sommer, Pottkinder GmbH: no GitHub org — add individuals to coder-ddev-com when known
 ```
