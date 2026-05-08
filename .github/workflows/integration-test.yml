@@ -68,7 +68,9 @@ concurrency:
 jobs:
   integration-test:
     name: Integration test (${{ matrix.template }})
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.owner.login == github.repository_owner }}
+    # Disabled: self-hosted sysbox runner; use integration-test-gh instead.
+    # To re-enable: restore `if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.owner.login == github.repository_owner }}`
+    if: false
     runs-on: [self-hosted, sysbox]
     strategy:
       matrix:
@@ -303,7 +305,6 @@ jobs:
             extra_params: ""
             app_slug: ""
       fail-fast: false
-      max-parallel: 1
     defaults:
       run:
         shell: bash -euo pipefail {0}

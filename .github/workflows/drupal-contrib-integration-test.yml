@@ -47,7 +47,9 @@ on:
 jobs:
   contrib-plain:
     name: Contrib ${{ matrix.project }} D${{ matrix.drupal_version }} (plain)
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.owner.login == github.repository_owner }}
+    # Disabled: self-hosted sysbox runner; use contrib-plain-gh instead.
+    # To re-enable: restore `if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.owner.login == github.repository_owner }}`
+    if: false
     runs-on: [self-hosted, sysbox]
     strategy:
       matrix:
@@ -204,7 +206,9 @@ jobs:
 
   contrib-issue-fork:
     name: Contrib ${{ vars.CONTRIB_TEST_PROJECT || 'token' }} issue fork
-    if: ${{ vars.CONTRIB_TEST_ISSUE_FORK != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.owner.login == github.repository_owner) }}
+    # Disabled: self-hosted sysbox runner; use contrib-issue-fork-gh instead.
+    # To re-enable: restore `if: ${{ vars.CONTRIB_TEST_ISSUE_FORK != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.owner.login == github.repository_owner) }}`
+    if: false
     runs-on: [self-hosted, sysbox]
     defaults:
       run:
@@ -392,7 +396,6 @@ jobs:
           - project: pathauto
             drupal_version: "11"
       fail-fast: false
-      max-parallel: 1
     defaults:
       run:
         shell: bash -euo pipefail {0}
