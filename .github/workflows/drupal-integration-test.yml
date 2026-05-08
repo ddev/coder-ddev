@@ -193,6 +193,79 @@ jobs:
         if: always()
         run: coder templates versions archive drupal-core ${{ env.WORKSPACE_NAME }} --yes || true
 
+  drupal-plain-gh:
+    name: Drupal ${{ matrix.drupal_version }} (plain, GH)
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.owner.login == github.repository_owner }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        drupal_version: ["12", "11"]
+      fail-fast: false
+      max-parallel: 1
+    defaults:
+      run:
+        shell: bash -euo pipefail {0}
+    env:
+      WORKSPACE_NAME: gd-${{ matrix.drupal_version }}-${{ github.run_number }}-${{ github.run_attempt }}
+      CI: "true"
+      DDEV_NONINTERACTIVE: "true"
+      NO_COLOR: "1"
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Load 1Password secrets
+        uses: 1password/load-secrets-action@v4
+        with:
+          export-env: true
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          TEST_CODER_SESSION_TOKEN: "op://test-secrets/TEST_CODER_SESSION_TOKEN/credential"
+
+      - uses: coder/setup-action@v1
+        with:
+          access_url: ${{ vars.TEST_CODER_URL }}
+          coder_session_token: ${{ env.TEST_CODER_SESSION_TOKEN }}
+
+      - name: Copy VERSION into template directory
+        run: cp VERSION drupal-core/VERSION
+
+      - name: Push template (inactive)
+        run: |
+          coder templates push drupal-core \
+            --directory drupal-core \
+            --activate=false \
+            --name ${{ env.WORKSPACE_NAME }} \
+            --yes \
+            --variable workspace_image_registry=index.docker.io/ddev/coder-ddev \
+            --variable cache_path=/tmp/ci-no-cache
+
+      - name: Create workspace
+        run: |
+          coder create ${{ env.WORKSPACE_NAME }} \
+            --template drupal-core \
+            --template-version ${{ env.WORKSPACE_NAME }} \
+            --parameter "vscode_extensions=[]" \
+            --parameter drupal_version=${{ matrix.drupal_version }} \
+            --parameter issue_fork= \
+            --parameter issue_branch= \
+            --parameter install_profile=minimal \
+            --parameter share_drupal_site=owner \
+            --yes
+
+      - *verify-agent
+      - *verify-docker
+      - *verify-ddev
+      - *verify-webroot
+      - *verify-drush
+      - *record-host-dir
+      - *verify-http
+      - *delete-workspace
+
+      - name: Archive CI template version
+        if: always()
+        run: coder templates versions archive drupal-core ${{ env.WORKSPACE_NAME }} --yes || true
+
   drupal-issue-fork:
     name: Drupal issue fork ${{ vars.DRUPAL_TEST_ISSUE_FORK || '3585397' }}
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.owner.login == github.repository_owner }}
@@ -353,3 +426,135 @@ jobs:
       - name: Archive CI template version
         if: always()
         run: coder templates versions archive drupal-core cd-${{ github.run_number }}-${{ github.run_attempt }} --yes || true
+
+  drupal-issue-fork-gh:
+    name: Drupal issue fork ${{ vars.DRUPAL_TEST_ISSUE_FORK || '3585397' }} (GH)
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.owner.login == github.repository_owner }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -euo pipefail {0}
+    env:
+      WORKSPACE_NAME: gd-fork-${{ github.run_number }}-${{ github.run_attempt }}
+      CI: "true"
+      DDEV_NONINTERACTIVE: "true"
+      NO_COLOR: "1"
+      ISSUE_FORK: ${{ vars.DRUPAL_TEST_ISSUE_FORK || '3585397' }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Load 1Password secrets
+        uses: 1password/load-secrets-action@v4
+        with:
+          export-env: true
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          TEST_CODER_SESSION_TOKEN: "op://test-secrets/TEST_CODER_SESSION_TOKEN/credential"
+
+      - uses: coder/setup-action@v1
+        with:
+          access_url: ${{ vars.TEST_CODER_URL }}
+          coder_session_token: ${{ env.TEST_CODER_SESSION_TOKEN }}
+
+      - name: Resolve issue branch and Drupal version from issue number
+        run: |
+          ISSUE_NUM="${ISSUE_FORK#drupal-}"
+          ISSUE_BRANCH=$(curl -sf \
+            "https://git.drupalcode.org/api/v4/projects/issue%2Fdrupal-${ISSUE_NUM}" \
+            | jq -r '.default_branch')
+          if [[ -z "$ISSUE_BRANCH" || "$ISSUE_BRANCH" == "null" ]]; then
+            echo "ERROR: Could not resolve default branch for issue fork $ISSUE_NUM" >&2
+            exit 1
+          fi
+          RAW_VERSION=$(curl -sf \
+            "https://www.drupal.org/api-d7/node/${ISSUE_NUM}.json" \
+            | jq -r '.field_issue_version // ""')
+          DRUPAL_VERSION=$(echo "$RAW_VERSION" | grep -oE '^[0-9]+' || echo "12")
+          echo "Resolved: branch=$ISSUE_BRANCH  drupal_version=$DRUPAL_VERSION"
+          echo "ISSUE_BRANCH=$ISSUE_BRANCH"        >> "$GITHUB_ENV"
+          echo "ISSUE_FORK_VERSION=$DRUPAL_VERSION" >> "$GITHUB_ENV"
+
+      - name: Copy VERSION into template directory
+        run: cp VERSION drupal-core/VERSION
+
+      - name: Push template (inactive)
+        run: |
+          coder templates push drupal-core \
+            --directory drupal-core \
+            --activate=false \
+            --name gd-${{ github.run_number }}-${{ github.run_attempt }} \
+            --yes \
+            --variable workspace_image_registry=index.docker.io/ddev/coder-ddev \
+            --variable cache_path=/tmp/ci-no-cache
+
+      - name: Create workspace
+        run: |
+          coder create ${{ env.WORKSPACE_NAME }} \
+            --template drupal-core \
+            --template-version gd-${{ github.run_number }}-${{ github.run_attempt }} \
+            --parameter "vscode_extensions=[]" \
+            --parameter drupal_version=${{ env.ISSUE_FORK_VERSION }} \
+            --parameter issue_fork=${{ env.ISSUE_FORK }} \
+            --parameter issue_branch=${{ env.ISSUE_BRANCH }} \
+            --parameter install_profile=minimal \
+            --parameter share_drupal_site=owner \
+            --yes
+
+      - name: Verify workspace — agent connected
+        run: coder ssh ${{ env.WORKSPACE_NAME }} --wait=yes -- echo "Agent connected"
+
+      - name: Verify workspace — Docker daemon running
+        run: coder ssh ${{ env.WORKSPACE_NAME }} -- docker ps
+
+      - name: Verify workspace — DDEV installed
+        run: coder ssh ${{ env.WORKSPACE_NAME }} -- ddev --version
+
+      - name: Verify workspace — web root exists
+        run: coder ssh ${{ env.WORKSPACE_NAME }} -- test -f /home/coder/drupal-core/web/index.php
+
+      - name: Verify workspace — issue branch checked out
+        run: |
+          CURRENT=$(coder ssh ${{ env.WORKSPACE_NAME }} -- git -C /home/coder/drupal-core/repos/drupal branch --show-current | tr -d '\r\n')
+          echo "Current branch: $CURRENT  Expected: ${{ env.ISSUE_BRANCH }}"
+          [[ "$CURRENT" == "${{ env.ISSUE_BRANCH }}" ]] || { echo "ERROR: wrong branch" >&2; exit 1; }
+
+      - name: Verify workspace — Drush DB connected
+        run: coder ssh ${{ env.WORKSPACE_NAME }} -- ddev drush status --fields=db-status | grep -i connected
+
+      - name: Record owner
+        run: |
+          OWNER=$(coder whoami --output json | jq -r 'if type == "array" then .[0].username else .username end')
+          echo "OWNER=$OWNER" >> "$GITHUB_ENV"
+
+      - name: Verify workspace — Drupal site externally accessible
+        run: |
+          CODER_DOMAIN="${{ vars.TEST_CODER_URL }}"
+          CODER_DOMAIN="${CODER_DOMAIN#https://}"
+          SITE_URL="https://drupal-site--${{ env.WORKSPACE_NAME }}--${OWNER}.${CODER_DOMAIN}"
+          echo "Checking $SITE_URL"
+          HTTP_STATUS=$(curl -sL --max-time 30 --retry 3 --retry-delay 5 \
+            -H "Coder-Session-Token: ${TEST_CODER_SESSION_TOKEN}" \
+            -o /tmp/drupal-response.html \
+            -w "%{http_code}" \
+            "$SITE_URL")
+          echo "HTTP status: $HTTP_STATUS"
+          if [[ ! "$HTTP_STATUS" =~ ^[23] ]]; then
+            echo "ERROR: unexpected HTTP status $HTTP_STATUS" >&2
+            head -50 /tmp/drupal-response.html >&2 || true
+            exit 1
+          fi
+          if ! grep -qi "log in" /tmp/drupal-response.html; then
+            echo "ERROR: response does not contain 'log in' — Drupal may not have started" >&2
+            head -50 /tmp/drupal-response.html >&2
+            exit 1
+          fi
+          echo "OK: Drupal site is accessible and shows login page"
+
+      - name: Delete workspace
+        if: always()
+        run: coder delete ${{ env.WORKSPACE_NAME }} --yes || true
+
+      - name: Archive CI template version
+        if: always()
+        run: coder templates versions archive drupal-core gd-${{ github.run_number }}-${{ github.run_attempt }} --yes || true
