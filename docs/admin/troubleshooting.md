@@ -857,6 +857,20 @@ du -sh /coder-workspaces/* | sort -h
 # Delete unused workspaces
 ```
 
+**/var partition full (containerd not in /data):**
+
+containerd runs as a daemon separate from Docker and has its own data root (`/var/lib/containerd` by default). If the server was set up without configuring containerd's root, image snapshots accumulate in `/var` rather than `/data`. Fix:
+
+```bash
+sudo systemctl stop docker containerd
+sudo mv /var/lib/containerd /data/containerd
+sudo sed -i 's|^root = .*|root = "/data/containerd"|' /etc/containerd/config.toml
+sudo systemctl start containerd && sudo systemctl start docker
+docker ps  # verify healthy
+```
+
+New server setups should configure containerd's root during initial setup — see `server-setup.md`.
+
 ## Getting Help
 
 ### Information to Collect

@@ -189,8 +189,16 @@ sudo tee /etc/docker/daemon.json > /dev/null <<'EOF'
 }
 EOF
 
+# Configure containerd to use /data as well.
+# containerd runs as a separate daemon from Docker and has its own data root
+# (default: /var/lib/containerd). Without this, /var fills up with image snapshots.
+sudo mkdir -p /etc/containerd
+containerd config default | sudo tee /etc/containerd/config.toml > /dev/null
+sudo sed -i 's|^root = .*|root = "/data/containerd"|' /etc/containerd/config.toml
+
 # Verify
 docker --version
+sudo systemctl enable --now containerd
 sudo systemctl enable --now docker
 ```
 
