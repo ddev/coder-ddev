@@ -52,7 +52,9 @@ on:
 jobs:
   drupal-plain:
     name: Drupal ${{ matrix.drupal_version }} (plain)
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.owner.login == github.repository_owner }}
+    # Disabled: self-hosted sysbox runner; use drupal-plain-gh instead.
+    # To re-enable: restore `if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.owner.login == github.repository_owner }}`
+    if: false
     runs-on: [self-hosted, sysbox]
     strategy:
       matrix:
@@ -201,7 +203,6 @@ jobs:
       matrix:
         drupal_version: ["12", "11"]
       fail-fast: false
-      max-parallel: 1
     defaults:
       run:
         shell: bash -euo pipefail {0}
@@ -268,7 +269,9 @@ jobs:
 
   drupal-issue-fork:
     name: Drupal issue fork ${{ vars.DRUPAL_TEST_ISSUE_FORK || '3585397' }}
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.owner.login == github.repository_owner }}
+    # Disabled: self-hosted sysbox runner; use drupal-issue-fork-gh instead.
+    # To re-enable: restore `if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.owner.login == github.repository_owner }}`
+    if: false
     runs-on: [self-hosted, sysbox]
     defaults:
       run:
