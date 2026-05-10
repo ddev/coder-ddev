@@ -131,7 +131,7 @@ jobs:
 
       - &verify-webroot
         name: Verify workspace — web root exists
-        run: coder ssh ${{ env.WORKSPACE_NAME }} -- test -f /home/coder/drupal-core/web/index.php
+        run: coder ssh ${{ env.WORKSPACE_NAME }} -- test -f /home/coder/drupal-core/index.php
 
       - &verify-drush
         name: Verify workspace — Drush DB connected
@@ -366,11 +366,11 @@ jobs:
         run: coder ssh ${{ env.WORKSPACE_NAME }} -- ddev --version
 
       - name: Verify workspace — web root exists
-        run: coder ssh ${{ env.WORKSPACE_NAME }} -- test -f /home/coder/drupal-core/web/index.php
+        run: coder ssh ${{ env.WORKSPACE_NAME }} -- test -f /home/coder/drupal-core/index.php
 
       - name: Verify workspace — issue branch checked out
         run: |
-          CURRENT=$(coder ssh ${{ env.WORKSPACE_NAME }} -- git -C /home/coder/drupal-core/repos/drupal branch --show-current | tr -d '\r\n')
+          CURRENT=$(coder ssh ${{ env.WORKSPACE_NAME }} -- git -C /home/coder/drupal-core branch --show-current | tr -d '\r\n')
           echo "Current branch: $CURRENT  Expected: ${{ env.ISSUE_BRANCH }}"
           [[ "$CURRENT" == "${{ env.ISSUE_BRANCH }}" ]] || { echo "ERROR: wrong branch" >&2; exit 1; }
 
@@ -514,11 +514,11 @@ jobs:
         run: coder ssh ${{ env.WORKSPACE_NAME }} -- ddev --version
 
       - name: Verify workspace — web root exists
-        run: coder ssh ${{ env.WORKSPACE_NAME }} -- test -f /home/coder/drupal-core/web/index.php
+        run: coder ssh ${{ env.WORKSPACE_NAME }} -- test -f /home/coder/drupal-core/index.php
 
       - name: Verify workspace — issue branch checked out
         run: |
-          CURRENT=$(coder ssh ${{ env.WORKSPACE_NAME }} -- git -C /home/coder/drupal-core/repos/drupal branch --show-current | tr -d '\r\n')
+          CURRENT=$(coder ssh ${{ env.WORKSPACE_NAME }} -- git -C /home/coder/drupal-core branch --show-current | tr -d '\r\n')
           echo "Current branch: $CURRENT  Expected: ${{ env.ISSUE_BRANCH }}"
           [[ "$CURRENT" == "${{ env.ISSUE_BRANCH }}" ]] || { echo "ERROR: wrong branch" >&2; exit 1; }
 
