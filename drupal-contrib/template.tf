@@ -672,7 +672,7 @@ COMPOSE_EOF
         # --no-update avoids triggering plugin checks before Drupal is installed
         log_setup "Adding drush to require-dev..."
         update_status "⏳ drush: Adding to composer.json..."
-        ddev exec composer require --dev drush/drush --no-update --no-interaction >> "$SETUP_LOG" 2>&1 || true
+        ddev exec composer require --dev "drush/drush:*" --no-update --no-interaction >> "$SETUP_LOG" 2>&1 || true
 
         # Run ddev poser: expands composer.json → composer.contrib.json (includes require-dev),
         # then runs composer install (installs Drupal + drush together), then removes composer.contrib.json
