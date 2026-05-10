@@ -632,6 +632,11 @@ COMPOSE_EOF
         update_status "⚠ ddev-drupal-contrib addon: Warning"
       fi
 
+      # Set DRUPAL_CORE so ddev-drupal-contrib's expand-composer-json / ddev poser
+      # installs the selected major version instead of defaulting to ^11.
+      ddev dotenv set .ddev/.env.web --drupal-core "^$DRUPAL_VERSION"
+      log_setup "✓ DRUPAL_CORE set to ^$DRUPAL_VERSION"
+
       # Start DDEV
       ddev poweroff 2>&1 | tee -a "$SETUP_LOG" || true
       log_setup "Starting DDEV environment..."
