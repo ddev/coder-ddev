@@ -58,6 +58,8 @@ jobs:
             drupal_version: "11"
           - project: pathauto
             drupal_version: "11"
+          - project: skipto
+            drupal_version: "12"
       fail-fast: false
     defaults:
       run:
@@ -395,6 +397,8 @@ jobs:
             drupal_version: "11"
           - project: pathauto
             drupal_version: "11"
+          - project: skipto
+            drupal_version: "12"
       fail-fast: false
     defaults:
       run:
