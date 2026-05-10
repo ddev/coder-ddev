@@ -862,18 +862,10 @@ The database is always installed fresh via `ddev drush si`.
 ### One-time initial setup
 
 ```bash
-mkdir -p ~/cache/drupal-core-seed/repos
-git clone https://git.drupalcode.org/project/drupal.git \
-  ~/cache/drupal-core-seed/repos/drupal
+git clone https://git.drupalcode.org/project/drupal.git ~/cache/drupal-core-seed
 ```
 
-The seed directory contains only:
-
-| Path             | Contents                  |
-|------------------|---------------------------|
-| `repos/drupal/`  | Git clone of Drupal core  |
-
-No DDEV, no vendor directory, no composer files — just the git objects.
+The seed directory IS the git clone — no subdirectory nesting. No DDEV, no vendor, no composer files.
 
 ### Install the hourly update timer
 
@@ -920,34 +912,35 @@ journalctl -u drupal-cache-updater.service -f
 
 ### Migrating from the old joachim-n cache structure
 
-If your server has an existing seed cache built with `joachim-n/drupal-core-development-project` (the old scaffolding), the `repos/drupal/.git` directory is already there and works as a git reference hint immediately — no urgent action is needed. New workspaces will use it automatically.
+If your server has an existing seed cache built with `joachim-n/drupal-core-development-project`, the startup script now checks for `.git` at the seed root — not inside `repos/drupal/`. New workspaces will fall back to a direct clone (slower) until migration is complete.
 
-When convenient, migrate each server to the simpler structure:
+Run these steps on each server:
 
 ```bash
 SEED_DIR=~/cache/drupal-core-seed
+REPO=~/workspace/coder-ddev
 
-# 1. Stop the DDEV seed project (no longer needed)
+# 1. Stop the old DDEV seed project
 cd "$SEED_DIR" && ddev stop --remove-data 2>/dev/null || true
 
-# 2. Install the updated update script (replaces composer update with git fetch)
-REPO=~/workspace/coder-ddev
+# 2. Move the git clone to the seed root, remove everything else
+mv "$SEED_DIR/repos/drupal" /tmp/drupal-git-tmp
+rm -rf "$SEED_DIR"
+mv /tmp/drupal-git-tmp "$SEED_DIR"
+
+# 3. Install the updated update script and service
 sudo install -m 755 $REPO/drupal-core/scripts/update-drupal-cache \
   /usr/local/bin/update-drupal-cache
 sudo install -m 644 $REPO/drupal-core/scripts/drupal-cache-updater.service \
   /etc/systemd/system/
 sudo systemctl daemon-reload
 
-# 3. Verify the timer still works
+# 4. Verify it works
 sudo systemctl start drupal-cache-updater.service
-journalctl -u drupal-cache-updater.service --no-pager | tail -20
-
-# 4. Clean up old files no longer needed (repos/drupal/ stays)
-cd "$SEED_DIR"
-rm -rf vendor web composer.json composer.lock .ddev core
+journalctl -u drupal-cache-updater.service --no-pager | tail -10
 ```
 
-After step 4, the seed directory contains only `repos/drupal/`.
+After migration, `~/cache/drupal-core-seed` is the git clone itself — `.git` is at the root.
 
 ### Template variable
 
@@ -963,9 +956,9 @@ make push-template-drupal-core DRUPAL_CACHE_PATH=/your/cache/path
 
 When a workspace starts for the first time:
 
-1. The startup script checks for `repos/drupal/.git` at `/home/coder-cache-seed` (the read-only bind mount of `cache_path`)
+1. The startup script checks for `.git` at `/home/coder-cache-seed` (the read-only bind mount of `cache_path`)
 2. **Cache hit:** `git clone --reference` reuses local git objects for the initial clone (fast), then `ddev composer install` runs fresh inside the container
-3. **Cache miss** (path absent or `repos/drupal/.git` missing): `git clone` runs without a reference — slower but always works
+3. **Cache miss** (path absent or no `.git` at root): `git clone` runs without a reference — slower but always works
 
 Check workspace startup logs in the Coder dashboard or at `/tmp/drupal-setup.log` inside the workspace to confirm which path was taken.
 
@@ -973,18 +966,17 @@ Check workspace startup logs in the Coder dashboard or at `/tmp/drupal-setup.log
 
 **Cache not being used:**
 
-- Verify the seed directory has a git clone: `ls ~/cache/drupal-core-seed/repos/drupal/.git`
+- Verify the seed directory is a git clone: `ls ~/cache/drupal-core-seed/.git`
 - Confirm `cache_path` in the deployed template matches your actual seed directory
-- Look for "with reference from cache seed" in `/tmp/drupal-setup.log`; absence means the path was missing or the clone check failed
+- Look for "with reference from cache seed" in `/tmp/drupal-setup.log`; absence means the path was missing or `.git` was not at the root
 
 **Update script fails:**
 
 ```bash
-git -C ~/cache/drupal-core-seed/repos/drupal fetch --all --prune
+git -C ~/cache/drupal-core-seed fetch --all --prune
 # If this fails, check network connectivity or re-clone:
-rm -rf ~/cache/drupal-core-seed/repos/drupal
-git clone https://git.drupalcode.org/project/drupal.git \
-  ~/cache/drupal-core-seed/repos/drupal
+rm -rf ~/cache/drupal-core-seed
+git clone https://git.drupalcode.org/project/drupal.git ~/cache/drupal-core-seed
 ```
 
 ---

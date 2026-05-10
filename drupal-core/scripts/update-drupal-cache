@@ -4,17 +4,17 @@
 # Refreshes the drupal-core seed cache used by the drupal-core Coder template.
 # Run this script on the Coder host server as the user who owns the seed directory.
 #
-# The seed cache is a plain git clone of drupal/drupal at repos/drupal/ inside
-# the seed directory. New workspaces pass it as a --reference hint to git clone,
-# which reuses the local git objects and avoids downloading several hundred MB.
-# Composer install still runs fresh inside each workspace.
+# The seed cache is a plain git clone of drupal/drupal. New workspaces pass it
+# as a --reference hint to git clone, reusing local git objects and avoiding
+# several hundred MB of network transfer. Composer install still runs fresh
+# inside each workspace.
 #
 # Usage:
 #   ./update-drupal-cache [--seed-dir PATH]
 #
 # Options:
-#   --seed-dir PATH   Absolute path to the seed directory.
-#                     Default: ~/cache/drupal-core-seed (resolved to the running user's home)
+#   --seed-dir PATH   Absolute path to the seed directory (the git clone root).
+#                     Default: ~/cache/drupal-core-seed
 #                     The Coder template's cache_path variable must be set to the same path.
 #
 # Note: When run via the systemd timer, the seed directory is taken from the default
@@ -39,10 +39,8 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-GIT_DIR="$SEED_DIR/repos/drupal"
-
-if [ ! -d "$GIT_DIR/.git" ]; then
-  echo "Error: Git clone not found at $GIT_DIR" >&2
+if [ ! -d "$SEED_DIR/.git" ]; then
+  echo "Error: Git clone not found at $SEED_DIR" >&2
   echo "Run the initial setup first. See docs/admin/server-setup.md." >&2
   exit 1
 fi
@@ -53,9 +51,9 @@ echo "Started: $(date)"
 echo ""
 
 echo "Fetching Drupal core git objects..."
-git -C "$GIT_DIR" fetch --all --prune
+git -C "$SEED_DIR" fetch --all --prune
 
 echo ""
 echo "=== Seed cache updated successfully ==="
 echo "Completed: $(date)"
-echo "Drupal HEAD: $(git -C "$GIT_DIR" log -1 --format='%h %s' 2>/dev/null || echo 'unknown')"
+echo "Drupal HEAD: $(git -C "$SEED_DIR" log -1 --format='%h %s' 2>/dev/null || echo 'unknown')"

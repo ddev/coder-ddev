@@ -608,9 +608,9 @@ STATUS_HEADER
       DRUPAL_SETUP_NEEDED=true
       update_status "⏳ Git clone: In progress..."
       _t=$SECONDS
-      if [ -d "$CACHE_SEED/repos/drupal/.git" ]; then
+      if [ -d "$CACHE_SEED/.git" ]; then
         log_setup "Cloning Drupal core (with reference from cache seed)..."
-        git clone --reference "$CACHE_SEED/repos/drupal" https://git.drupalcode.org/project/drupal.git "$DRUPAL_DIR" >> "$SETUP_LOG" 2>&1 || \
+        git clone --reference "$CACHE_SEED" https://git.drupalcode.org/project/drupal.git "$DRUPAL_DIR" >> "$SETUP_LOG" 2>&1 || \
           git clone https://git.drupalcode.org/project/drupal.git "$DRUPAL_DIR" >> "$SETUP_LOG" 2>&1
       else
         log_setup "Cloning Drupal core..."
