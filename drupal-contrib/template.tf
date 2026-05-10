@@ -115,7 +115,7 @@ data "coder_parameter" "drupal_version" {
   display_name = "Drupal Version"
   description  = "Major Drupal version to install as the dev dependency. Match the version the issue targets."
   type         = "string"
-  default      = "12"
+  default      = "11"
   mutable      = true
   order        = 4
   option {
