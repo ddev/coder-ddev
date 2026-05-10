@@ -695,9 +695,10 @@ COMPOSE_EOF
         if ddev poser >> "$SETUP_LOG" 2>&1; then
           log_setup "✓ ddev poser complete ($((SECONDS - _t))s)"
           update_status "✓ ddev poser: Success"
-          # Restore composer.json — drush is now in vendor/ so the require entry
-          # is no longer needed and we don't want it showing as a local modification.
-          git checkout composer.json >> "$SETUP_LOG" 2>&1 || true
+          # Hide the drush require-dev line from git status without touching the
+          # file — git checkout would remove drush from composer.json and break
+          # ddev restart (which rebuilds vendor/ from the restored file).
+          git update-index --skip-worktree composer.json >> "$SETUP_LOG" 2>&1 || true
         else
           log_setup "✗ ddev poser failed ($((SECONDS - _t))s)"
           update_status "✗ ddev poser: Failed"
