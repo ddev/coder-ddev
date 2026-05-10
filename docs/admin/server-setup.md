@@ -857,7 +857,7 @@ This deploys three templates:
 
 The `drupal-core` template can provision workspaces faster using a **seed cache** on the host. The cache is a plain git clone of drupal/drupal. New workspaces pass it as a `--reference` hint to `git clone`, reusing local git objects and avoiding several hundred MB of network transfer. Composer install still runs fresh inside each workspace.
 
-The database is always installed fresh via `ddev drush si`.
+The seed cache is just a simple git checkout — no DDEV project, no database, no vendor directory, no composer files.
 
 ### One-time initial setup
 
@@ -920,7 +920,7 @@ Run these steps on each server:
 SEED_DIR=~/cache/drupal-core-seed
 REPO=~/workspace/coder-ddev
 
-# 1. Stop the old DDEV seed project
+# 1. Stop the old DDEV seed project (only needed if it was still running)
 cd "$SEED_DIR" && ddev stop --remove-data 2>/dev/null || true
 
 # 2. Move the git clone to the seed root, remove everything else
@@ -928,14 +928,22 @@ mv "$SEED_DIR/repos/drupal" /tmp/drupal-git-tmp
 rm -rf "$SEED_DIR"
 mv /tmp/drupal-git-tmp "$SEED_DIR"
 
-# 3. Install the updated update script and service
+# 3. Install the updated script, service, and timer
 sudo install -m 755 $REPO/drupal-core/scripts/update-drupal-cache \
   /usr/local/bin/update-drupal-cache
 sudo install -m 644 $REPO/drupal-core/scripts/drupal-cache-updater.service \
   /etc/systemd/system/
-sudo systemctl daemon-reload
+sudo install -m 644 $REPO/drupal-core/scripts/drupal-cache-updater.timer \
+  /etc/systemd/system/
 
-# 4. Verify it works
+# 4. Set the correct user in the service file (YOURUSER is a placeholder)
+sudo sed -i "s/User=YOURUSER/User=$(whoami)/" /etc/systemd/system/drupal-cache-updater.service
+
+# 5. Enable and start the timer
+sudo systemctl daemon-reload
+sudo systemctl enable --now drupal-cache-updater.timer
+
+# 6. Verify it works
 sudo systemctl start drupal-cache-updater.service
 journalctl -u drupal-cache-updater.service --no-pager | tail -10
 ```
@@ -957,7 +965,7 @@ make push-template-drupal-core DRUPAL_CACHE_PATH=/your/cache/path
 When a workspace starts for the first time:
 
 1. The startup script checks for `.git` at `/home/coder-cache-seed` (the read-only bind mount of `cache_path`)
-2. **Cache hit:** `git clone --reference` reuses local git objects for the initial clone (fast), then `ddev composer install` runs fresh inside the container
+2. **Cache hit:** `git clone --reference` reuses local git objects for the initial clone (fast), then `composer install` runs fresh inside the container
 3. **Cache miss** (path absent or no `.git` at root): `git clone` runs without a reference — slower but always works
 
 Check workspace startup logs in the Coder dashboard or at `/tmp/drupal-setup.log` inside the workspace to confirm which path was taken.
