@@ -1,6 +1,6 @@
 # Drupal Core Development Template
 
-Automated Coder workspace for Drupal core development using [joachim-n/drupal-core-development-project](https://github.com/joachim-n/drupal-core-development-project). Sets up a professional development environment with Drupal core, DDEV, and a demo site.
+Automated Coder workspace for Drupal core development using the [amateescu/ddev-drupal-dev](https://github.com/amateescu/ddev-drupal-dev) DDEV add-on. Sets up a professional development environment with Drupal core, DDEV, and a demo site.
 
 **New? See the [quickstart guide](../docs/user/quickstart.md).**
 
@@ -8,26 +8,23 @@ Automated Coder workspace for Drupal core development using [joachim-n/drupal-co
 
 ## Features
 
-- **Professional Setup**: Uses the drupal-core-development-project template
-- **Clean Git Clone**: Drupal core in `repos/drupal/` directory
-- **Proper Structure**: Web root at `web/` with Composer management
+- **Direct Git Clone**: Drupal core cloned as the project root — no composer project wrapper
+- **Add-on Overlay**: [`amateescu/ddev-drupal-dev`](https://github.com/amateescu/ddev-drupal-dev) provides `ddev add-module`, `ddev phpunit`, and a `composer.local.json` overlay so core's `composer.json` stays untouched
 - **Demo Site**: Umami demo profile pre-installed (configurable)
 - **Full DDEV**: Complete DDEV environment with automatic PHP version selection
-- **Issue Fork Support**: Check out any Drupal.org issue branch, with automatic Composer dependency resolution
-- **VS Code**: Opens directly to Drupal core project root
+- **Issue Fork Support**: Check out any Drupal.org issue branch via git remote
+- **VS Code**: Opens directly to the Drupal core project root
 - **Port Forwarding**: HTTP (80)
 - **Custom Launch Command**: `ddev launch` shows Coder-specific instructions
 
 ## Initial Setup Time
 
-When a seed cache is available on the server (the default), first workspace creation takes approximately **3-5 minutes**:
-- rsync from seed cache: ~3s
-- git fetch: ~1s
-- composer install: ~2s
-- Drupal site install (ddev drush si): ~2-3 min
-- DDEV start: ~15s
+First workspace creation takes approximately **5-8 minutes**:
 
-Without a seed cache, first setup takes 10-15 minutes (full composer create + Drupal install).
+- git clone (with cache seed reference hint): ~10s
+- DDEV start + add-on install: ~1 min
+- `ddev composer install`: ~2-3 min
+- Drupal site install (`ddev drush si`): ~2-3 min
 
 Subsequent starts are fast (< 1 minute) as everything is already present.
 
@@ -41,7 +38,7 @@ coder create --template drupal-core my-drupal-dev
 
 **Working on a specific issue:**
 
-Use the **[Drupal Issue Picker](https://start.coder.ddev.com/drupal-issue)** — enter an issue URL or number and it opens a pre-configured workspace with the issue branch already checked out and composer dependencies resolved.
+Use the **[Drupal Issue Picker](https://start.coder.ddev.com/drupal-issue)** — enter an issue URL or number and it opens a pre-configured workspace with the issue branch already checked out.
 
 Or manually via CLI:
 ```bash
@@ -61,20 +58,14 @@ coder create --template drupal-core my-issue-3568144 \
 
 ```
 /home/coder/
-├── drupal-core/              # Project root (VS Code opens here)
-│   ├── repos/
-│   │   └── drupal/          # Drupal core git clone (clean)
-│   ├── web/                 # Web docroot
-│   │   ├── core/            # Symlinked from repos/drupal/core
-│   │   ├── index.php        # Patched for correct app root
-│   │   └── ...
+├── drupal-core/              # Drupal core git clone (VS Code opens here)
+│   ├── core/                 # Drupal core source
+│   ├── index.php             # Entry point (at project root, not web/)
 │   ├── .ddev/               # DDEV configuration
-│   ├── vendor/              # Composer dependencies
-│   ├── composer.json        # Project dependencies
-│   └── ...
+│   └── composer.local.json  # Local dependencies (drush, dev modules)
 ├── WELCOME.txt              # Welcome message
 ├── SETUP_STATUS.txt         # Setup completion status
-└── projects/                # Additional projects directory (pre-created)
+└── projects/                # Additional projects directory
 ```
 
 ## Common Commands
@@ -86,10 +77,9 @@ ddev drush uli              # Get one-time admin login link
 ddev drush cr               # Clear cache
 ddev drush updb             # Run database updates
 
-# Development
-ddev composer require ...   # Add dependencies
-ddev composer update        # Update dependencies
-ddev exec phpunit ...       # Run tests
+# Development (provided by ddev-drupal-dev add-on)
+ddev add-module token       # Install a contrib module for development
+ddev phpunit core/modules/node  # Run Drupal tests
 
 # DDEV management
 ddev launch                 # Show access instructions
@@ -112,8 +102,8 @@ tail -f /tmp/drupal-setup.log  # View setup logs
 
 ### Network Access
 - Packagist: https://packagist.org (for Composer)
-- GitHub: https://github.com (for drupal-core-development-project)
-- Git: https://git.drupalcode.org (for Drupal core clone)
+- Git: https://git.drupalcode.org (for Drupal core clone and issue forks)
+- GitHub: https://github.com (for ddev-drupal-dev add-on)
 - Docker Hub: https://hub.docker.com
 
 ## Troubleshooting
@@ -126,19 +116,21 @@ tail -50 /tmp/drupal-setup.log
 ```
 
 Common issues:
-- **DDEV config failed**: Check DDEV installation and Docker daemon
+
+- **git clone failed**: Network connectivity to git.drupalcode.org
 - **DDEV start failed**: Docker daemon issue, check `docker ps`
-- **DDEV composer create failed**: Network connectivity or memory issue
+- **composer install failed**: Network connectivity or memory issue
 - **Drupal install failed**: Database connection, check DDEV logs
 
 ### Manual Recovery
 If automatic setup fails, you can complete steps manually:
 ```bash
 cd ~/drupal-core
-# Adjust project-type to match your version: drupal10, drupal11, or drupal12
-ddev config --project-type=drupal12 --docroot=web
+ddev config --project-type=drupal12
 ddev start
-ddev composer create-project joachim-n/drupal-core-development-project .
+ddev add-on get amateescu/ddev-drupal-dev
+ddev restart
+ddev composer install
 ddev composer require drush/drush
 ddev drush si -y demo_umami --account-pass=admin
 ```
@@ -157,7 +149,7 @@ coder create --template drupal-core my-11x-workspace --parameter drupal_version=
 # Stable 10.x branch
 coder create --template drupal-core my-10x-workspace --parameter drupal_version=10
 ```
-The version controls the DDEV project type (PHP version) and the git branch checked out in `repos/drupal/`. Non-12.x versions always run a full Drupal site install (no cached DB snapshot).
+The version controls the DDEV project type (PHP version) and the git branch checked out.
 
 ### Change Drupal Profile
 Set the `install_profile` parameter when creating the workspace:
@@ -166,8 +158,6 @@ coder create --template drupal-core my-workspace --parameter install_profile=sta
 ```
 Options: `demo_umami` (default), `minimal`, `standard`.
 
-All workspaces run a full `ddev drush si` on first setup regardless of profile or whether an issue fork is specified.
-
 ### Add Custom Commands
 Create scripts in `~/.ddev/commands/host/` or `.ddev/commands/web/`
 
@@ -175,26 +165,25 @@ Create scripts in `~/.ddev/commands/host/` or `.ddev/commands/web/`
 
 - **Base Image**: `ddev/coder-ddev` (Ubuntu 24.04, DDEV, Docker, Node.js)
 - **Runtime**: Sysbox (secure Docker-in-Docker)
-- **Project Template**: [joachim-n/drupal-core-development-project](https://github.com/joachim-n/drupal-core-development-project)
+- **Add-on**: [amateescu/ddev-drupal-dev](https://github.com/amateescu/ddev-drupal-dev)
 - **Volumes**:
   - `/home/coder` - Persistent workspace data
   - `/var/lib/docker` - Docker images and containers
-- **Drupal**: Cloned from https://git.drupalcode.org/project/drupal — defaults to `main` (12.x); select 11.x or 10.x via the `drupal_version` parameter for stable branch development
+- **Drupal**: Cloned from https://git.drupalcode.org/project/drupal — defaults to `main` (12.x); select 11.x or 10.x via the `drupal_version` parameter
 
 ## Development Workflow
 
 1. Make changes in VS Code (automatically opens to `/home/coder/drupal-core`)
-2. Edit Drupal core files in `repos/drupal/` directory
-3. Test changes via DDEV Web app (web root is at `web/`)
-4. Run tests: `ddev exec phpunit ...`
-5. Commit changes in `repos/drupal/`: `cd repos/drupal && git add . && git commit -m "..."`
-6. Push to fork: `git remote add fork <url> && git push fork`
-
-**Note**: The `repos/drupal/` directory contains the clean Drupal core git repository. Changes here are reflected in the `web/` directory via symlinks.
+2. Edit Drupal core files directly in `~/drupal-core/`
+3. Test changes via DDEV Web app
+4. Run tests: `ddev phpunit core/modules/...`
+5. Commit: `cd ~/drupal-core && git add . && git commit -m "..."`
+6. Push to fork: `git push issue HEAD`
 
 ## Support
 
-- **DDEV Docs**: https://docs.ddev.com/
-- **Drupal Docs**: https://www.drupal.org/docs
-- **Coder Docs**: https://coder.com/docs
+- **Add-on docs**: [amateescu/ddev-drupal-dev](https://github.com/amateescu/ddev-drupal-dev)
+- **DDEV Docs**: [docs.ddev.com](https://docs.ddev.com/)
+- **Drupal Docs**: [drupal.org/docs](https://www.drupal.org/docs)
+- **Coder Docs**: [coder.com/docs](https://coder.com/docs)
 - **Template Issues**: File issues in this repository

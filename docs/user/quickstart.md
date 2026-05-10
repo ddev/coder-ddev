@@ -1,6 +1,6 @@
 # Quickstart: Drupal Core Development on coder.ddev.com
 
-Cloud-hosted DDEV workspaces for Drupal core development. Full environment — Drupal core clone, running site, drush — ready in about a minute.
+Cloud-hosted DDEV workspaces for Drupal core development. Full environment — Drupal core clone, running site, drush — ready in about five minutes.
 
 [![Open in Coder](https://coder.ddev.com/open-in-coder.svg)](https://coder.ddev.com/templates/coder/drupal-core/workspace?mode=manual)
 
@@ -16,7 +16,7 @@ Go to **[coder.ddev.com](https://coder.ddev.com)** and sign in with GitHub.
 
 Click the button above, or go to **Create Workspace** → select the **drupal-core** template → click **Create Workspace**.
 
-Wait about a minute for the startup script to complete. Watch progress in the **Logs** tab.
+Wait about five minutes for the startup script to complete. Watch progress in the **Logs** tab.
 
 ---
 
@@ -31,15 +31,14 @@ The running site has the Umami demo profile installed. Admin credentials: `admin
 ## Code layout
 
 ```
-~/drupal-core/
-├── repos/drupal/     # Drupal core git clone — edit files here
-│   └── core/
-├── web/              # Web docroot (core/ symlinked from repos/drupal/)
-├── .ddev/            # DDEV config
-└── vendor/           # Composer-managed dependencies
+~/drupal-core/           # Drupal core git clone — edit files here
+├── core/                # Drupal core source
+├── index.php            # Entry point
+├── .ddev/               # DDEV config
+└── composer.local.json  # Local dependencies (drush, dev modules)
 ```
 
-Make your changes in `repos/drupal/` — they are immediately reflected in the running site.
+Edit files directly in `~/drupal-core/` — changes are immediately reflected in the running site.
 
 ---
 
@@ -52,8 +51,11 @@ ddev drush uli
 # Clear cache
 ddev drush cr
 
-# Run Drupal tests (from repos/drupal/)
-ddev exec phpunit web/core/tests/...
+# Run Drupal tests (provided by ddev-drupal-dev add-on)
+ddev phpunit core/modules/node
+
+# Install a contrib module for development
+ddev add-module token
 
 # Open the site in your browser
 ddev launch
@@ -77,7 +79,7 @@ When working on an issue, the workspace surfaces issue info in several places:
 To push your changes back:
 
 ```bash
-cd ~/drupal-core/repos/drupal
+cd ~/drupal-core
 
 # ... make changes ...
 
@@ -93,7 +95,7 @@ If you prefer to set up manually:
 
 ```bash
 # In the workspace terminal:
-cd ~/drupal-core/repos/drupal
+cd ~/drupal-core
 
 # Create a branch
 git checkout -b my-fix
@@ -132,4 +134,4 @@ tail -50 /tmp/drupal-setup.log
 ddev describe
 ```
 
-See also: [full getting-started guide](getting-started.md) · [DDEV docs](https://docs.ddev.com/) · [Drupal core contribution guide](https://www.drupal.org/contribute/development)
+See also: [full getting-started guide](getting-started.md) · [DDEV docs](https://docs.ddev.com/) · [Drupal core contribution guide](https://www.drupal.org/contribute/development) · [ddev-drupal-dev add-on](https://github.com/amateescu/ddev-drupal-dev)
