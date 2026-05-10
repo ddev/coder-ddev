@@ -920,7 +920,7 @@ Run these steps on each server:
 SEED_DIR=~/cache/drupal-core-seed
 REPO=~/workspace/coder-ddev
 
-# 1. Stop the old DDEV seed project
+# 1. Stop the old DDEV seed project (only needed if it was still running)
 cd "$SEED_DIR" && ddev stop --remove-data 2>/dev/null || true
 
 # 2. Move the git clone to the seed root, remove everything else
@@ -928,14 +928,22 @@ mv "$SEED_DIR/repos/drupal" /tmp/drupal-git-tmp
 rm -rf "$SEED_DIR"
 mv /tmp/drupal-git-tmp "$SEED_DIR"
 
-# 3. Install the updated update script and service
+# 3. Install the updated script, service, and timer
 sudo install -m 755 $REPO/drupal-core/scripts/update-drupal-cache \
   /usr/local/bin/update-drupal-cache
 sudo install -m 644 $REPO/drupal-core/scripts/drupal-cache-updater.service \
   /etc/systemd/system/
-sudo systemctl daemon-reload
+sudo install -m 644 $REPO/drupal-core/scripts/drupal-cache-updater.timer \
+  /etc/systemd/system/
 
-# 4. Verify it works
+# 4. Set the correct user in the service file (YOURUSER is a placeholder)
+sudo sed -i "s/User=YOURUSER/User=$(whoami)/" /etc/systemd/system/drupal-cache-updater.service
+
+# 5. Enable and start the timer
+sudo systemctl daemon-reload
+sudo systemctl enable --now drupal-cache-updater.timer
+
+# 6. Verify it works
 sudo systemctl start drupal-cache-updater.service
 journalctl -u drupal-cache-updater.service --no-pager | tail -10
 ```
