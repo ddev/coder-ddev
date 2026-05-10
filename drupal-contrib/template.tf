@@ -681,11 +681,11 @@ COMPOSE_EOF
       fi
 
       if [ "$DRUPAL_INSTALLED" = "false" ]; then
-        # Add drush as require-dev so expand-composer-json includes it in composer.contrib.json
-        # --no-update avoids triggering plugin checks before Drupal is installed
+        # Add drush as require-dev so expand-composer-json includes it in composer.contrib.json.
+        # Direct JSON edit (not `composer require`) per ddev-drupal-contrib README.
         log_setup "Adding drush to require-dev..."
         update_status "⏳ drush: Adding to composer.json..."
-        ddev exec composer require --dev "drush/drush:*" --no-update --no-interaction >> "$SETUP_LOG" 2>&1 || true
+        jq '.["require-dev"]["drush/drush"] = "*"' composer.json > composer.json.tmp && mv composer.json.tmp composer.json
 
         # Run ddev poser: expands composer.json → composer.contrib.json (includes require-dev),
         # then runs composer install (installs Drupal + drush together), then removes composer.contrib.json
