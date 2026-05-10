@@ -6,7 +6,7 @@ Type=oneshot
 # Must run as the user who owns the seed cache directory — NOT root.
 # Change User= to the account that owns the cache (e.g. your server's admin user).
 User=YOURUSER
-WorkingDirectory=%h
+WorkingDirectory=/tmp
 # The script is installed to /usr/local/bin/ (see docs/admin/server-setup.md).
 # The script defaults to ~/cache/drupal-core-seed (relative to the User= above).
 # Pass --seed-dir only if your seed directory differs from that default.
