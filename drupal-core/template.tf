@@ -583,6 +583,15 @@ STATUS_HEADER
       if [ -n "$ISSUE_TITLE" ]; then log_setup "   Title: $ISSUE_TITLE"; fi
     fi
 
+    # Drupal version, branch, and DDEV project type — computed early so the git clone
+    # section can check out the correct branch before DDEV config runs.
+    DRUPAL_VERSION="${data.coder_parameter.drupal_version.value}"
+    case "$DRUPAL_VERSION" in
+      10) DDEV_PROJECT_TYPE="drupal10"; DRUPAL_BRANCH="10.x" ;;
+      11) DDEV_PROJECT_TYPE="drupal11"; DRUPAL_BRANCH="11.x" ;;
+      *)  DDEV_PROJECT_TYPE="drupal12"; DRUPAL_BRANCH="main" ;;
+    esac
+
     # Step 1: Clone Drupal core (first run) or verify existing checkout
     CACHE_SEED="/home/coder-cache-seed"
     SETUP_START=$SECONDS
@@ -665,21 +674,6 @@ STATUS_HEADER
     cd "$DRUPAL_DIR" || exit 1
 
     # Step 2: Configure DDEV (must be done before composer create)
-    # Derive project type from the Drupal major version parameter (let DDEV pick default PHP version)
-    DRUPAL_VERSION="${data.coder_parameter.drupal_version.value}"
-    case "$DRUPAL_VERSION" in
-      10) DDEV_PROJECT_TYPE="drupal10" ;;
-      11) DDEV_PROJECT_TYPE="drupal11" ;;
-      *)  DDEV_PROJECT_TYPE="drupal12" ;;
-    esac
-
-    # Map version to git branch (non-main versions need a dedicated branch checkout)
-    case "$DRUPAL_VERSION" in
-      10) DRUPAL_BRANCH="10.x" ;;
-      11) DRUPAL_BRANCH="11.x" ;;
-      *)  DRUPAL_BRANCH="main" ;;
-    esac
-
     # Always regenerate .ddev/config.yaml from scratch so DDEV picks its own defaults
     # for the project type (e.g. correct PHP version). Preserving an old config.yaml
     # would leave stale fields like php_version untouched even when project-type changes.
