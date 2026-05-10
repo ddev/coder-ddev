@@ -20,6 +20,9 @@
 # Note: When run via the systemd timer, the seed directory is taken from the default
 # or from the ExecStart line in drupal-cache-updater.service — edit that file to pass
 # --seed-dir if your seed directory differs from the default.
+#
+# IMPORTANT: This script must be reinstalled to /usr/local/bin/ after any changes:
+#   sudo install -m 755 drupal-core/scripts/update-drupal-cache /usr/local/bin/update-drupal-cache
 
 set -euo pipefail
 

@@ -857,7 +857,7 @@ This deploys three templates:
 
 The `drupal-core` template can provision workspaces faster using a **seed cache** on the host. The cache is a plain git clone of drupal/drupal. New workspaces pass it as a `--reference` hint to `git clone`, reusing local git objects and avoiding several hundred MB of network transfer. Composer install still runs fresh inside each workspace.
 
-The database is always installed fresh via `ddev drush si`.
+The seed cache is just a simple git checkout — no DDEV project, no database, no vendor directory, no composer files.
 
 ### One-time initial setup
 
@@ -957,7 +957,7 @@ make push-template-drupal-core DRUPAL_CACHE_PATH=/your/cache/path
 When a workspace starts for the first time:
 
 1. The startup script checks for `.git` at `/home/coder-cache-seed` (the read-only bind mount of `cache_path`)
-2. **Cache hit:** `git clone --reference` reuses local git objects for the initial clone (fast), then `ddev composer install` runs fresh inside the container
+2. **Cache hit:** `git clone --reference` reuses local git objects for the initial clone (fast), then `composer install` runs fresh inside the container
 3. **Cache miss** (path absent or no `.git` at root): `git clone` runs without a reference — slower but always works
 
 Check workspace startup logs in the Coder dashboard or at `/tmp/drupal-setup.log` inside the workspace to confirm which path was taken.
