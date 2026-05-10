@@ -855,51 +855,29 @@ This deploys three templates:
 
 ## Step 10: Set Up the Drupal Core Seed Cache (optional, highly recommended)
 
-The `drupal-core` template can provision a Drupal core development environment faster on new workspaces using a **seed cache** on the host. Without the cache, first-time workspace setup downloads a full git clone and all composer dependencies (~10-13 minutes). With the cache, the composer install phase is nearly instant; total workspace startup is 3-5 minutes (the remaining time is the Drupal site install, which always runs fresh).
+The `drupal-core` template can provision workspaces faster using a **seed cache** on the host. The cache is a plain git clone of drupal/drupal. New workspaces pass it as a `--reference` hint to `git clone`, reusing local git objects and avoiding several hundred MB of network transfer. Composer install still runs fresh inside each workspace.
 
-The cache is a standing DDEV project on the host that is periodically refreshed. New workspaces copy the git checkout and vendor directory from it. The database is always installed fresh via `ddev drush si` — this avoids schema-drift reliability problems with pre-built DB snapshots.
-
-### Prerequisites
-
-DDEV must be installed on the Coder server itself (not just inside workspaces). The host DDEV project runs on the host Docker daemon, separate from the Sysbox workspace containers.
-
-Follow the [DDEV Linux installation instructions](https://docs.ddev.com/en/stable/users/install/ddev-installation/#ddev-installation-linux) to install DDEV on the host.
-
-> **User note:** The seed cache must be owned and operated by a normal (non-root) user. DDEV refuses to run as root. All the commands below, and the systemd service, must run as that user — not with `sudo`.
+The database is always installed fresh via `ddev drush si`.
 
 ### One-time initial setup
 
-Run these commands as your normal (non-root) user — **not** as root:
-
 ```bash
-mkdir -p ~/cache/drupal-core-seed
-cd ~/cache/drupal-core-seed
-
-# Configure DDEV project
-ddev config --project-type=drupal12 --php-version=8.5 --docroot=web \
-  --project-name=drupal-core-seed
-ddev start
-
-# Create the full drupal-core development project (takes 5-10 minutes)
-ddev composer create-project joachim-n/drupal-core-development-project --no-interaction
-
-# Add Drush
-ddev composer require drush/drush
+mkdir -p ~/cache/drupal-core-seed/repos
+git clone https://git.drupalcode.org/project/drupal.git \
+  ~/cache/drupal-core-seed/repos/drupal
 ```
 
-After this runs, the seed directory contains:
+The seed directory contains only:
 
-| Path | Contents |
-|------|----------|
-| `composer.json` / `composer.lock` | Project definition |
-| `repos/drupal/` | Git clone of Drupal core |
-| `vendor/` | All Composer packages |
-| `web/` | Docroot (symlinked) |
-| `.ddev/` | Host DDEV config — **not** copied to workspaces |
+| Path             | Contents                  |
+|------------------|---------------------------|
+| `repos/drupal/`  | Git clone of Drupal core  |
+
+No DDEV, no vendor directory, no composer files — just the git objects.
 
 ### Install the hourly update timer
 
-The update script runs `composer update` to keep the cache current with Drupal HEAD. Install it as an hourly systemd timer:
+The update script runs `git fetch --all --prune` to keep the cache current. Install it as an hourly systemd timer:
 
 ```bash
 REPO=~/workspace/coder-ddev   # adjust if your repo is elsewhere
@@ -929,8 +907,6 @@ systemctl list-timers drupal-cache-updater.timer
 
 ### Manual refresh
 
-Run an update at any time (e.g. after a major Drupal release):
-
 ```bash
 /usr/local/bin/update-drupal-cache
 
@@ -941,6 +917,37 @@ Run an update at any time (e.g. after a major Drupal release):
 sudo systemctl start drupal-cache-updater.service
 journalctl -u drupal-cache-updater.service -f
 ```
+
+### Migrating from the old joachim-n cache structure
+
+If your server has an existing seed cache built with `joachim-n/drupal-core-development-project` (the old scaffolding), the `repos/drupal/.git` directory is already there and works as a git reference hint immediately — no urgent action is needed. New workspaces will use it automatically.
+
+When convenient, migrate each server to the simpler structure:
+
+```bash
+SEED_DIR=~/cache/drupal-core-seed
+
+# 1. Stop the DDEV seed project (no longer needed)
+cd "$SEED_DIR" && ddev stop --remove-data 2>/dev/null || true
+
+# 2. Install the updated update script (replaces composer update with git fetch)
+REPO=~/workspace/coder-ddev
+sudo install -m 755 $REPO/drupal-core/scripts/update-drupal-cache \
+  /usr/local/bin/update-drupal-cache
+sudo install -m 644 $REPO/drupal-core/scripts/drupal-cache-updater.service \
+  /etc/systemd/system/
+sudo systemctl daemon-reload
+
+# 3. Verify the timer still works
+sudo systemctl start drupal-cache-updater.service
+journalctl -u drupal-cache-updater.service --no-pager | tail -20
+
+# 4. Clean up old files no longer needed (repos/drupal/ stays)
+cd "$SEED_DIR"
+rm -rf vendor web composer.json composer.lock .ddev core
+```
+
+After step 4, the seed directory contains only `repos/drupal/`.
 
 ### Template variable
 
@@ -956,11 +963,9 @@ make push-template-drupal-core DRUPAL_CACHE_PATH=/your/cache/path
 
 When a workspace starts for the first time:
 
-1. The startup script checks for a valid seed at `/home/coder-cache-seed` (the read-only bind mount of `cache_path`)
-2. **Cache hit:** `rsync` copies the project files (excluding `.ddev/`), `ddev composer install` ensures vendor is current (near-instant with vendor already present), then `ddev drush si` installs Drupal fresh (~2-3 min)
-3. **Cache miss** (path absent or incomplete): falls back to full `ddev composer create-project` + `ddev drush si` — slower but always works
-
-The database is always installed fresh — there is no pre-built DB snapshot. This avoids schema-drift failures that occurred when the cached DB became stale relative to Drupal HEAD.
+1. The startup script checks for `repos/drupal/.git` at `/home/coder-cache-seed` (the read-only bind mount of `cache_path`)
+2. **Cache hit:** `git clone --reference` reuses local git objects for the initial clone (fast), then `ddev composer install` runs fresh inside the container
+3. **Cache miss** (path absent or `repos/drupal/.git` missing): `git clone` runs without a reference — slower but always works
 
 Check workspace startup logs in the Coder dashboard or at `/tmp/drupal-setup.log` inside the workspace to confirm which path was taken.
 
@@ -968,21 +973,18 @@ Check workspace startup logs in the Coder dashboard or at `/tmp/drupal-setup.log
 
 **Cache not being used:**
 
-- Verify the seed directory exists and is populated: `ls $SEED_DIR/composer.json $SEED_DIR/vendor`
-- Confirm `cache_path` in the deployed template matches your actual seed directory (check with `coder templates versions list drupal-core`)
-- Check the workspace startup log for the "Cache mount check" diagnostic block — it shows exactly which files were found or missing at the bind mount path
-- Look for "Cache hit" in the log; "No cache available" means the path is absent or the seed was never initialized
-
-**Seed project won't start after server reboot:**
-```bash
-cd ~/cache/drupal-core-seed && ddev start
-```
+- Verify the seed directory has a git clone: `ls ~/cache/drupal-core-seed/repos/drupal/.git`
+- Confirm `cache_path` in the deployed template matches your actual seed directory
+- Look for "with reference from cache seed" in `/tmp/drupal-setup.log`; absence means the path was missing or the clone check failed
 
 **Update script fails:**
+
 ```bash
-cd ~/cache/drupal-core-seed
-ddev describe   # verify DDEV is running
-ddev logs       # check container logs for errors
+git -C ~/cache/drupal-core-seed/repos/drupal fetch --all --prune
+# If this fails, check network connectivity or re-clone:
+rm -rf ~/cache/drupal-core-seed/repos/drupal
+git clone https://git.drupalcode.org/project/drupal.git \
+  ~/cache/drupal-core-seed/repos/drupal
 ```
 
 ---
