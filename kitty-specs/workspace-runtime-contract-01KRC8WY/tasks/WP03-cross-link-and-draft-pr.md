@@ -62,3 +62,4 @@ Bind the Spec Kitty mission and the OpenSpec change with bidirectional reference
 ## Activity Log
 
 - 2026-05-11T20:05:27Z – claude – shell_pid=386142 – Moved to for_review
+- 2026-05-11T20:05:54Z – claude – shell_pid=386142 – Lane branch cleaned; cross-link will be applied on PR branch (spec-workspace-runtime-contract)
