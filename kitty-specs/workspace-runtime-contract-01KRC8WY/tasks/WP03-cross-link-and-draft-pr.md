@@ -21,13 +21,14 @@ subtasks:
 - T012
 - T013
 - T014
-shell_pid: '385833'
+shell_pid: "386142"
 history: []
 authoritative_surface: kitty-specs/workspace-runtime-contract-01KRC8WY/meta.json
 execution_mode: code_change
 owned_files:
 - kitty-specs/workspace-runtime-contract-01KRC8WY/meta.json
 tags: []
+agent: "claude"
 ---
 
 # WP03 — Cross-link mission to OpenSpec and open draft PR
@@ -57,3 +58,7 @@ Bind the Spec Kitty mission and the OpenSpec change with bidirectional reference
 - `terraform fmt -recursive` clean.
 - Draft PR exists on `ddev/coder-ddev:main`. PR URL captured in the WP completion notes.
 - No file under `image/`, `*/template.tf`, `*/scripts/`, or `Makefile` in the PR diff.
+
+## Activity Log
+
+- 2026-05-11T20:05:27Z – claude – shell_pid=386142 – Moved to for_review
