@@ -17,16 +17,6 @@ Automated Coder workspace for Drupal core development using the [amateescu/ddev-
 - **Port Forwarding**: HTTP (80)
 - **Custom Launch Command**: `ddev launch` shows Coder-specific instructions
 
-## Initial Setup Time
-
-First workspace creation takes approximately **5-8 minutes**:
-
-- git clone (with cache seed reference hint): ~10s
-- DDEV start + add-on install: ~1 min
-- `ddev composer install`: ~2-3 min
-- Drupal site install (`ddev drush si`): ~2-3 min
-
-Subsequent starts are fast (< 1 minute) as everything is already present.
 
 ## Quick Start
 

@@ -39,10 +39,12 @@ TEMPLATE_EDIT_user-defined-web := --display-name "[DEPRECATED] DDEV Web Workspac
                                    --description "Deprecated: use the freeform template instead. Existing workspaces continue to work." \
                                    --deprecated "Deprecated: use the freeform template instead. Existing workspaces continue to work."
 TEMPLATE_EDIT_drupal-core      := --display-name "Drupal Core Development" \
-                                   --description "Drupal core dev environment: full DDEV stack, core clone, Umami demo site. Ready in about a minute."
+                                   --description "Drupal core dev environment: full DDEV stack, core clone, Umami demo site. Built on the amateescu/ddev-drupal-dev add-on."
 TEMPLATE_EDIT_drupal-contrib   := --display-name "Drupal Contrib Development" \
-                                   --description "Drupal contrib module/theme dev: clone any drupal.org project, optional issue branch checkout. Ready in 5-10 minutes."
-TEMPLATE_EDIT_freeform         := --display-name "DDEV Freeform (Traefik)" --default-ttl 24h
+                                   --description "Drupal contrib module/theme dev: clone any drupal.org project, optional issue branch. Uses ddev/ddev-drupal-contrib."
+TEMPLATE_EDIT_freeform         := --display-name "DDEV Freeform" \
+                                   --description "Multi-project DDEV workspace: each project gets its own URL via ddev-router Host-header routing." \
+                                   --default-ttl 24h
 
 # Shared recipe for pushing any template (call with template name as argument)
 define push_template

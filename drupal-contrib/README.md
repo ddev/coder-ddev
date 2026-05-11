@@ -36,12 +36,6 @@ coder create --template drupal-contrib issue-3568144 \
   --yes
 ```
 
-## Setup Time
-
-| Scenario | Time |
-|----------|------|
-| First workspace creation | 5–10 min (downloads Drupal + dependencies) |
-| Subsequent starts | ~1 min (restarts existing containers) |
 
 ## Workspace Structure
 

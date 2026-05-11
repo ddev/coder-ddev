@@ -120,7 +120,7 @@ coder create --template user-defined-web my-workspace
 ### drupal-core (Drupal Core Development)
 Fully automated Drupal core development environment, including issue fork support.
 
-- **Setup**: Automatic (Drupal core cloned and installed, ~30s with seed cache)
+- **Setup**: Automatic (Drupal core cloned and installed)
 - **Use Case**: Drupal core development, contribution, patch testing
 - **Template Directory**: `drupal-core/`
 - **Issue Picker**: [start.coder.ddev.com/drupal-issue](https://start.coder.ddev.com/drupal-issue) — paste any drupal.org issue URL; the picker auto-detects core vs. contrib and routes to the right template
@@ -140,7 +140,7 @@ coder create --template drupal-core my-drupal-dev
 
 Automated environment for developing Drupal contrib modules and themes, with optional issue branch support.
 
-- **Setup**: Automatic (module/theme cloned, Drupal installed as dev dependency via `ddev-drupal-contrib`, ~5-10 min)
+- **Setup**: Automatic (module/theme cloned, Drupal installed as dev dependency via `ddev-drupal-contrib`)
 - **Use Case**: Contrib module/theme development, issue queue work on any drupal.org project
 - **Template Directory**: `drupal-contrib/`
 - **Issue Picker**: [start.coder.ddev.com/drupal-issue](https://start.coder.ddev.com/drupal-issue) — paste a drupal.org issue or project URL; auto-detects contrib

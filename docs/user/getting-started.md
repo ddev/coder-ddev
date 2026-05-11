@@ -489,7 +489,7 @@ coder start my-first-workspace
 # Via UI: Click "Start" button on workspace
 ```
 
-**Startup time:** about a minute (faster than initial create without cache)
+**Startup time:** faster than initial create (no reinstall needed)
 
 **After starting:**
 ```bash
