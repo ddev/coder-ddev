@@ -21,6 +21,7 @@ subtasks:
 - T012
 - T013
 - T014
+shell_pid: '385833'
 history: []
 authoritative_surface: kitty-specs/workspace-runtime-contract-01KRC8WY/meta.json
 execution_mode: code_change
