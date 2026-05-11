@@ -687,6 +687,11 @@ COMPOSE_EOF
         update_status "⏳ drush: Adding to composer.json..."
         jq '.["require-dev"]["drush/drush"] = "*"' composer.json > composer.json.tmp && mv composer.json.tmp composer.json
 
+        # Allow all Composer plugins in this dev environment. Composer 2.2+ blocks
+        # unknown plugins by default; modules can pull in arbitrary plugins (e.g.
+        # symfony/runtime) that aren't pre-listed in allow-plugins.
+        jq 'if .config == null then .config = {} else . end | .config["allow-plugins"] = true' composer.json > composer.json.tmp && mv composer.json.tmp composer.json
+
         # Run ddev poser: expands composer.json → composer.contrib.json (includes require-dev),
         # then runs composer install (installs Drupal + drush together), then removes composer.contrib.json
         log_setup "Running ddev poser (installs Drupal as dev dependency)..."

@@ -1,10 +1,11 @@
 # Freeform DDEV Template
 
-Coder workspace for a single DDEV project with full Traefik routing integration. Coder-aware routing rules are automatically configured so web, Mailpit, and optional Adminer are accessible via stable subdomains.
+Coder workspace for one or more DDEV projects in a single workspace. Each project gets its own stable subdomain URL via ddev-router (Traefik) Host-header routing — no port numbers in links, no conflicts between projects.
 
 ## Features
 
-- **Coder-Aware Traefik Routing**: DDEV web server and Mailpit get stable subdomain URLs (no port numbers in links)
+- **Multi-Project Support**: Run multiple DDEV projects in one workspace; each gets its own Coder app button and URL
+- **Coder-Aware Routing**: DDEV web server and Mailpit get stable subdomain URLs via ddev-router Host-header dispatch
 - **VS Code for Web**: Opens directly to your project directory
 - **Mailpit**: Email testing UI available as a Coder app
 - **Optional Adminer**: Database UI available when enabled via template variable

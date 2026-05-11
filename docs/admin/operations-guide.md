@@ -111,12 +111,13 @@ gh workflow run push-image.yml --ref <branch>
 ### Using the Makefile
 
 ```bash
-# Push all three templates (no image build — use when only HCL changed)
+# Push all four templates (no image build — use when only HCL changed)
 make push-all-templates
 
 # Push a single template
 make push-template-user-defined-web
 make push-template-drupal-core
+make push-template-drupal-contrib
 make push-template-freeform
 
 # Full deployment: build image, push image, push all templates
@@ -132,6 +133,7 @@ Set a default auto-stop so idle workspaces shut down and free resources. Run onc
 
 ```bash
 coder templates edit drupal-core      --default-ttl 2h --yes
+coder templates edit drupal-contrib   --default-ttl 2h --yes
 coder templates edit user-defined-web --default-ttl 2h --yes
 coder templates edit freeform         --default-ttl 2h --yes
 ```
