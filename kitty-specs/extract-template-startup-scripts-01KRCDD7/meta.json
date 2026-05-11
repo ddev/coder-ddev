@@ -1,10 +1,12 @@
 {
   "created_at": "2026-05-11T20:59:39.092220+00:00",
-  "friendly_name": "extract template startup scripts",
+  "friendly_name": "Extract Template Startup Scripts",
   "mission_id": "01KRCDD730HK8SWWHAADCM8KQH",
   "mission_number": null,
   "mission_slug": "extract-template-startup-scripts-01KRCDD7",
   "mission_type": "software-dev",
   "slug": "extract-template-startup-scripts-01KRCDD7",
-  "target_branch": "extract-template-startup-scripts"
+  "source_description": "GitHub issue ddev/coder-ddev#76 — refactor inline bash in terraform templates into reusable scripts. Prerequisite #71 (automated tests) closed 2026-05-10.",
+  "target_branch": "extract-template-startup-scripts",
+  "vcs": "git"
 }
