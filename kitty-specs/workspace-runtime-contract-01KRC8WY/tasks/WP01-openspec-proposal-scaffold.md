@@ -62,3 +62,4 @@ Create the OpenSpec change scaffold (proposal, design, tasks) for `add-workspace
 ## Activity Log
 
 - 2026-05-11T19:59:37Z – claude – shell_pid=385108 – WP01 OpenSpec scaffold complete in worktree
+- 2026-05-11T19:59:46Z – claude – shell_pid=385108 – Self-review: scaffolds match WP01 owned_files; no out-of-scope edits
