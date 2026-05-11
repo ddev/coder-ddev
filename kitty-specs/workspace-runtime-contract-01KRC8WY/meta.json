@@ -6,5 +6,7 @@
   "mission_slug": "workspace-runtime-contract-01KRC8WY",
   "mission_type": "software-dev",
   "slug": "workspace-runtime-contract-01KRC8WY",
-  "target_branch": "spec-workspace-runtime-contract"
+  "target_branch": "spec-workspace-runtime-contract",
+  "vcs": "git",
+  "vcs_locked_at": "2026-05-11T19:58:02.673303+00:00"
 }

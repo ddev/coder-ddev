@@ -10,11 +10,15 @@ requirement_refs:
 planning_base_branch: spec-workspace-runtime-contract
 merge_target_branch: spec-workspace-runtime-contract
 branch_strategy: Planning artifacts for this feature were generated on spec-workspace-runtime-contract. During /spec-kitty.implement this WP may branch from a dependency-specific base, but completed changes must merge back into spec-workspace-runtime-contract unless the human explicitly redirects the landing branch.
+base_branch: kitty/mission-workspace-runtime-contract-01KRC8WY
+base_commit: 3634d6663736aef7a45502b30a2594f209a146ba
+created_at: '2026-05-11T19:58:02.708020+00:00'
 subtasks:
 - T001
 - T002
 - T003
 - T004
+shell_pid: '384815'
 history: []
 authoritative_surface: openspec/changes/add-workspace-runtime-contract/
 execution_mode: code_change
