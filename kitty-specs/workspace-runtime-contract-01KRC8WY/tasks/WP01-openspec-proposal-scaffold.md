@@ -18,7 +18,7 @@ subtasks:
 - T002
 - T003
 - T004
-shell_pid: '384815'
+shell_pid: "385108"
 history: []
 authoritative_surface: openspec/changes/add-workspace-runtime-contract/
 execution_mode: code_change
@@ -27,6 +27,7 @@ owned_files:
 - openspec/changes/add-workspace-runtime-contract/design.md
 - openspec/changes/add-workspace-runtime-contract/tasks.md
 tags: []
+agent: "claude"
 ---
 
 # WP01 — Author OpenSpec proposal scaffold for `add-workspace-runtime-contract`
@@ -57,3 +58,7 @@ Create the OpenSpec change scaffold (proposal, design, tasks) for `add-workspace
 - `design.md` justifies descriptive-first + cohabitation.
 - `tasks.md` is in OpenSpec's expected checkbox format.
 - No file outside `openspec/changes/add-workspace-runtime-contract/` is modified.
+
+## Activity Log
+
+- 2026-05-11T19:59:37Z – claude – shell_pid=385108 – WP01 OpenSpec scaffold complete in worktree
