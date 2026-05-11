@@ -61,3 +61,4 @@ Write the OpenSpec delta spec for capability `workspace-runtime` with nine `## A
 ## Activity Log
 
 - 2026-05-11T20:02:17Z – claude – shell_pid=385715 – WP02 delta spec authored, openspec validate --strict green
+- 2026-05-11T20:02:18Z – claude – shell_pid=385715 – Self-review: 9 ADDED reqs, all with scenarios; drift block informational; validation green
