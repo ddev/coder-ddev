@@ -17,7 +17,7 @@ subtasks:
 - T004
 history: []
 authoritative_surface: openspec/changes/add-workspace-runtime-contract/
-execution_mode: doc_change
+execution_mode: code_change
 owned_files:
 - openspec/changes/add-workspace-runtime-contract/proposal.md
 - openspec/changes/add-workspace-runtime-contract/design.md

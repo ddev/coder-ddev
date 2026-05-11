@@ -21,7 +21,7 @@ subtasks:
 - T009
 history: []
 authoritative_surface: openspec/changes/add-workspace-runtime-contract/specs/workspace-runtime/spec.md
-execution_mode: doc_change
+execution_mode: code_change
 owned_files:
 - openspec/changes/add-workspace-runtime-contract/specs/workspace-runtime/spec.md
 tags: []

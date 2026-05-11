@@ -23,7 +23,7 @@ subtasks:
 - T014
 history: []
 authoritative_surface: kitty-specs/workspace-runtime-contract-01KRC8WY/meta.json
-execution_mode: doc_change
+execution_mode: code_change
 owned_files:
 - kitty-specs/workspace-runtime-contract-01KRC8WY/meta.json
 tags: []
