@@ -19,13 +19,14 @@ subtasks:
 - T007
 - T008
 - T009
-shell_pid: '385375'
+shell_pid: "385715"
 history: []
 authoritative_surface: openspec/changes/add-workspace-runtime-contract/specs/workspace-runtime/spec.md
 execution_mode: code_change
 owned_files:
 - openspec/changes/add-workspace-runtime-contract/specs/workspace-runtime/spec.md
 tags: []
+agent: "claude"
 ---
 
 # WP02 — Author the runtime-contract delta spec
@@ -56,3 +57,7 @@ Write the OpenSpec delta spec for capability `workspace-runtime` with nine `## A
 - `openspec validate add-workspace-runtime-contract --strict` is green.
 - Each `ADDED Requirement` has at least one `#### Scenario:`.
 - Drift block is clearly labeled informational and cites the relevant source files.
+
+## Activity Log
+
+- 2026-05-11T20:02:17Z – claude – shell_pid=385715 – WP02 delta spec authored, openspec validate --strict green
