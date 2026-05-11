@@ -105,6 +105,16 @@ for PAIR in "${TESTS[@]}"; do
       cd "$HOME"
       continue
     fi
+    DIRTY=$(git status --short 2>/dev/null)
+    if [ -n "$DIRTY" ]; then
+      log "ERROR: dirty git tree after issue branch checkout:"
+      echo "$DIRTY" | head -20
+      RESULTS["$DIR_KEY"]="FAIL (dirty git tree after checkout)"
+      DURATIONS["$DIR_KEY"]=$((SECONDS - START))
+      cd "$HOME"
+      continue
+    fi
+    log "✓ git tree clean after checkout"
   elif [ "$TARGET_BRANCH" != "main" ]; then
     log "Checking out $TARGET_BRANCH..."
     if ! (git checkout -b "$TARGET_BRANCH" "origin/$TARGET_BRANCH" 2>&1 || \
