@@ -95,6 +95,16 @@ for SPEC in "${TESTS[@]}"; do
       continue
     fi
     log "Checked out issue branch: $BRANCH"
+    DIRTY=$(git status --short 2>/dev/null)
+    if [ -n "$DIRTY" ]; then
+      log "ERROR: dirty git tree after issue branch checkout:"
+      echo "$DIRTY" | head -20
+      RESULTS["$DIR_KEY"]="FAIL (dirty git tree after checkout)"
+      DURATIONS["$DIR_KEY"]=$((SECONDS - START))
+      cd "$HOME"
+      continue
+    fi
+    log "✓ git tree clean after checkout"
   fi
 
   # --- Configure DDEV if needed ---

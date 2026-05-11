@@ -545,6 +545,12 @@ GIT_EXCLUDE_EOF
              git checkout -b "$ISSUE_BRANCH" "$REMOTE_NAME/$ISSUE_BRANCH" >> "$SETUP_LOG" 2>&1; then
             log_setup "✓ Checked out branch $ISSUE_BRANCH"
             update_status "✓ Branch checkout: Success"
+            # Ensure working tree exactly matches the checked-out branch.
+            # origin/main may be ahead of the issue branch base; git can leave
+            # files from those newer commits as modified/untracked after checkout.
+            git reset --hard HEAD >> "$SETUP_LOG" 2>&1 || true
+            git clean -fd >> "$SETUP_LOG" 2>&1 || true
+            log_setup "✓ Working tree reset to match branch"
           else
             log_setup "⚠ Warning: Could not checkout $ISSUE_BRANCH — remaining on current branch"
             update_status "⚠ Branch checkout: Warning"

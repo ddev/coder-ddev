@@ -56,6 +56,10 @@ echo ""
 echo "Fetching Drupal core git objects..."
 git -C "$SEED_DIR" fetch --all --prune
 
+echo "Fast-forwarding local main branch..."
+git -C "$SEED_DIR" merge --ff-only origin/main || \
+  echo "Warning: could not fast-forward main (local changes?); objects still updated."
+
 echo ""
 echo "=== Seed cache updated successfully ==="
 echo "Completed: $(date)"

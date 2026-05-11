@@ -635,6 +635,13 @@ STATUS_HEADER
             if git -C "$DRUPAL_DIR" checkout -b "$ISSUE_BRANCH" "issue/$ISSUE_BRANCH" >> "$SETUP_LOG" 2>&1 || \
                git -C "$DRUPAL_DIR" checkout "$ISSUE_BRANCH" >> "$SETUP_LOG" 2>&1; then
               log_setup "  ✓ Checked out branch: $ISSUE_BRANCH"
+              # Ensure the working tree exactly matches the checked-out branch.
+              # When cloning with --reference, origin/main may be ahead of the
+              # issue branch base; git updates the index but can leave working tree
+              # files from those newer main commits behind as modified/untracked.
+              git -C "$DRUPAL_DIR" reset --hard HEAD >> "$SETUP_LOG" 2>&1 || true
+              git -C "$DRUPAL_DIR" clean -fd >> "$SETUP_LOG" 2>&1 || true
+              log_setup "  ✓ Working tree reset to match branch"
             else
               log_setup "✗ Failed to check out branch $ISSUE_BRANCH"
               SETUP_FAILED=true
