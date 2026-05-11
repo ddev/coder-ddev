@@ -857,21 +857,27 @@ This deploys four templates:
 
 ## Step 10: Set Up the Drupal Core Seed Cache (optional, highly recommended)
 
-The `drupal-core` template can provision workspaces faster using a **seed cache** on the host. The cache is a plain git clone of drupal/drupal. New workspaces pass it as a `--reference` hint to `git clone`, reusing local git objects and avoiding several hundred MB of network transfer. Composer install still runs fresh inside each workspace.
+The `drupal-core` template can provision workspaces faster using a **seed cache** on the host. The cache is a **bare** git clone of drupal/drupal. When a workspace starts, the startup script:
 
-The seed cache is just a simple git checkout — no DDEV project, no database, no vendor directory, no composer files.
+1. Creates a fresh git repo in the workspace directory
+2. Adds the bare cache as a local remote and fetches from it (fast — reuses local objects, no network)
+3. Removes the cache remote
+4. Fetches from `git.drupalcode.org` for any commits newer than the cache
+5. Checks out `main` (or the issue branch)
+
+This avoids downloading hundreds of MB per workspace and eliminates working-tree issues that a non-bare cache causes.
 
 ### One-time initial setup
 
 ```bash
-git clone https://git.drupalcode.org/project/drupal.git ~/cache/drupal-core-seed
+git clone --bare https://git.drupalcode.org/project/drupal.git ~/cache/drupal-core-seed
 ```
 
-The seed directory IS the git clone — no subdirectory nesting. No DDEV, no vendor, no composer files.
+The seed directory IS the bare clone root — no subdirectory nesting. No working tree, no DDEV, no vendor, no composer files.
 
 ### Install the hourly update timer
 
-The update script runs `git fetch --all --prune` to keep the cache current. Install it as an hourly systemd timer:
+The update script runs `git fetch --all --prune` to keep the bare cache current. Because there is no working tree, no `git merge` is needed. Install it as an hourly systemd timer:
 
 ```bash
 REPO=~/workspace/coder-ddev   # adjust if your repo is elsewhere
@@ -966,19 +972,33 @@ make push-template-drupal-core DRUPAL_CACHE_PATH=/your/cache/path
 
 When a workspace starts for the first time:
 
-1. The startup script checks for `.git` at `/home/coder-cache-seed` (the read-only bind mount of `cache_path`)
-2. **Cache hit:** `git clone --reference` reuses local git objects for the initial clone (fast), then `composer install` runs fresh inside the container
-3. **Cache miss** (path absent or no `.git` at root): `git clone` runs without a reference — slower but always works
+1. The startup script detects a bare repo at `/home/coder-cache-seed` (the read-only bind mount of `cache_path`)
+2. **Bare cache hit:** `git init` + `git fetch drupalcache` (fast local copy of all objects) + `git fetch origin` (only the delta) + checkout
+3. **Legacy non-bare cache:** `git clone --reference` (old behaviour, still supported)
+4. **Cache miss** (path absent or not a git repo): `git clone` runs without any cache — slower but always works
 
-Check workspace startup logs in the Coder dashboard or at `/tmp/drupal-setup.log` inside the workspace to confirm which path was taken.
+Check workspace startup logs in the Coder dashboard or at `/tmp/drupal-setup.log` inside the workspace to confirm which path was taken. Look for "bare cache" or "reference from cache seed" in the log.
+
+### Migrating from a non-bare (legacy) cache
+
+If you have an existing non-bare clone at `~/cache/drupal-core-seed`, replace it with a bare clone:
+
+```bash
+mv ~/cache/drupal-core-seed ~/cache/drupal-core-seed.bak
+git clone --bare https://git.drupalcode.org/project/drupal.git ~/cache/drupal-core-seed
+# Once confirmed working:
+rm -rf ~/cache/drupal-core-seed.bak
+```
+
+The `update-drupal-cache` script handles both bare and non-bare repos automatically.
 
 ### Troubleshooting
 
 **Cache not being used:**
 
-- Verify the seed directory is a git clone: `ls ~/cache/drupal-core-seed/.git`
+- Verify the seed directory is a bare git repo: `git -C ~/cache/drupal-core-seed rev-parse --is-bare-repository` (should print `true`)
 - Confirm `cache_path` in the deployed template matches your actual seed directory
-- Look for "with reference from cache seed" in `/tmp/drupal-setup.log`; absence means the path was missing or `.git` was not at the root
+- Look for "bare cache" or "reference from cache seed" in `/tmp/drupal-setup.log`; absence means the path was missing or not a valid git repo
 
 **Update script fails:**
 

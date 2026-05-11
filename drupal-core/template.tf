@@ -608,13 +608,38 @@ STATUS_HEADER
       DRUPAL_SETUP_NEEDED=true
       update_status "⏳ Git clone: In progress..."
       _t=$SECONDS
-      if [ -d "$CACHE_SEED/.git" ]; then
+      DRUPAL_REMOTE="https://git.drupalcode.org/project/drupal.git"
+      if git -C "$CACHE_SEED" rev-parse --is-bare-repository 2>/dev/null | grep -q true; then
+        # Bare cache: init repo, add all remotes (cache, origin, issue fork if
+        # applicable), fetch cache first (fast local copy of all objects), then
+        # fetch origin and issue fork for only the delta.
+        log_setup "Initialising Drupal core repo (bare cache + origin delta)..."
+        mkdir -p "$DRUPAL_DIR"
+        git -C "$DRUPAL_DIR" init >> "$SETUP_LOG" 2>&1
+        git -C "$DRUPAL_DIR" remote add drupalcache "$CACHE_SEED"
+        git -C "$DRUPAL_DIR" remote add origin "$DRUPAL_REMOTE"
+        if [ "$USING_ISSUE_FORK" = "true" ] && [ -n "$ISSUE_FORK" ]; then
+          git -C "$DRUPAL_DIR" remote add issue "https://git.drupalcode.org/issue/drupal-$${ISSUE_FORK}.git"
+        fi
+        git -C "$DRUPAL_DIR" fetch drupalcache >> "$SETUP_LOG" 2>&1
+        # Remove the local cache remote now — objects are in the local repo and
+        # keeping it causes ambiguous-ref errors when checking out branches that
+        # exist in both drupalcache and origin.
+        git -C "$DRUPAL_DIR" remote remove drupalcache
+        git -C "$DRUPAL_DIR" fetch origin >> "$SETUP_LOG" 2>&1 || true
+        if [ "$USING_ISSUE_FORK" = "true" ] && [ -n "$ISSUE_FORK" ]; then
+          git -C "$DRUPAL_DIR" fetch issue >> "$SETUP_LOG" 2>&1 || true
+        fi
+        git -C "$DRUPAL_DIR" checkout -b main --track origin/main >> "$SETUP_LOG" 2>&1
+      elif [ -d "$CACHE_SEED/.git" ]; then
+        # Non-bare (legacy) cache: use as --reference hint to avoid re-downloading
+        # objects that already exist locally.
         log_setup "Cloning Drupal core (with reference from cache seed)..."
-        git clone --reference "$CACHE_SEED" https://git.drupalcode.org/project/drupal.git "$DRUPAL_DIR" >> "$SETUP_LOG" 2>&1 || \
-          git clone https://git.drupalcode.org/project/drupal.git "$DRUPAL_DIR" >> "$SETUP_LOG" 2>&1
+        git clone --reference "$CACHE_SEED" "$DRUPAL_REMOTE" "$DRUPAL_DIR" >> "$SETUP_LOG" 2>&1 || \
+          git clone "$DRUPAL_REMOTE" "$DRUPAL_DIR" >> "$SETUP_LOG" 2>&1
       else
         log_setup "Cloning Drupal core..."
-        git clone https://git.drupalcode.org/project/drupal.git "$DRUPAL_DIR" >> "$SETUP_LOG" 2>&1
+        git clone "$DRUPAL_REMOTE" "$DRUPAL_DIR" >> "$SETUP_LOG" 2>&1
       fi
       if [ -d "$DRUPAL_DIR/.git" ]; then
         log_setup "✓ Drupal core cloned ($((SECONDS - _t))s)"
@@ -627,18 +652,22 @@ STATUS_HEADER
 
       # Branch or fork checkout
       if [ "$SETUP_FAILED" != "true" ] && [ "$USING_ISSUE_FORK" = "true" ] && [ -n "$ISSUE_FORK" ]; then
-        log_setup "Adding issue fork remote and fetching: $ISSUE_FORK"
-        git -C "$DRUPAL_DIR" remote add issue "https://git.drupalcode.org/issue/drupal-$${ISSUE_FORK}.git"
-        if git -C "$DRUPAL_DIR" fetch issue >> "$SETUP_LOG" 2>&1; then
+        # Add issue remote and fetch unless already done in the bare-cache setup above.
+        if ! git -C "$DRUPAL_DIR" remote get-url issue >> "$SETUP_LOG" 2>&1; then
+          log_setup "Adding issue fork remote and fetching: $ISSUE_FORK"
+          git -C "$DRUPAL_DIR" remote add issue "https://git.drupalcode.org/issue/drupal-$${ISSUE_FORK}.git"
+          git -C "$DRUPAL_DIR" fetch issue >> "$SETUP_LOG" 2>&1
+        fi
+        if git -C "$DRUPAL_DIR" branch -r | grep -q "^  issue/"; then
           log_setup "  ✓ Fetched from issue remote"
           if [ -n "$ISSUE_BRANCH" ]; then
             if git -C "$DRUPAL_DIR" checkout -b "$ISSUE_BRANCH" "issue/$ISSUE_BRANCH" >> "$SETUP_LOG" 2>&1 || \
                git -C "$DRUPAL_DIR" checkout "$ISSUE_BRANCH" >> "$SETUP_LOG" 2>&1; then
               log_setup "  ✓ Checked out branch: $ISSUE_BRANCH"
               # Ensure the working tree exactly matches the checked-out branch.
-              # When cloning with --reference, origin/main may be ahead of the
-              # issue branch base; git updates the index but can leave working tree
-              # files from those newer main commits behind as modified/untracked.
+              # origin/main may be ahead of the issue branch base; git updates
+              # the index but can leave working tree files from those newer main
+              # commits behind as modified/untracked.
               git -C "$DRUPAL_DIR" reset --hard HEAD >> "$SETUP_LOG" 2>&1 || true
               git -C "$DRUPAL_DIR" clean -fd >> "$SETUP_LOG" 2>&1 || true
               log_setup "  ✓ Working tree reset to match branch"
