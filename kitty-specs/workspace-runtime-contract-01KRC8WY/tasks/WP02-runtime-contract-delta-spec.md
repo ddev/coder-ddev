@@ -19,6 +19,7 @@ subtasks:
 - T007
 - T008
 - T009
+shell_pid: '385375'
 history: []
 authoritative_surface: openspec/changes/add-workspace-runtime-contract/specs/workspace-runtime/spec.md
 execution_mode: code_change
