@@ -5,7 +5,9 @@
   "mission_number": 2,
   "mission_slug": "workspace-runtime-contract-01KRC8WY",
   "mission_type": "software-dev",
+  "openspec_change_id": "add-workspace-runtime-contract",
   "slug": "workspace-runtime-contract-01KRC8WY",
+  "source_description": "Foundational workspace-runtime-contract spec; wraps OpenSpec change add-workspace-runtime-contract. Descriptive-first capture of nine runtime invariants (Sysbox, identity, sudo, dockerd, volumes, hydration, routing, cleanup, identity source).",
   "target_branch": "spec-workspace-runtime-contract",
   "vcs": "git",
   "vcs_locked_at": "2026-05-11T19:58:02.673303+00:00"
