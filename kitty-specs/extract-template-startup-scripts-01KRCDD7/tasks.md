@@ -13,10 +13,10 @@
 | T001  | Scaffold `scripts/templates/` and `scripts/shared/` directories                              | WP01 |          | [D] |
 | T002  | Write `scripts/shared/lib.sh` (prelude: shebang, strict mode, log/warn/die)                  | WP01 |          | [D] |
 | T003  | Smoke-validate the scaffold (`bash -n`, `shellcheck` if present, `terraform fmt -check`)     | WP01 |          | [D] |
-| T004  | Capture `freeform` pre-refactor baseline (interpolation grep + boot time)                    | WP02 |          |
-| T005  | Extract `freeform` `startup_script` heredoc to `scripts/templates/freeform/startup.sh`       | WP02 |          |
-| T006  | Replace `freeform` `startup_script` with `file()` + `env = { REGISTRY_MIRROR = ... }`        | WP02 |          |
-| T007  | Verify `freeform`: `terraform fmt`, `validate`, `test`; boot-time within ±10% of baseline    | WP02 |          |
+| T004  | Capture `freeform` pre-refactor baseline (interpolation grep + boot time)                    | WP02 |          | [D] |
+| T005  | Extract `freeform` `startup_script` heredoc to `scripts/templates/freeform/startup.sh`       | WP02 |          | [D] |
+| T006  | Replace `freeform` `startup_script` with `file()` + `env = { REGISTRY_MIRROR = ... }`        | WP02 |          | [D] |
+| T007  | Verify `freeform`: `terraform fmt`, `validate`, `test`; boot-time within ±10% of baseline    | WP02 |          | [D] |
 | T008  | Capture `user-defined-web` pre-refactor baseline                                              | WP03 |          |
 | T009  | Extract `user-defined-web` heredoc to `scripts/templates/user-defined-web/startup.sh`         | WP03 |          |
 | T010  | Replace `user-defined-web` heredoc with `file()` + `env = { REGISTRY_MIRROR = ... }`          | WP03 |          |
@@ -66,10 +66,10 @@ Prompt: [`tasks/WP01-scaffold-scripts-and-shared-lib.md`](tasks/WP01-scaffold-sc
 **Estimated prompt**: ~350 lines.
 
 Included subtasks:
-- [ ] T004 Capture `freeform` pre-refactor baseline (interpolation grep + boot time) (WP02)
-- [ ] T005 Extract `freeform` `startup_script` heredoc to `scripts/templates/freeform/startup.sh` (WP02)
-- [ ] T006 Replace `freeform` `startup_script` with `file()` + `env = { REGISTRY_MIRROR = ... }` (WP02)
-- [ ] T007 Verify `freeform`: `terraform fmt`, `validate`, `test`; boot-time within ±10% of baseline (WP02)
+- [x] T004 Capture `freeform` pre-refactor baseline (interpolation grep + boot time) (WP02)
+- [x] T005 Extract `freeform` `startup_script` heredoc to `scripts/templates/freeform/startup.sh` (WP02)
+- [x] T006 Replace `freeform` `startup_script` with `file()` + `env = { REGISTRY_MIRROR = ... }` (WP02)
+- [x] T007 Verify `freeform`: `terraform fmt`, `validate`, `test`; boot-time within ±10% of baseline (WP02)
 
 Prompt: [`tasks/WP02-extract-freeform-startup.md`](tasks/WP02-extract-freeform-startup.md)
 
