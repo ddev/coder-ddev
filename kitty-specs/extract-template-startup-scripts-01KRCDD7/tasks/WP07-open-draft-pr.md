@@ -13,8 +13,8 @@ subtasks:
 - T027
 - T028
 - T029
-agent: "claude:opus-4-7:implementer:implementer"
-shell_pid: "484396"
+agent: "claude:opus-4-7:reviewer:reviewer"
+shell_pid: "485074"
 history:
 - timestamp: '2026-05-12T00:00:00Z'
   event: created
@@ -233,3 +233,4 @@ spec-kitty agent action implement WP07 --agent <name>
 
 - 2026-05-12T17:45:26Z – claude:opus-4-7:implementer:implementer – shell_pid=484396 – Started implementation via action command
 - 2026-05-12T17:47:21Z – claude:opus-4-7:implementer:implementer – shell_pid=484396 – pr-body.md drafted; T028/T029 (push + gh pr create) deferred to orchestrator post-merge (depends on lane-a merging into extract-template-startup-scripts first)
+- 2026-05-12T17:47:44Z – claude:opus-4-7:reviewer:reviewer – shell_pid=485074 – Started review via action command
