@@ -18,6 +18,8 @@ subtasks:
 - T009
 - T010
 - T011
+agent: "claude:opus-4-7:implementer:implementer"
+shell_pid: "472695"
 history:
 - timestamp: '2026-05-12T00:00:00Z'
   event: created
@@ -213,3 +215,7 @@ Apply the WP02 extraction pattern to `user-defined-web`: lift the `<<-EOT` hered
 ```bash
 spec-kitty agent action implement WP03 --agent <name>
 ```
+
+## Activity Log
+
+- 2026-05-12T17:21:26Z – claude:opus-4-7:implementer:implementer – shell_pid=472695 – Started implementation via action command
