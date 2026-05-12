@@ -1,7 +1,7 @@
 {
-  "event_count": 35,
-  "last_event_id": "01KREMGQZ2C6YBR93J08RV6W62",
-  "materialized_at": "2026-05-12T17:42:22.946821+00:00",
+  "event_count": 36,
+  "last_event_id": "01KREMHH5FTHHKHBJVD8YEJCSB",
+  "materialized_at": "2026-05-12T17:42:48.751337+00:00",
   "mission_number": "",
   "mission_slug": "extract-template-startup-scripts-01KRCDD7",
   "mission_type": "software-dev",
@@ -11,9 +11,9 @@
     "canceled": 0,
     "claimed": 0,
     "done": 0,
-    "for_review": 1,
+    "for_review": 0,
     "in_progress": 0,
-    "in_review": 0,
+    "in_review": 1,
     "planned": 1
   },
   "work_packages": {
@@ -53,11 +53,11 @@
       "last_transition_at": "2026-05-12T17:37:38.819951+00:00"
     },
     "WP06": {
-      "actor": "user",
+      "actor": "claude:opus-4-7:reviewer:reviewer",
       "force_count": 1,
-      "lane": "for_review",
-      "last_event_id": "01KREMGQZ2C6YBR93J08RV6W62",
-      "last_transition_at": "2026-05-12T17:42:22.946821+00:00"
+      "lane": "in_review",
+      "last_event_id": "01KREMHH5FTHHKHBJVD8YEJCSB",
+      "last_transition_at": "2026-05-12T17:42:48.751337+00:00"
     },
     "WP07": {
       "actor": "finalize-tasks",
