@@ -21,11 +21,11 @@
 | T009  | Extract `user-defined-web` heredoc to `scripts/templates/user-defined-web/startup.sh`         | WP03 |          | [D] |
 | T010  | Replace `user-defined-web` heredoc with `file()` + `env = { REGISTRY_MIRROR = ... }`          | WP03 |          | [D] |
 | T011  | Verify `user-defined-web`: `fmt`, `validate`, smoke-boot (no `terraform test` exists)         | WP03 |          | [D] |
-| T012  | Capture `drupal-contrib` pre-refactor baseline (7 Terraform refs, 31 `$${}` escapes)         | WP04 |          |
-| T013  | Extract `drupal-contrib` heredoc to `scripts/templates/drupal-contrib/startup.sh`             | WP04 |          |
-| T014  | Convert 7 Terraform interpolations to `env = { ... }` entries; un-escape 31 `$${}` → `${}`    | WP04 |          |
-| T015  | Replace `drupal-contrib` heredoc with `file()` + 7-key env block                              | WP04 |          |
-| T016  | Verify `drupal-contrib`: `fmt`, `validate`, `test`; boot-time within ±10%                     | WP04 |          |
+| T012  | Capture `drupal-contrib` pre-refactor baseline (7 Terraform refs, 31 `$${}` escapes)         | WP04 |          | [D] |
+| T013  | Extract `drupal-contrib` heredoc to `scripts/templates/drupal-contrib/startup.sh`             | WP04 |          | [D] |
+| T014  | Convert 7 Terraform interpolations to `env = { ... }` entries; un-escape 31 `$${}` → `${}`    | WP04 |          | [D] |
+| T015  | Replace `drupal-contrib` heredoc with `file()` + 7-key env block                              | WP04 |          | [D] |
+| T016  | Verify `drupal-contrib`: `fmt`, `validate`, `test`; boot-time within ±10%                     | WP04 |          | [D] |
 | T017  | Capture `drupal-core` pre-refactor baseline (5 Terraform refs, 42 `$${}` escapes)            | WP05 |          |
 | T018  | Extract `drupal-core` heredoc to `scripts/templates/drupal-core/startup.sh`                   | WP05 |          |
 | T019  | Convert 5 Terraform interpolations to `env = { ... }` entries; un-escape 42 `$${}` → `${}`    | WP05 |          |
@@ -98,11 +98,11 @@ Prompt: [`tasks/WP03-extract-user-defined-web-startup.md`](tasks/WP03-extract-us
 **Estimated prompt**: ~420 lines.
 
 Included subtasks:
-- [ ] T012 Capture `drupal-contrib` pre-refactor baseline (7 Terraform refs, 31 `$${}` escapes) (WP04)
-- [ ] T013 Extract `drupal-contrib` heredoc to `scripts/templates/drupal-contrib/startup.sh` (WP04)
-- [ ] T014 Convert 7 Terraform interpolations to `env = { ... }` entries; un-escape 31 `$${}` → `${}` (WP04)
-- [ ] T015 Replace `drupal-contrib` heredoc with `file()` + 7-key env block (WP04)
-- [ ] T016 Verify `drupal-contrib`: `fmt`, `validate`, `test`; boot-time within ±10% (WP04)
+- [x] T012 Capture `drupal-contrib` pre-refactor baseline (7 Terraform refs, 31 `$${}` escapes) (WP04)
+- [x] T013 Extract `drupal-contrib` heredoc to `scripts/templates/drupal-contrib/startup.sh` (WP04)
+- [x] T014 Convert 7 Terraform interpolations to `env = { ... }` entries; un-escape 31 `$${}` → `${}` (WP04)
+- [x] T015 Replace `drupal-contrib` heredoc with `file()` + 7-key env block (WP04)
+- [x] T016 Verify `drupal-contrib`: `fmt`, `validate`, `test`; boot-time within ±10% (WP04)
 
 Prompt: [`tasks/WP04-extract-drupal-contrib-startup.md`](tasks/WP04-extract-drupal-contrib-startup.md)
 
