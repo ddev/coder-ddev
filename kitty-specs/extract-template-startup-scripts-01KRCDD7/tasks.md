@@ -31,11 +31,11 @@
 | T019  | Convert 5 Terraform interpolations to `env = { ... }` entries; un-escape 42 `$${}` → `${}`    | WP05 |          | [D] |
 | T020  | Replace `drupal-core` heredoc with `file()` + 5-key env block                                 | WP05 |          | [D] |
 | T021  | Verify `drupal-core`: `fmt`, `validate`, `test`; boot-time within ±10%                        | WP05 |          | [D] |
-| T022  | Side-by-side audit of the 4 extracted `startup.sh` files; identify lexically duplicated blocks | WP06 |          |
-| T023  | Implement candidate shared helpers under `scripts/shared/` per audit findings                 | WP06 |          |
-| T024  | Update per-template `startup.sh` files to source shared helpers; remove now-duplicated bash   | WP06 |          |
-| T025  | Re-verify all 4 templates: `fmt`, `validate`, `test`; confirm ≥1 helper sourced by ≥2 callers | WP06 |          |
-| T026  | Write `AUDIT.md` summarizing what was factored vs. left inline and why                        | WP06 |          |
+| T022  | Side-by-side audit of the 4 extracted `startup.sh` files; identify lexically duplicated blocks | WP06 |          | [D] |
+| T023  | Implement candidate shared helpers under `scripts/shared/` per audit findings                 | WP06 |          | [D] |
+| T024  | Update per-template `startup.sh` files to source shared helpers; remove now-duplicated bash   | WP06 |          | [D] |
+| T025  | Re-verify all 4 templates: `fmt`, `validate`, `test`; confirm ≥1 helper sourced by ≥2 callers | WP06 |          | [D] |
+| T026  | Write `AUDIT.md` summarizing what was factored vs. left inline and why                        | WP06 |          | [D] |
 | T027  | Generate PR body (`pr-body.md`) referencing #76 + listed follow-up issues                     | WP07 |          |
 | T028  | Push branch to `origin`; open draft PR `jonesrussell:extract-template-startup-scripts` → `ddev/coder-ddev:main` | WP07 |          |
 | T029  | Confirm CI green; verify final diff against Success Criteria checklist                        | WP07 |          |
@@ -134,11 +134,11 @@ Prompt: [`tasks/WP05-extract-drupal-core-startup.md`](tasks/WP05-extract-drupal-
 **Note on ownership**: This WP modifies per-template `startup.sh` files written in WP02–WP05. Sequencing (dependency on WP05) makes this safe; ownership overlap is documented in this WP's frontmatter rather than enforced by partition.
 
 Included subtasks:
-- [ ] T022 Side-by-side audit of the 4 extracted `startup.sh` files; identify lexically duplicated blocks (WP06)
-- [ ] T023 Implement candidate shared helpers under `scripts/shared/` per audit findings (WP06)
-- [ ] T024 Update per-template `startup.sh` files to source shared helpers; remove now-duplicated bash (WP06)
-- [ ] T025 Re-verify all 4 templates: `fmt`, `validate`, `test`; confirm ≥1 helper sourced by ≥2 callers (WP06)
-- [ ] T026 Write `scripts/shared/AUDIT.md` summarizing what was factored vs. left inline and why (WP06)
+- [x] T022 Side-by-side audit of the 4 extracted `startup.sh` files; identify lexically duplicated blocks (WP06)
+- [x] T023 Implement candidate shared helpers under `scripts/shared/` per audit findings (WP06)
+- [x] T024 Update per-template `startup.sh` files to source shared helpers; remove now-duplicated bash (WP06)
+- [x] T025 Re-verify all 4 templates: `fmt`, `validate`, `test`; confirm ≥1 helper sourced by ≥2 callers (WP06)
+- [x] T026 Write `scripts/shared/AUDIT.md` summarizing what was factored vs. left inline and why (WP06)
 
 Prompt: [`tasks/WP06-consolidate-shared-helpers.md`](tasks/WP06-consolidate-shared-helpers.md)
 
