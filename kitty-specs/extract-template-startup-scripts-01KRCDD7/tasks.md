@@ -10,9 +10,9 @@
 
 | ID    | Description                                                                                  | WP   | Parallel |
 | ----- | -------------------------------------------------------------------------------------------- | ---- | -------- |
-| T001  | Scaffold `scripts/templates/` and `scripts/shared/` directories                              | WP01 |          |
-| T002  | Write `scripts/shared/lib.sh` (prelude: shebang, strict mode, log/warn/die)                  | WP01 |          |
-| T003  | Smoke-validate the scaffold (`bash -n`, `shellcheck` if present, `terraform fmt -check`)     | WP01 |          |
+| T001  | Scaffold `scripts/templates/` and `scripts/shared/` directories                              | WP01 |          | [D] |
+| T002  | Write `scripts/shared/lib.sh` (prelude: shebang, strict mode, log/warn/die)                  | WP01 |          | [D] |
+| T003  | Smoke-validate the scaffold (`bash -n`, `shellcheck` if present, `terraform fmt -check`)     | WP01 |          | [D] |
 | T004  | Capture `freeform` pre-refactor baseline (interpolation grep + boot time)                    | WP02 |          |
 | T005  | Extract `freeform` `startup_script` heredoc to `scripts/templates/freeform/startup.sh`       | WP02 |          |
 | T006  | Replace `freeform` `startup_script` with `file()` + `env = { REGISTRY_MIRROR = ... }`        | WP02 |          |
@@ -51,9 +51,9 @@
 **Estimated prompt**: ~250 lines.
 
 Included subtasks:
-- [ ] T001 Scaffold `scripts/templates/` and `scripts/shared/` directories (WP01)
-- [ ] T002 Write `scripts/shared/lib.sh` (prelude: shebang, strict mode, log/warn/die) (WP01)
-- [ ] T003 Smoke-validate the scaffold (`bash -n`, `shellcheck` if present, `terraform fmt -check`) (WP01)
+- [x] T001 Scaffold `scripts/templates/` and `scripts/shared/` directories (WP01)
+- [x] T002 Write `scripts/shared/lib.sh` (prelude: shebang, strict mode, log/warn/die) (WP01)
+- [x] T003 Smoke-validate the scaffold (`bash -n`, `shellcheck` if present, `terraform fmt -check`) (WP01)
 
 Prompt: [`tasks/WP01-scaffold-scripts-and-shared-lib.md`](tasks/WP01-scaffold-scripts-and-shared-lib.md)
 
