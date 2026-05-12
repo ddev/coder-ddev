@@ -26,11 +26,11 @@
 | T014  | Convert 7 Terraform interpolations to `env = { ... }` entries; un-escape 31 `$${}` → `${}`    | WP04 |          | [D] |
 | T015  | Replace `drupal-contrib` heredoc with `file()` + 7-key env block                              | WP04 |          | [D] |
 | T016  | Verify `drupal-contrib`: `fmt`, `validate`, `test`; boot-time within ±10%                     | WP04 |          | [D] |
-| T017  | Capture `drupal-core` pre-refactor baseline (5 Terraform refs, 42 `$${}` escapes)            | WP05 |          |
-| T018  | Extract `drupal-core` heredoc to `scripts/templates/drupal-core/startup.sh`                   | WP05 |          |
-| T019  | Convert 5 Terraform interpolations to `env = { ... }` entries; un-escape 42 `$${}` → `${}`    | WP05 |          |
-| T020  | Replace `drupal-core` heredoc with `file()` + 5-key env block                                 | WP05 |          |
-| T021  | Verify `drupal-core`: `fmt`, `validate`, `test`; boot-time within ±10%                        | WP05 |          |
+| T017  | Capture `drupal-core` pre-refactor baseline (5 Terraform refs, 42 `$${}` escapes)            | WP05 |          | [D] |
+| T018  | Extract `drupal-core` heredoc to `scripts/templates/drupal-core/startup.sh`                   | WP05 |          | [D] |
+| T019  | Convert 5 Terraform interpolations to `env = { ... }` entries; un-escape 42 `$${}` → `${}`    | WP05 |          | [D] |
+| T020  | Replace `drupal-core` heredoc with `file()` + 5-key env block                                 | WP05 |          | [D] |
+| T021  | Verify `drupal-core`: `fmt`, `validate`, `test`; boot-time within ±10%                        | WP05 |          | [D] |
 | T022  | Side-by-side audit of the 4 extracted `startup.sh` files; identify lexically duplicated blocks | WP06 |          |
 | T023  | Implement candidate shared helpers under `scripts/shared/` per audit findings                 | WP06 |          |
 | T024  | Update per-template `startup.sh` files to source shared helpers; remove now-duplicated bash   | WP06 |          |
@@ -115,11 +115,11 @@ Prompt: [`tasks/WP04-extract-drupal-contrib-startup.md`](tasks/WP04-extract-drup
 **Estimated prompt**: ~440 lines.
 
 Included subtasks:
-- [ ] T017 Capture `drupal-core` pre-refactor baseline (5 Terraform refs, 42 `$${}` escapes) (WP05)
-- [ ] T018 Extract `drupal-core` heredoc to `scripts/templates/drupal-core/startup.sh` (WP05)
-- [ ] T019 Convert 5 Terraform interpolations to `env = { ... }` entries; un-escape 42 `$${}` → `${}` (WP05)
-- [ ] T020 Replace `drupal-core` heredoc with `file()` + 5-key env block (WP05)
-- [ ] T021 Verify `drupal-core`: `fmt`, `validate`, `test`; boot-time within ±10% (WP05)
+- [x] T017 Capture `drupal-core` pre-refactor baseline (5 Terraform refs, 42 `$${}` escapes) (WP05)
+- [x] T018 Extract `drupal-core` heredoc to `scripts/templates/drupal-core/startup.sh` (WP05)
+- [x] T019 Convert 5 Terraform interpolations to `env = { ... }` entries; un-escape 42 `$${}` → `${}` (WP05)
+- [x] T020 Replace `drupal-core` heredoc with `file()` + 5-key env block (WP05)
+- [x] T021 Verify `drupal-core`: `fmt`, `validate`, `test`; boot-time within ±10% (WP05)
 
 Prompt: [`tasks/WP05-extract-drupal-core-startup.md`](tasks/WP05-extract-drupal-core-startup.md)
 
