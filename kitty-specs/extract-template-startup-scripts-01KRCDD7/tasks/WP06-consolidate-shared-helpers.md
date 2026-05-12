@@ -268,3 +268,4 @@ spec-kitty agent action implement WP06 --agent <name>
 ## Activity Log
 
 - 2026-05-12T17:38:12Z – claude:opus-4-7:implementer:implementer – shell_pid=480597 – Started implementation via action command
+- 2026-05-12T17:42:23Z – claude:opus-4-7:implementer:implementer – shell_pid=480597 – 4 shared helpers + AUDIT.md shipped; function-only design (adoption deferred); all 4 per-template scripts source the helpers via the existing [ -f ] conditional from WP02-05 satisfying SC#4; terraform validate+test green for all templates
