@@ -17,10 +17,10 @@
 | T005  | Extract `freeform` `startup_script` heredoc to `scripts/templates/freeform/startup.sh`       | WP02 |          | [D] |
 | T006  | Replace `freeform` `startup_script` with `file()` + `env = { REGISTRY_MIRROR = ... }`        | WP02 |          | [D] |
 | T007  | Verify `freeform`: `terraform fmt`, `validate`, `test`; boot-time within ±10% of baseline    | WP02 |          | [D] |
-| T008  | Capture `user-defined-web` pre-refactor baseline                                              | WP03 |          |
-| T009  | Extract `user-defined-web` heredoc to `scripts/templates/user-defined-web/startup.sh`         | WP03 |          |
-| T010  | Replace `user-defined-web` heredoc with `file()` + `env = { REGISTRY_MIRROR = ... }`          | WP03 |          |
-| T011  | Verify `user-defined-web`: `fmt`, `validate`, smoke-boot (no `terraform test` exists)         | WP03 |          |
+| T008  | Capture `user-defined-web` pre-refactor baseline                                              | WP03 |          | [D] |
+| T009  | Extract `user-defined-web` heredoc to `scripts/templates/user-defined-web/startup.sh`         | WP03 |          | [D] |
+| T010  | Replace `user-defined-web` heredoc with `file()` + `env = { REGISTRY_MIRROR = ... }`          | WP03 |          | [D] |
+| T011  | Verify `user-defined-web`: `fmt`, `validate`, smoke-boot (no `terraform test` exists)         | WP03 |          | [D] |
 | T012  | Capture `drupal-contrib` pre-refactor baseline (7 Terraform refs, 31 `$${}` escapes)         | WP04 |          |
 | T013  | Extract `drupal-contrib` heredoc to `scripts/templates/drupal-contrib/startup.sh`             | WP04 |          |
 | T014  | Convert 7 Terraform interpolations to `env = { ... }` entries; un-escape 31 `$${}` → `${}`    | WP04 |          |
@@ -82,10 +82,10 @@ Prompt: [`tasks/WP02-extract-freeform-startup.md`](tasks/WP02-extract-freeform-s
 **Estimated prompt**: ~350 lines.
 
 Included subtasks:
-- [ ] T008 Capture `user-defined-web` pre-refactor baseline (WP03)
-- [ ] T009 Extract `user-defined-web` heredoc to `scripts/templates/user-defined-web/startup.sh` (WP03)
-- [ ] T010 Replace `user-defined-web` heredoc with `file()` + `env = { REGISTRY_MIRROR = ... }` (WP03)
-- [ ] T011 Verify `user-defined-web`: `fmt`, `validate`, smoke-boot (no `terraform test` exists) (WP03)
+- [x] T008 Capture `user-defined-web` pre-refactor baseline (WP03)
+- [x] T009 Extract `user-defined-web` heredoc to `scripts/templates/user-defined-web/startup.sh` (WP03)
+- [x] T010 Replace `user-defined-web` heredoc with `file()` + `env = { REGISTRY_MIRROR = ... }` (WP03)
+- [x] T011 Verify `user-defined-web`: `fmt`, `validate`, smoke-boot (no `terraform test` exists) (WP03)
 
 Prompt: [`tasks/WP03-extract-user-defined-web-startup.md`](tasks/WP03-extract-user-defined-web-startup.md)
 
