@@ -15,7 +15,8 @@ subtasks:
 - T001
 - T002
 - T003
-shell_pid: '465542'
+shell_pid: "465542"
+agent: "claude:opus-4-7:implementer:implementer"
 history:
 - timestamp: '2026-05-12T00:00:00Z'
   event: created
@@ -194,3 +195,7 @@ Create the runtime-script directory layout (`scripts/templates/` and `scripts/sh
 ```bash
 spec-kitty agent action implement WP01 --agent <name>
 ```
+
+## Activity Log
+
+- 2026-05-12T17:08:57Z – claude:opus-4-7:implementer:implementer – shell_pid=465542 – Assigned agent via action command
