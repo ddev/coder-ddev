@@ -13,6 +13,8 @@ subtasks:
 - T027
 - T028
 - T029
+agent: "claude:opus-4-7:implementer:implementer"
+shell_pid: "484396"
 history:
 - timestamp: '2026-05-12T00:00:00Z'
   event: created
@@ -226,3 +228,7 @@ Ship the mission. Push the feature branch to the user's fork (`origin` = `jonesr
 ```bash
 spec-kitty agent action implement WP07 --agent <name>
 ```
+
+## Activity Log
+
+- 2026-05-12T17:45:26Z – claude:opus-4-7:implementer:implementer – shell_pid=484396 – Started implementation via action command
