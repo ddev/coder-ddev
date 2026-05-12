@@ -13,7 +13,7 @@ requirement_refs:
 - FR-009
 planning_base_branch: extract-template-startup-scripts
 merge_target_branch: extract-template-startup-scripts
-branch_strategy: Single feature branch extract-template-startup-scripts off upstream/main. Final draft PR targets ddev/coder-ddev:main. Execution worktrees allocated per lane from lanes.json.
+branch_strategy: Planning artifacts for this feature were generated on extract-template-startup-scripts. During /spec-kitty.implement this WP may branch from a dependency-specific base, but completed changes must merge back into extract-template-startup-scripts unless the human explicitly redirects the landing branch.
 subtasks:
 - T012
 - T013

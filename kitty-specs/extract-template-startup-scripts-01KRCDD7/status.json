@@ -1,0 +1,70 @@
+{
+  "event_count": 7,
+  "last_event_id": "01KREJE0K6YDJH51QVT4H9NEZX",
+  "materialized_at": "2026-05-12T17:05:56.326082+00:00",
+  "mission_number": "",
+  "mission_slug": "extract-template-startup-scripts-01KRCDD7",
+  "mission_type": "software-dev",
+  "summary": {
+    "approved": 0,
+    "blocked": 0,
+    "canceled": 0,
+    "claimed": 0,
+    "done": 0,
+    "for_review": 0,
+    "in_progress": 0,
+    "in_review": 0,
+    "planned": 7
+  },
+  "work_packages": {
+    "WP01": {
+      "actor": "finalize-tasks",
+      "force_count": 1,
+      "lane": "planned",
+      "last_event_id": "01KREJDZR4PK3PXEX0HH0YY95X",
+      "last_transition_at": "2026-05-12T17:05:55.460211+00:00"
+    },
+    "WP02": {
+      "actor": "finalize-tasks",
+      "force_count": 1,
+      "lane": "planned",
+      "last_event_id": "01KREJE0CX6JNPB7X4BR3VPVAW",
+      "last_transition_at": "2026-05-12T17:05:56.125950+00:00"
+    },
+    "WP03": {
+      "actor": "finalize-tasks",
+      "force_count": 1,
+      "lane": "planned",
+      "last_event_id": "01KREJE0E3961B70MT9EEAGGGN",
+      "last_transition_at": "2026-05-12T17:05:56.163183+00:00"
+    },
+    "WP04": {
+      "actor": "finalize-tasks",
+      "force_count": 1,
+      "lane": "planned",
+      "last_event_id": "01KREJE0FDFGS7WW0VTY06155Q",
+      "last_transition_at": "2026-05-12T17:05:56.205826+00:00"
+    },
+    "WP05": {
+      "actor": "finalize-tasks",
+      "force_count": 1,
+      "lane": "planned",
+      "last_event_id": "01KREJE0GMH3Q27Y5JTHPKPHYX",
+      "last_transition_at": "2026-05-12T17:05:56.244609+00:00"
+    },
+    "WP06": {
+      "actor": "finalize-tasks",
+      "force_count": 1,
+      "lane": "planned",
+      "last_event_id": "01KREJE0HTF263E6HCECKWS8VF",
+      "last_transition_at": "2026-05-12T17:05:56.282780+00:00"
+    },
+    "WP07": {
+      "actor": "finalize-tasks",
+      "force_count": 1,
+      "lane": "planned",
+      "last_event_id": "01KREJE0K6YDJH51QVT4H9NEZX",
+      "last_transition_at": "2026-05-12T17:05:56.326082+00:00"
+    }
+  }
+}
