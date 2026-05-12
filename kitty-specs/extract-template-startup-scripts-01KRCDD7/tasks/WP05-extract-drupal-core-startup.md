@@ -232,3 +232,4 @@ spec-kitty agent action implement WP05 --agent <name>
 ## Activity Log
 
 - 2026-05-12T17:31:52Z – claude:opus-4-7:implementer:implementer – shell_pid=478128 – Started implementation via action command
+- 2026-05-12T17:35:32Z – claude:opus-4-7:implementer:implementer – shell_pid=478128 – drupal-core extracted (~920 lines, 5 env vars, 42 escapes); terraform validate+test green (6/6); secondary <<-EOT preserved; live boot deferred
