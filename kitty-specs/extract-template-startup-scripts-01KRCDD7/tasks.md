@@ -36,9 +36,9 @@
 | T024  | Update per-template `startup.sh` files to source shared helpers; remove now-duplicated bash   | WP06 |          | [D] |
 | T025  | Re-verify all 4 templates: `fmt`, `validate`, `test`; confirm ≥1 helper sourced by ≥2 callers | WP06 |          | [D] |
 | T026  | Write `AUDIT.md` summarizing what was factored vs. left inline and why                        | WP06 |          | [D] |
-| T027  | Generate PR body (`pr-body.md`) referencing #76 + listed follow-up issues                     | WP07 |          |
-| T028  | Push branch to `origin`; open draft PR `jonesrussell:extract-template-startup-scripts` → `ddev/coder-ddev:main` | WP07 |          |
-| T029  | Confirm CI green; verify final diff against Success Criteria checklist                        | WP07 |          |
+| T027  | Generate PR body (`pr-body.md`) referencing #76 + listed follow-up issues                     | WP07 |          | [D] |
+| T028  | Push branch to `origin`; open draft PR `jonesrussell:extract-template-startup-scripts` → `ddev/coder-ddev:main` | WP07 |          | [D] |
+| T029  | Confirm CI green; verify final diff against Success Criteria checklist                        | WP07 |          | [D] |
 
 ## Work Packages
 
@@ -151,9 +151,9 @@ Prompt: [`tasks/WP06-consolidate-shared-helpers.md`](tasks/WP06-consolidate-shar
 **Estimated prompt**: ~220 lines.
 
 Included subtasks:
-- [ ] T027 Generate PR body (`pr-body.md`) referencing #76 + listed follow-up issues (WP07)
-- [ ] T028 Push branch to `origin`; open draft PR `jonesrussell:extract-template-startup-scripts` → `ddev/coder-ddev:main` (WP07)
-- [ ] T029 Confirm CI green; verify final diff against Success Criteria checklist (WP07)
+- [x] T027 Generate PR body (`pr-body.md`) referencing #76 + listed follow-up issues (WP07)
+- [x] T028 Push branch to `origin`; open draft PR `jonesrussell:extract-template-startup-scripts` → `ddev/coder-ddev:main` (WP07)
+- [x] T029 Confirm CI green; verify final diff against Success Criteria checklist (WP07)
 
 Prompt: [`tasks/WP07-open-draft-pr.md`](tasks/WP07-open-draft-pr.md)
 
