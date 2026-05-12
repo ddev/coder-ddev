@@ -16,6 +16,8 @@ subtasks:
 - T024
 - T025
 - T026
+agent: "claude:opus-4-7:implementer:implementer"
+shell_pid: "480597"
 history:
 - timestamp: '2026-05-12T00:00:00Z'
   event: created
@@ -262,3 +264,7 @@ Identify lexically duplicated blocks across the four per-template `startup.sh` f
 ```bash
 spec-kitty agent action implement WP06 --agent <name>
 ```
+
+## Activity Log
+
+- 2026-05-12T17:38:12Z – claude:opus-4-7:implementer:implementer – shell_pid=480597 – Started implementation via action command
