@@ -19,6 +19,8 @@ subtasks:
 - T005
 - T006
 - T007
+agent: "claude:opus-4-7:implementer:implementer"
+shell_pid: "466556"
 history:
 - timestamp: '2026-05-12T00:00:00Z'
   event: created
@@ -232,3 +234,7 @@ This is the **pilot extraction** — WP03–WP05 follow the same shape, so any p
 ```bash
 spec-kitty agent action implement WP02 --agent <name>
 ```
+
+## Activity Log
+
+- 2026-05-12T17:11:01Z – claude:opus-4-7:implementer:implementer – shell_pid=466556 – Started implementation via action command
