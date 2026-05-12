@@ -20,6 +20,8 @@ subtasks:
 - T019
 - T020
 - T021
+agent: "claude:opus-4-7:implementer:implementer"
+shell_pid: "478128"
 history:
 - timestamp: '2026-05-12T00:00:00Z'
   event: created
@@ -226,3 +228,7 @@ Apply the established extraction pattern to `drupal-core` — the **largest** of
 ```bash
 spec-kitty agent action implement WP05 --agent <name>
 ```
+
+## Activity Log
+
+- 2026-05-12T17:31:52Z – claude:opus-4-7:implementer:implementer – shell_pid=478128 – Started implementation via action command
