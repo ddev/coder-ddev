@@ -8,10 +8,14 @@ requirement_refs:
 planning_base_branch: extract-template-startup-scripts
 merge_target_branch: extract-template-startup-scripts
 branch_strategy: Planning artifacts for this feature were generated on extract-template-startup-scripts. During /spec-kitty.implement this WP may branch from a dependency-specific base, but completed changes must merge back into extract-template-startup-scripts unless the human explicitly redirects the landing branch.
+base_branch: kitty/mission-extract-template-startup-scripts-01KRCDD7
+base_commit: ed61eb58ca3dca2609cefbdce88df535afc93dc3
+created_at: '2026-05-12T17:08:56.592350+00:00'
 subtasks:
 - T001
 - T002
 - T003
+shell_pid: '465542'
 history:
 - timestamp: '2026-05-12T00:00:00Z'
   event: created
