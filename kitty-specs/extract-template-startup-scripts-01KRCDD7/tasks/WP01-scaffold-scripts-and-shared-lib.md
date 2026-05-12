@@ -199,3 +199,4 @@ spec-kitty agent action implement WP01 --agent <name>
 ## Activity Log
 
 - 2026-05-12T17:08:57Z – claude:opus-4-7:implementer:implementer – shell_pid=465542 – Assigned agent via action command
+- 2026-05-12T17:09:49Z – claude:opus-4-7:implementer:implementer – shell_pid=465542 – lib.sh prelude + scaffold ready for review
