@@ -232,3 +232,4 @@ spec-kitty agent action implement WP07 --agent <name>
 ## Activity Log
 
 - 2026-05-12T17:45:26Z – claude:opus-4-7:implementer:implementer – shell_pid=484396 – Started implementation via action command
+- 2026-05-12T17:47:21Z – claude:opus-4-7:implementer:implementer – shell_pid=484396 – pr-body.md drafted; T028/T029 (push + gh pr create) deferred to orchestrator post-merge (depends on lane-a merging into extract-template-startup-scripts first)
