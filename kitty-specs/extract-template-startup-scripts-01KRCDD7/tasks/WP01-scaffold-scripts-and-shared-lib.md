@@ -15,8 +15,8 @@ subtasks:
 - T001
 - T002
 - T003
-shell_pid: "465542"
-agent: "claude:opus-4-7:implementer:implementer"
+shell_pid: "466182"
+agent: "claude:opus-4-7:reviewer:reviewer"
 history:
 - timestamp: '2026-05-12T00:00:00Z'
   event: created
@@ -200,3 +200,4 @@ spec-kitty agent action implement WP01 --agent <name>
 
 - 2026-05-12T17:08:57Z – claude:opus-4-7:implementer:implementer – shell_pid=465542 – Assigned agent via action command
 - 2026-05-12T17:09:49Z – claude:opus-4-7:implementer:implementer – shell_pid=465542 – lib.sh prelude + scaffold ready for review
+- 2026-05-12T17:10:10Z – claude:opus-4-7:reviewer:reviewer – shell_pid=466182 – Started review via action command
