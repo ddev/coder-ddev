@@ -20,6 +20,8 @@ subtasks:
 - T014
 - T015
 - T016
+agent: "claude:opus-4-7:implementer:implementer"
+shell_pid: "475729"
 history:
 - timestamp: '2026-05-12T00:00:00Z'
   event: created
@@ -235,3 +237,7 @@ Apply the WP02/WP03 extraction pattern to `drupal-contrib` — the third-largest
 ```bash
 spec-kitty agent action implement WP04 --agent <name>
 ```
+
+## Activity Log
+
+- 2026-05-12T17:26:16Z – claude:opus-4-7:implementer:implementer – shell_pid=475729 – Started implementation via action command
