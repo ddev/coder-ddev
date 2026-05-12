@@ -102,7 +102,7 @@ jobs:
             --name ${{ env.WORKSPACE_NAME }} \
             --yes \
             --variable workspace_image_registry=index.docker.io/ddev/coder-ddev \
-            --variable cache_path=/tmp/ci-no-cache
+            --variable cache_path=/home/rfay/cache/drupal-core-seed
 
       - name: Create workspace
         run: |
@@ -239,7 +239,7 @@ jobs:
             --name ${{ env.WORKSPACE_NAME }} \
             --yes \
             --variable workspace_image_registry=index.docker.io/ddev/coder-ddev \
-            --variable cache_path=/tmp/ci-no-cache
+            --variable cache_path=/home/rfay/cache/drupal-core-seed
 
       - name: Create workspace
         run: |
@@ -341,7 +341,7 @@ jobs:
             --name cd-${{ github.run_number }}-${{ github.run_attempt }} \
             --yes \
             --variable workspace_image_registry=index.docker.io/ddev/coder-ddev \
-            --variable cache_path=/tmp/ci-no-cache
+            --variable cache_path=/home/rfay/cache/drupal-core-seed
 
       - name: Create workspace
         run: |
@@ -489,7 +489,7 @@ jobs:
             --name gd-${{ github.run_number }}-${{ github.run_attempt }} \
             --yes \
             --variable workspace_image_registry=index.docker.io/ddev/coder-ddev \
-            --variable cache_path=/tmp/ci-no-cache
+            --variable cache_path=/home/rfay/cache/drupal-core-seed
 
       - name: Create workspace
         run: |
@@ -521,6 +521,16 @@ jobs:
           CURRENT=$(coder ssh ${{ env.WORKSPACE_NAME }} -- git -C /home/coder/drupal-core branch --show-current | tr -d '\r\n')
           echo "Current branch: $CURRENT  Expected: ${{ env.ISSUE_BRANCH }}"
           [[ "$CURRENT" == "${{ env.ISSUE_BRANCH }}" ]] || { echo "ERROR: wrong branch" >&2; exit 1; }
+
+      - name: Verify workspace — git tree is clean
+        run: |
+          DIRTY=$(coder ssh ${{ env.WORKSPACE_NAME }} -- git -C /home/coder/drupal-core status --short | tr -d '\r')
+          if [[ -n "$DIRTY" ]]; then
+            echo "ERROR: dirty git tree after issue branch checkout:" >&2
+            echo "$DIRTY" >&2
+            exit 1
+          fi
+          echo "OK: git tree is clean"
 
       - name: Verify workspace — Drush DB connected
         run: coder ssh ${{ env.WORKSPACE_NAME }} -- ddev drush status --fields=db-status | grep -i connected

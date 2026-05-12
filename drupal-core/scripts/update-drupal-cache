@@ -4,22 +4,28 @@
 # Refreshes the drupal-core seed cache used by the drupal-core Coder template.
 # Run this script on the Coder host server as the user who owns the seed directory.
 #
-# The seed cache is a plain git clone of drupal/drupal. New workspaces pass it
-# as a --reference hint to git clone, reusing local git objects and avoiding
-# several hundred MB of network transfer. Composer install still runs fresh
-# inside each workspace.
+# The seed cache is a BARE git clone of drupal/drupal. Workspaces clone from it
+# locally (very fast — git reuses local objects), then fetch only the delta from
+# the real remote, avoiding several hundred MB of network transfer per workspace.
+#
+# Using a bare repo is intentional: there is no working tree to keep in sync and
+# no "Your branch is behind" noise. git fetch --all --prune is all that is needed.
+#
+# Initial setup (one-time, run as the seed-directory owner):
+#   git clone --bare https://git.drupalcode.org/project/drupal.git ~/cache/drupal-core-seed
+#
+# Migration from a non-bare clone:
+#   mv ~/cache/drupal-core-seed ~/cache/drupal-core-seed.bak
+#   git clone --bare https://git.drupalcode.org/project/drupal.git ~/cache/drupal-core-seed
+#   rm -rf ~/cache/drupal-core-seed.bak   # once you've confirmed the new one works
 #
 # Usage:
 #   ./update-drupal-cache [--seed-dir PATH]
 #
 # Options:
-#   --seed-dir PATH   Absolute path to the seed directory (the git clone root).
+#   --seed-dir PATH   Absolute path to the bare seed repository.
 #                     Default: ~/cache/drupal-core-seed
 #                     The Coder template's cache_path variable must be set to the same path.
-#
-# Note: When run via the systemd timer, the seed directory is taken from the default
-# or from the ExecStart line in drupal-cache-updater.service — edit that file to pass
-# --seed-dir if your seed directory differs from the default.
 #
 # IMPORTANT: This script must be reinstalled to /usr/local/bin/ after any changes:
 #   sudo install -m 755 drupal-core/scripts/update-drupal-cache /usr/local/bin/update-drupal-cache
@@ -42,23 +48,35 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [ ! -d "$SEED_DIR/.git" ]; then
-  echo "Error: Git clone not found at $SEED_DIR" >&2
+# Detect bare vs. non-bare clone
+IS_BARE=false
+if git -C "$SEED_DIR" rev-parse --is-bare-repository 2>/dev/null | grep -q true; then
+  IS_BARE=true
+elif [ ! -d "$SEED_DIR/.git" ]; then
+  echo "Error: No git repository found at $SEED_DIR" >&2
   echo "Run the initial setup first. See docs/admin/server-setup.md." >&2
   exit 1
 fi
 
+if [ "$IS_BARE" = "false" ]; then
+  echo "WARNING: $SEED_DIR is not a bare repository." >&2
+  echo "A bare clone is recommended. See migration instructions in this script's header." >&2
+fi
+
 echo "=== Updating drupal-core seed cache ==="
 echo "Seed directory: $SEED_DIR"
-echo "Started: $(date)"
+echo "Bare:           $IS_BARE"
+echo "Started:        $(date)"
 echo ""
 
 echo "Fetching Drupal core git objects..."
 git -C "$SEED_DIR" fetch --all --prune
 
-echo "Fast-forwarding local main branch..."
-git -C "$SEED_DIR" merge --ff-only origin/main || \
-  echo "Warning: could not fast-forward main (local changes?); objects still updated."
+if [ "$IS_BARE" = "false" ]; then
+  echo "Fast-forwarding local main branch..."
+  git -C "$SEED_DIR" merge --ff-only origin/main || \
+    echo "Warning: could not fast-forward main (local changes?); objects still updated."
+fi
 
 echo ""
 echo "=== Seed cache updated successfully ==="
