@@ -2,7 +2,7 @@
   "created_at": "2026-05-11T20:59:39.092220+00:00",
   "friendly_name": "Extract Template Startup Scripts",
   "mission_id": "01KRCDD730HK8SWWHAADCM8KQH",
-  "mission_number": null,
+  "mission_number": 2,
   "mission_slug": "extract-template-startup-scripts-01KRCDD7",
   "mission_type": "software-dev",
   "slug": "extract-template-startup-scripts-01KRCDD7",
