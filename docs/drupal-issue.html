@@ -522,6 +522,32 @@
     let currentNid = '';
     let currentProjectName = ''; // 'drupal' for core, module machine name for contrib
     let currentIsContrib = false;
+    let currentProjectType = 'module'; // 'module' or 'theme' for drupal-contrib template
+
+    function normalizeProjectType(rawType) {
+      const t = String(rawType || '').toLowerCase();
+      if (t === 'theme' || t === 'project_theme' || t.indexOf('theme') !== -1) {
+        return 'theme';
+      }
+      return 'module';
+    }
+
+    async function fetchDrupalOrgProjectType(projectName) {
+      try {
+        const resp = await fetch(
+          'https://www.drupal.org/api-d7/node.json?field_project_machine_name='
+            + encodeURIComponent(projectName)
+        );
+        if (!resp.ok) return 'module';
+        const data = await resp.json();
+        const project = data.list && data.list[0];
+        if (!project) return 'module';
+        // field_project_type is "full" for both modules and themes; node type is reliable.
+        return normalizeProjectType(project.type);
+      } catch (_) {
+        return 'module';
+      }
+    }
 
     function getResultBranchOptionCount() {
       const sel = document.getElementById('branch-select');
@@ -588,6 +614,7 @@
       document.getElementById('result-form').hidden = true;
       document.getElementById('plain-dev-form').hidden = true;
       document.getElementById('manual-form').hidden = true;
+      currentProjectType = 'module';
     }
 
     // Returns { type: 'issue'|'project', nid, project } or null
@@ -654,6 +681,7 @@
       clearStatus();
       document.getElementById('plain-project-display').textContent = projectName;
       currentProjectName = projectName;
+      currentProjectType = await fetchDrupalOrgProjectType(projectName);
       syncPlainWorkspaceName();
       document.getElementById('plain-dev-form').hidden = false;
     }
@@ -668,7 +696,6 @@
         let projectName = hintedProject;
         let title = 'Issue #' + nid;
         let drupalMajor = '11';
-        let projectType = 'module'; // used later for contrib template hint
 
         try {
           const issueResp = await fetch('https://www.drupal.org/api-d7/node/' + nid + '.json');
@@ -678,10 +705,6 @@
             // Resolve project name from API (overrides URL-hinted project)
             const apiProject = issue.field_project && issue.field_project.machine_name;
             if (apiProject) projectName = apiProject;
-            // Detect project type (module vs theme)
-            if (issue.field_project && issue.field_project.field_project_type) {
-              projectType = issue.field_project.field_project_type;
-            }
             // Detect Drupal major version from field_issue_version — core issues only.
             // For contrib, field_issue_version is the MODULE version (e.g. "8.x-1.x"
             // means module 1.x, not Drupal 8), so we leave drupalMajor at its default.
@@ -699,8 +722,13 @@
 
         currentProjectName = projectName;
         currentIsContrib = (projectName !== 'drupal');
+        if (currentIsContrib) {
+          currentProjectType = await fetchDrupalOrgProjectType(projectName);
+        } else {
+          currentProjectType = 'module';
+        }
 
-        // Issue fork name: 'drupal-{nid}' for core, '{module}-{nid}' for contrib
+        // Issue fork name: 'drupal-{nid}' for core, '{module}-NID' for contrib
         const issueFork = currentIsContrib ? (projectName + '-' + nid) : ('drupal-' + nid);
         currentIssueFork = issueFork;
 
@@ -786,7 +814,8 @@
         const profileHint = document.getElementById('profile-hint');
 
         if (currentIsContrib) {
-          badge.textContent = 'drupal-contrib template · ' + projectName;
+          const typeLabel = currentProjectType === 'theme' ? 'theme' : 'module';
+          badge.textContent = 'drupal-contrib template · ' + projectName + ' (' + typeLabel + ')';
           badge.className = 'cds-template-badge cds-template-badge--contrib';
           resultLabel.textContent = 'Contrib Issue (' + projectName + ')';
           setCheckedRadioValue('result_install_profile', 'minimal');
@@ -839,14 +868,14 @@
       return base + '?' + params.toString();
     }
 
-    function buildContribIssueUrl(projectName, issueNumber, issueBranch, installProfile, drupalVersion, workspaceName, shareDrupalSite) {
+    function buildContribIssueUrl(projectName, issueNumber, issueBranch, installProfile, drupalVersion, workspaceName, shareDrupalSite, projectType) {
       const base = CODER_BASE + '/templates/' + CODER_TEMPLATE_CONTRIB + '/workspace';
       const params = new URLSearchParams({
         mode: 'auto',
         name: sanitizeWorkspaceName(workspaceName),
         disable_params: CONTRIB_DISABLE_PARAMS,
         'param.project_name': projectName,
-        'param.project_type': 'module', // will be overridden manually for themes
+        'param.project_type': projectType || 'module',
         'param.issue_fork': issueNumber,
         'param.issue_branch': issueBranch,
         'param.install_profile': installProfile,
@@ -856,14 +885,14 @@
       return base + '?' + params.toString();
     }
 
-    function buildContribPlainUrl(projectName, drupalVersion, installProfile, workspaceName, shareDrupalSite) {
+    function buildContribPlainUrl(projectName, drupalVersion, installProfile, workspaceName, shareDrupalSite, projectType) {
       const base = CODER_BASE + '/templates/' + CODER_TEMPLATE_CONTRIB + '/workspace';
       const params = new URLSearchParams({
         mode: 'auto',
         name: sanitizeWorkspaceName(workspaceName),
         disable_params: CONTRIB_DISABLE_PARAMS,
         'param.project_name': projectName,
-        'param.project_type': 'module',
+        'param.project_type': projectType || 'module',
         'param.issue_fork': '',
         'param.issue_branch': '',
         'param.install_profile': installProfile,
@@ -896,7 +925,9 @@
 
       let url;
       if (currentIsContrib) {
-        url = buildContribIssueUrl(currentProjectName, currentNid, branch, profile, drupalVersion, wsName, shareDrupalSite);
+        url = buildContribIssueUrl(
+          currentProjectName, currentNid, branch, profile, drupalVersion, wsName, shareDrupalSite, currentProjectType
+        );
       } else {
         url = buildCoreUrl(currentIssueFork, branch, profile, drupalVersion, wsName, shareDrupalSite);
       }
@@ -925,11 +956,13 @@
         return;
       }
 
-      const url = buildContribPlainUrl(currentProjectName, drupalVersion, profile, wsName, shareDrupalSite);
+      const url = buildContribPlainUrl(
+        currentProjectName, drupalVersion, profile, wsName, shareDrupalSite, currentProjectType
+      );
       window.open(url, '_blank');
     }
 
-    function openManualWorkspace() {
+    async function openManualWorkspace() {
       const fork = document.getElementById('manual-fork').value.trim();
       const branch = document.getElementById('manual-branch').value.trim();
       const profile = getCheckedRadioValue('manual_install_profile');
@@ -963,7 +996,12 @@
         const forkParts = fork.match(/^([a-z][a-z0-9_]*)-(\d+)$/);
         const project = forkParts ? forkParts[1] : 'unknown';
         const nidFromFork = forkParts ? forkParts[2] : currentNid;
-        url = buildContribIssueUrl(project, nidFromFork, branch, profile, drupalVersion, wsName, shareDrupalSite);
+        const projectType = (currentProjectName === project && currentProjectType)
+          ? currentProjectType
+          : await fetchDrupalOrgProjectType(project);
+        url = buildContribIssueUrl(
+          project, nidFromFork, branch, profile, drupalVersion, wsName, shareDrupalSite, projectType
+        );
       }
       window.open(url, '_blank');
     }
