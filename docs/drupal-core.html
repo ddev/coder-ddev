@@ -138,8 +138,9 @@
 
       <div class="cds-field">
         <label class="cds-field__label" for="workspace-name">Workspace name</label>
-        <input type="text" id="workspace-name" value="" autocomplete="off" spellcheck="false" maxlength="128">
-        <div class="cds-hint">Used to generate the URL. Must be lowercase letters, numbers, and hyphens only.</div>
+        <input type="text" id="workspace-name" value="" autocomplete="off" spellcheck="false" maxlength="128" aria-describedby="workspace-name-hint workspace-name-error">
+        <div class="cds-hint" id="workspace-name-hint">Used to generate the URL. Must be lowercase letters, numbers, and hyphens only.</div>
+        <div class="cds-field-error" id="workspace-name-error" role="alert" hidden></div>
         <div class="hint cds-hint--url">E.g. <code>https://ddev-web--<span id="core-workspace-url-slug"></span>--username.coder.ddev.com/</code></div>
       </div>
     </div>
@@ -174,7 +175,7 @@
   <script>
     const CODER_BASE = 'https://coder.ddev.com';
     const CODER_TEMPLATE_CORE = 'coder/drupal-core';
-    const { sanitizeWorkspaceName, workspaceNameFromCoreChoices } = window.CoderWorkspace;
+    const { sanitizeWorkspaceName, workspaceNameFromCoreChoices, applyWorkspaceNameFieldValidation, bindWorkspaceNameFieldValidation } = window.CoderWorkspace;
 
     function suggestedWorkspaceName() {
       const ver = document.querySelector('input[name="drupal_version"]:checked').value;
@@ -185,6 +186,7 @@
     function syncWorkspaceNameFromChoices() {
       document.getElementById('workspace-name').value = suggestedWorkspaceName();
       updateCoreWorkspaceUrlSlug();
+      applyWorkspaceNameFieldValidation('workspace-name', 'workspace-name-error');
     }
 
     function updateCoreWorkspaceUrlSlug() {
@@ -238,6 +240,12 @@
         updateCoreWorkspaceUrlSlug();
       }
 
+      const validation = applyWorkspaceNameFieldValidation('workspace-name', 'workspace-name-error');
+      if (validation && !validation.valid) {
+        setError('');
+        return;
+      }
+
       setError('');
       const url = buildCorePlainUrl(drupalVersion, installProfile, workspaceName, shareDrupalSite);
       window.open(url, '_blank');
@@ -252,7 +260,7 @@
       }
     });
 
-    document.getElementById('workspace-name').addEventListener('input', updateCoreWorkspaceUrlSlug);
+    bindWorkspaceNameFieldValidation('workspace-name', 'workspace-name-error', updateCoreWorkspaceUrlSlug);
 
     document.querySelectorAll('input[name="drupal_version"], input[name="install_profile"]').forEach(function(radio) {
       radio.addEventListener('change', syncWorkspaceNameFromChoices);

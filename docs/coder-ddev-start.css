@@ -28,6 +28,7 @@
   --link: #35c5f4;
   --link-hover: #7ddbfc;
   --focus: #7ddbfc;
+  --danger: #f07178;
   --radius: 12px;
   --radius-sm: 8px;
   --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -533,6 +534,21 @@ pre code {
   border-color: var(--action);
   outline: 2px solid var(--action);
   outline-offset: 2px;
+}
+
+.cds-field input[type="text"][aria-invalid="true"] {
+  border-color: var(--danger);
+}
+
+.cds-field input[type="text"][aria-invalid="true"]:focus {
+  border-color: var(--danger);
+  outline-color: var(--danger);
+}
+
+.cds-field-error {
+  margin-top: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--danger);
 }
 
 .cds-fields {
