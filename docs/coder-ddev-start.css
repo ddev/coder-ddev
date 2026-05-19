@@ -1,0 +1,511 @@
+/**
+ * Shared tokens + components for start.coder.ddev.com static pages.
+ * Includes: global reset + skip link, form subpage chrome (drupal-core / drupal-issue),
+ * and tile/button/note patterns used on index.
+ * Colors: DDEV brand guide — https://docs.ddev.com/en/stable/developers/brand-guide/
+ *   DDEV Blue #02a8e2 · DDEV Black #1e2127 · DDEV White #e1ded8
+ * Filled buttons use a darker blue than --action so white text meets WCAG 1.4.3 (AA).
+ */
+:root {
+  --bg-page: #1e2127;
+  --bg-elevated: #262c35;
+  --bg-elevated-hover: #2e3540;
+  --border: #3d4550;
+  --border-subtle: #2a3039;
+  --text: #e1ded8;
+  --text-secondary: #b5b1ab;
+  /* Lighter than old #8a8680: ≥4.5:1 on --bg-page and --bg-elevated (WCAG 1.4.3 AA normal text) */
+  --text-muted: #a09993;
+  /* Brand blue — links, focus, borders, non–white-on-blue accents */
+  --action: #02a8e2;
+  --action-pressed: #0184b4;
+  /* Filled controls (primary CTAs, skip link): #fff vs bg ≥ 4.5:1 (normal text) */
+  --btn-primary-bg: #01729d;
+  --btn-primary-bg-hover: #01658a;
+  /* Muted primary (disabled): same hue family as --btn-primary-bg, not neutral purple */
+  --btn-primary-bg-disabled: color-mix(in srgb, var(--btn-primary-bg) 42%, var(--border));
+  --btn-primary-fg: #ffffff;
+  --btn-primary-fg-disabled: color-mix(in srgb, var(--btn-primary-fg) 58%, var(--text-muted));
+  --link: #35c5f4;
+  --link-hover: #7ddbfc;
+  --focus: #7ddbfc;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.cds-body {
+  font-family: var(--font);
+  background: var(--bg-page);
+  color: var(--text);
+  line-height: 1.6;
+}
+
+.cds-link {
+  color: var(--link);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.cds-link:hover {
+  color: var(--link-hover);
+  text-decoration: underline;
+}
+
+/* Card / tile — one pattern everywhere */
+.cds-tile-grid {
+  display: grid;
+  gap: 1rem;
+  width: min(100%, 720px);
+}
+
+@media (min-width: 560px) {
+  .cds-tile-grid--2 {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.cds-tile {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.35rem 1.4rem;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  text-align: left;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.cds-tile:hover {
+  background: var(--bg-elevated-hover);
+  border-color: #525a66;
+}
+
+.cds-tile--featured {
+  border-color: rgba(2, 168, 226, 0.5);
+  box-shadow: inset 0 1px 0 0 rgba(2, 168, 226, 0.18);
+}
+
+.cds-tile__eyebrow {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--action);
+  margin-bottom: 0.45rem;
+}
+
+.cds-tile__title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 0.4rem;
+  letter-spacing: -0.01em;
+}
+
+.cds-tile__desc {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  margin-bottom: 1.1rem;
+  flex: 1;
+}
+
+.cds-tile__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin-top: auto;
+}
+
+.cds-tile__actions .cds-btn {
+  width: 100%;
+  justify-content: center;
+  text-align: center;
+}
+
+/* Buttons — DDEV blue primary */
+.cds-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  padding: 0.65rem 1.1rem;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.cds-btn:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.cds-btn--primary {
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-fg);
+}
+
+.cds-btn--primary:hover {
+  background: var(--btn-primary-bg-hover);
+}
+
+/* Secondary — DDEV surface + border; quieter than primary, still on-brand on hover */
+.cds-btn--secondary {
+  background: var(--bg-page);
+  color: var(--text);
+  border-color: var(--border);
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.04);
+}
+
+.cds-btn--secondary:hover {
+  background: var(--bg-elevated);
+  border-color: var(--action);
+  color: #fff;
+}
+
+.cds-btn--outline {
+  background: transparent;
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.cds-btn--outline:hover {
+  border-color: var(--action);
+  color: #fff;
+}
+
+.cds-btn__badge {
+  height: 36px;
+  width: auto;
+  display: block;
+}
+
+.cds-btn--outline .cds-btn__badge {
+  margin-left: 0.25rem;
+}
+
+/* Muted note / footnote strip */
+.cds-note {
+  width: min(100%, 720px);
+  margin-top: 1rem;
+  padding: 1rem 1.15rem;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+
+/* Hero subtitle → cross-link intro (drupal-core / drupal-issue): same rhythm on both */
+.cds-note.intro-note {
+  margin-top: 0.35rem;
+  margin-bottom: 1.75rem;
+}
+
+.cds-note a {
+  color: var(--link);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.cds-note a:hover {
+  text-decoration: underline;
+  color: var(--link-hover);
+}
+
+.cds-note strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.cds-note__sep {
+  color: var(--text-muted);
+  margin: 0 0.25rem;
+}
+
+/* Inline muted link row (advanced) */
+.cds-muted-row {
+  margin-top: 0.85rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-align: center;
+  max-width: 720px;
+}
+
+.cds-muted-row a {
+  color: var(--text-secondary);
+  text-decoration: underline;
+}
+
+.cds-muted-row a:hover {
+  color: var(--text);
+}
+
+/* ---------------------------------------------------------------------------
+ * Global doc reset + skip link (index, drupal-core, drupal-issue)
+ * --------------------------------------------------------------------------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body.cds-body {
+  min-height: 100vh;
+}
+
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 1rem;
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-fg);
+  padding: 0.5rem 1rem;
+  border-radius: 0 0 6px 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+  z-index: 999;
+}
+
+.skip-link:hover {
+  background: var(--btn-primary-bg-hover);
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------------------------------------------------------------------------
+ * Form subpages: drupal-core, drupal-issue (top chrome + shared controls)
+ * --------------------------------------------------------------------------- */
+header {
+  padding: 1.25rem 2rem;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+header a {
+  font-size: 0.9rem;
+}
+
+header a:hover {
+  text-decoration: underline;
+}
+
+header .sep {
+  color: var(--text-muted);
+}
+
+header .title {
+  color: var(--text);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 3rem 2rem 5rem;
+}
+
+.page > h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.5rem;
+  color: var(--text);
+}
+
+.page > .subtitle {
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 1.5;
+  margin-bottom: 1.35rem;
+}
+
+/* Form field captions — drupal-core (.field-label) + drupal-issue (.field > label); use tokens only */
+.page .field-label,
+.page .field > label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+  margin-bottom: 0.42rem;
+}
+
+.page .field .hint--url {
+  margin-top: 0.4rem;
+  line-height: 1.45;
+}
+
+.page .field .hint--url code {
+  font-family: "SF Mono", Consolas, monospace;
+  font-size: 0.72rem;
+  color: var(--link);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  padding: 0.12em 0.35em;
+  border-radius: 4px;
+  word-break: break-all;
+}
+
+.launch-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.15rem;
+}
+
+.btn-open {
+  flex: 1 1 14rem;
+  min-width: min(100%, 14rem);
+  width: auto;
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-fg);
+  border: none;
+  border-radius: 8px;
+  padding: 0.85rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.btn-open:hover {
+  background: var(--btn-primary-bg-hover);
+}
+
+.btn-open:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.launch-note {
+  flex: 1 1 12rem;
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  max-width: 22rem;
+}
+
+.status {
+  font-size: 0.9rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  display: none;
+}
+
+.status.loading {
+  display: block;
+  background: #161619;
+  /* #636377 on #161619 ~3.5:1 — WCAG 1.4.11 non-text contrast (AA) */
+  border: 1px solid #636377;
+  color: #999;
+}
+
+.status.error {
+  display: block;
+  background: #1f0f0f;
+  border: 1px solid #5a1a1a;
+  color: #f87171;
+}
+
+.status.info {
+  display: block;
+  background: #0f1a1f;
+  border: 1px solid #1a4a5a;
+  color: #7dd3fc;
+}
+
+.notes {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+.notes h2 {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  margin-bottom: 0.65rem;
+}
+
+.notes h2:not(:first-child) {
+  margin-top: 1.35rem;
+}
+
+.notes p,
+.notes ul {
+  margin: 0 0 1.25rem;
+}
+
+.notes :last-child {
+  margin-bottom: 0;
+}
+
+.notes ul {
+  padding-left: 1.1rem;
+}
+
+.notes li {
+  margin-bottom: 0.35rem;
+}
+
+.notes a {
+  color: var(--link);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.notes a:hover {
+  text-decoration: underline;
+  color: var(--link-hover);
+}
+
+.divider {
+  border: 0;
+  border-top: 1px solid var(--border-subtle);
+  margin: 2.25rem 0;
+  height: 0;
+}
+
+.notes--feedback p {
+  margin: 0;
+}
+
+.feedback-links {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
