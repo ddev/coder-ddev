@@ -23,35 +23,52 @@
         <p>New here? Read the <a class="cds-link" href="https://ddev.com/blog/coder-ddev-com-announcement/">DDEV Coder Workspaces announcement</a> on ddev.com for background on the service and two demo videos.</p>
       </div>
 
-      <div class="cds-callout cds-callout--with-icon">
-        <svg width="22" height="22" viewBox="0 0 98 96" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-          <path fill-rule="evenodd" clip-rule="evenodd" d="M48.854 0C21.839 0 0 22 0 49.217c0 21.756 13.993 40.172 33.405 46.69 2.427.49 3.316-1.059 3.316-2.362 0-1.141-.08-5.052-.08-9.127-13.59 2.934-16.42-5.867-16.42-5.867-2.184-5.704-5.42-7.17-5.42-7.17-4.448-3.015.324-3.015.324-3.015 4.934.326 7.523 5.052 7.523 5.052 4.367 7.496 11.404 5.378 14.235 4.074.404-3.178 1.699-5.378 3.074-6.6-10.839-1.141-22.243-5.378-22.243-24.283 0-5.378 1.94-9.778 5.014-13.2-.485-1.222-2.184-6.275.486-13.038 0 0 4.125-1.304 13.426 5.052a46.97 46.97 0 0 1 12.214-1.63c4.125 0 8.33.571 12.213 1.63 9.302-6.356 13.427-5.052 13.427-5.052 2.67 6.763.97 11.816.485 13.038 3.155 3.422 5.015 7.822 5.015 13.2 0 18.905-11.404 23.06-22.324 24.283 1.78 1.548 3.316 4.481 3.316 9.126 0 6.6-.08 11.897-.08 13.526 0 1.304.89 2.853 3.316 2.364 19.412-6.52 33.405-24.935 33.405-46.691C97.707 22 75.788 0 48.854 0z"/>
-        </svg>
-        <span><a class="cds-link" href="https://coder.ddev.com/login">Sign in</a> via GitHub OAuth. To use DDEV Coder Workspaces, you must be a member of a sponsoring GitHub organization, or of the <a class="cds-link" href="https://github.com/ddev"><code>ddev</code></a> or <a class="cds-link" href="https://github.com/coder-ddev-com"><code>coder-ddev-com</code></a> org. Organizations gain access by <a class="cds-link" href="https://ddev.com/support-ddev/">sponsoring DDEV</a> at the $100+/month level. Individuals may <a class="cds-link" href="https://github.com/coder-ddev-com/access-requests/issues/new?template=access-request.yml">request contributor access</a>.</span>
-      </div>
-
-      <div class="cds-tile-grid cds-tile-grid--2">
+      <div class="cds-tile-grid cds-tile-grid--3">
         <article class="cds-tile cds-tile--featured">
-          <p class="cds-tile__eyebrow">Recommended</p>
-          <h2 class="cds-tile__title">Drupal Issue Picker</h2>
-          <p class="cds-tile__desc">Paste a drupal.org core or contrib issue URL or number, or a contrib project URL or machine name. We detect Drupal core vs contrib, list branches on your issue fork, and send you to Coder with defaults aligned to the issue.</p>
+          <p class="cds-tile__eyebrow"><a href="#footnote-1">Recommended</a> <sup>1</sup></a></p>
+          <h2 class="cds-tile__title">Drupal Issue</h2>
+          <p class="cds-tile__desc">Launch into an issue fork or contrib project workspace. No manual setup required.</p>
           <div class="cds-tile__actions">
-            <a class="cds-btn cds-btn--primary" href="drupal-issue">Open Issue Picker</a>
+            <a class="cds-btn cds-btn--primary" href="/drupal-issue">Open  issue picker</a>
+          </div>
+        </article>
+
+        <article class="cds-tile">
+          <p class="cds-tile__eyebrow"><a href="#footnote-1">Demo-ready</a> <sup>1</sup></p>
+          <h2 class="cds-tile__title">Drupal Core</h2>
+          <p class="cds-tile__desc">Create a core development workspace. Manage issue forks manually.</p>
+          <div class="cds-tile__actions">
+            <a class="cds-btn cds-btn--secondary" href="/drupal-issue">Open core picker</a>
           </div>
         </article>
 
         <article class="cds-tile">
           <h2 class="cds-tile__title">DDEV Freeform</h2>
-          <p class="cds-tile__desc">Multiple DDEV projects in one workspace—each keeps its own hostname via <strong>ddev-router</strong>. Use this when you want a flexible environment instead of a single curated template.</p>
+          <p class="cds-tile__desc">Manage multiple and/or custom DDEV projects in a single workspace.</p>
           <div class="cds-tile__actions">
-            <a class="cds-btn cds-btn--secondary" href="https://coder.ddev.com/templates/coder/freeform/workspace?mode=manual">Launch Freeform environment</a>
+            <a class="cds-btn cds-btn--outline" href="https://coder.ddev.com/templates/coder/freeform/workspace?mode=manual">Configure freeform</a>
           </div>
         </article>
       </div>
 
-      <p class="cds-note cds-note--after-tiles">
-        <strong>Not using a Drupal.org issue fork?</strong> Launch into a <a class="cds-link" href="drupal-core">clean Drupal core</a> version branch environment (12.x, 11.x, 10.x) for a quickstart demo workspace. For the full directory—manual flows, contrib, freeform, and more—browse <a class="cds-link" href="https://coder.ddev.com/templates">all Coder templates</a> on coder.ddev.com.
-      </p>
+      <div class="cds-callout cds-callout--naked cds-callout--muted cds-callout--narrow cds-callout--with-icon">
+        <svg width="22" height="22" viewBox="0 0 98 96" fill="currentColor"
+          xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+          <path fill-rule="evenodd" clip-rule="evenodd"
+            d="M48.854 0C21.839 0 0 22 0 49.217c0 21.756 13.993 40.172 33.405 46.69 2.427.49 3.316-1.059 3.316-2.362 0-1.141-.08-5.052-.08-9.127-13.59 2.934-16.42-5.867-16.42-5.867-2.184-5.704-5.42-7.17-5.42-7.17-4.448-3.015.324-3.015.324-3.015 4.934.326 7.523 5.052 7.523 5.052 4.367 7.496 11.404 5.378 14.235 4.074.404-3.178 1.699-5.378 3.074-6.6-10.839-1.141-22.243-5.378-22.243-24.283 0-5.378 1.94-9.778 5.014-13.2-.485-1.222-2.184-6.275.486-13.038 0 0 4.125-1.304 13.426 5.052a46.97 46.97 0 0 1 12.214-1.63c4.125 0 8.33.571 12.213 1.63 9.302-6.356 13.427-5.052 13.427-5.052 2.67 6.763.97 11.816.485 13.038 3.155 3.422 5.015 7.822 5.015 13.2 0 18.905-11.404 23.06-22.324 24.283 1.78 1.548 3.316 4.481 3.316 9.126 0 6.6-.08 11.897-.08 13.526 0 1.304.89 2.853 3.316 2.364 19.412-6.52 33.405-24.935 33.405-46.691C97.707 22 75.788 0 48.854 0z" />
+        </svg>
+        <span><a class="cds-link" href="https://coder.ddev.com/login">Sign in</a> via
+          GitHub OAuth. To use DDEV Coder Workspaces, you must be a member of a
+          sponsoring GitHub organization, or of the <a class="cds-link"
+            href="https://github.com/ddev"><code>ddev</code></a> or <a
+            class="cds-link"
+            href="https://github.com/coder-ddev-com"><code>coder-ddev-com</code></a>
+          org. Organizations gain access by <a class="cds-link"
+            href="https://ddev.com/support-ddev/">sponsoring DDEV</a> at the
+          $100+/month level. Individuals may <a class="cds-link"
+            href="https://github.com/coder-ddev-com/access-requests/issues/new?template=access-request.yml">request
+            contributor access</a>.</span>
+      </div>
     </div>
 
     <span class="cds-scroll-hint" aria-hidden="true">More below</span>
@@ -60,33 +77,12 @@
   <hr class="cds-divider">
 
   <div class="cds-details" id="main-content">
-    <section>
-      <h2>Other entry points</h2>
-      <div class="cds-tile-grid cds-tile-grid--2">
-        <article class="cds-tile">
-          <h2 class="cds-tile__title">Guided Drupal core</h2>
-          <p class="cds-tile__desc">Vanilla Drupal core, no issue fork: a few choices here, then straight into Coder to create the workspace.</p>
-          <div class="cds-tile__actions">
-            <a class="cds-btn cds-btn--primary" href="drupal-core">Start guided Drupal core</a>
-          </div>
-        </article>
-        <article class="cds-tile">
-          <h2 class="cds-tile__title">Template library</h2>
-          <p class="cds-tile__desc">Every Coder template in one place, including flows where you set the full Coder parameters yourself.</p>
-          <div class="cds-tile__actions">
-            <a class="cds-btn cds-btn--outline" href="https://coder.ddev.com/templates">Browse templates</a>
-          </div>
-        </article>
-      </div>
-    </section>
-
-    <hr class="cds-divider">
 
     <section class="cds-notes" aria-labelledby="how-it-works">
       <h2 id="how-it-works">How it works</h2>
       <ol class="cds-steps">
         <li><p>Sign in with GitHub at <a class="cds-link" href="https://coder.ddev.com/login">coder.ddev.com</a> (see access note above).</p></li>
-        <li><p>Create a workspace from a <a class="cds-link" href="drupal-core">Drupal core version</a>, an <a class="cds-link" href="drupal-issue">issue fork or contrib project name</a>, or select from <a class="cds-link" href="https://coder.ddev.com/templates">available Coder templates</a>.</p></li>
+        <li><p>Create a workspace from a <a class="cds-link" href="drupal-core">Drupal core version</a>, an <a class="cds-link" href="drupal-issue">issue fork or contrib project name</a>, or a <a class="cds-link" href="https://coder.ddev.com/templates">DDEV freeform template</a>.</p></li>
         <li><p>Open <strong>DDEV Web</strong> for the site or <strong>VS Code</strong> for the editor.</p></li>
       </ol>
     </section>
@@ -111,12 +107,17 @@
       </div>
     </section>
 
-    <hr class="cds-divider">
-
     <section class="cds-notes" aria-labelledby="feedback">
       <h2 id="feedback">Feedback &amp; Community</h2>
       <p class="cds-feedback">Problems or ideas? <a class="cds-link" href="https://github.com/ddev/coder-ddev/issues">ddev/coder-ddev issues</a> · Drupal Slack <strong>#ddev</strong> · <a class="cds-link" href="https://ddev.com/s/discord">DDEV Discord</a>.</p>
     </section>
+
+    <hr class="cds-divider">
+
+    <section class="cds-notes" aria-labelledby="footnotes">
+      <h2 id="footnotes">Footnotes</h2>
+      <p><em id="footnote-1">1. Drupal core and contrib projects aim to keep main branches working. If needed, you can use DDEV workspace git controls to manually check out a stable tag or issue fork.</em></p>
+    </div>
   </div>
 </body>
 </html>
