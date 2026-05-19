@@ -1,12 +1,12 @@
 /**
- * Shared tokens + components for start.coder.ddev.com static pages.
- * Includes: global reset + skip link, form subpage chrome (drupal-core / drupal-issue),
- * and tile/button/note patterns used on index.
- * Colors: DDEV brand guide — https://docs.ddev.com/en/stable/developers/brand-guide/
- *   DDEV Blue #02a8e2 · DDEV Black #1e2127 · DDEV White #e1ded8
- * Filled buttons use a darker blue than --action so white text meets WCAG 1.4.3 (AA).
+ * Shared design tokens + components for start.coder.ddev.com
+ * Used on static HTML landing pages and Jekyll docs markdown pages.
+ * See /components.html for example usage.
+ * See DDEV brand guide https://docs.ddev.com/en/stable/developers/brand-guide/
+ * for primary color definitions.
  */
 :root {
+  --bg-dark: #131318;
   --bg-page: #1e2127;
   --bg-elevated: #262c35;
   --bg-elevated-hover: #2e3540;
@@ -14,15 +14,14 @@
   --border-subtle: #2a3039;
   --text: #e1ded8;
   --text-secondary: #b5b1ab;
-  /* Lighter than old #8a8680: ≥4.5:1 on --bg-page and --bg-elevated (WCAG 1.4.3 AA normal text) */
+  /* Lighter than old #8a8680: meets WCAG 1.4.3 AA normal text contrast. */
   --text-muted: #a09993;
   /* Brand blue — links, focus, borders, non–white-on-blue accents */
   --action: #02a8e2;
   --action-pressed: #0184b4;
-  /* Filled controls (primary CTAs, skip link): #fff vs bg ≥ 4.5:1 (normal text) */
+  /* Filled button controls use a darker blue so white on blue meets WCAG 1.4.3 AA contrast. */
   --btn-primary-bg: #01729d;
   --btn-primary-bg-hover: #01658a;
-  /* Muted primary (disabled): same hue family as --btn-primary-bg, not neutral purple */
   --btn-primary-bg-disabled: color-mix(in srgb, var(--btn-primary-bg) 42%, var(--border));
   --btn-primary-fg: #ffffff;
   --btn-primary-fg-disabled: color-mix(in srgb, var(--btn-primary-fg) 58%, var(--text-muted));
@@ -93,14 +92,14 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--action);
-  margin-bottom: 0.45rem;
+  margin: 0 0 0.45rem;
 }
 
 .cds-tile__title {
   font-size: 1.05rem;
   font-weight: 700;
   color: var(--text);
-  margin-bottom: 0.4rem;
+  margin: 0 0 0.4rem;
   letter-spacing: -0.01em;
 }
 
@@ -108,7 +107,7 @@
   font-size: 0.9rem;
   color: var(--text-secondary);
   line-height: 1.55;
-  margin-bottom: 1.1rem;
+  margin: 0 0 1.1rem;
   flex: 1;
 }
 
@@ -157,7 +156,7 @@
 
 /* Secondary — DDEV surface + border; quieter than primary, still on-brand on hover */
 .cds-btn--secondary {
-  background: var(--bg-page);
+  background: var(--bg-dark);
   color: var(--text);
   border-color: var(--border);
   box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.04);
@@ -193,7 +192,7 @@
 /* Muted note / footnote strip */
 .cds-note {
   width: min(100%, 720px);
-  margin-top: 1rem;
+  margin: 1.25rem 0;
   padding: 1rem 1.15rem;
   font-size: 0.88rem;
   color: var(--text-secondary);
@@ -203,8 +202,16 @@
   border-radius: var(--radius-sm);
 }
 
+.cds-note:first-child {
+  margin-top: 0;
+}
+
+.cds-note:last-child {
+  margin-bottom: 0;
+}
+
 /* Hero subtitle → cross-link intro (drupal-core / drupal-issue): same rhythm on both */
-.cds-note.intro-note {
+.cds-note--intro {
   margin-top: 0.35rem;
   margin-bottom: 1.75rem;
 }
@@ -263,7 +270,7 @@ body.cds-body {
   min-height: 100vh;
 }
 
-.skip-link {
+.cds-skip-link {
   position: absolute;
   top: -100%;
   left: 1rem;
@@ -277,15 +284,15 @@ body.cds-body {
   z-index: 999;
 }
 
-.skip-link:hover {
+.cds-skip-link:hover {
   background: var(--btn-primary-bg-hover);
 }
 
-.skip-link:focus {
+.cds-skip-link:focus {
   top: 0;
 }
 
-.sr-only {
+.cds-sr-only {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -300,7 +307,7 @@ body.cds-body {
 /* ---------------------------------------------------------------------------
  * Form subpages: drupal-core, drupal-issue (top chrome + shared controls)
  * --------------------------------------------------------------------------- */
-header {
+.cds-page-header {
   padding: 1.25rem 2rem;
   border-bottom: 1px solid var(--border-subtle);
   display: flex;
@@ -309,31 +316,31 @@ header {
   flex-wrap: wrap;
 }
 
-header a {
+.cds-page-header a {
   font-size: 0.9rem;
 }
 
-header a:hover {
+.cds-page-header a:hover {
   text-decoration: underline;
 }
 
-header .sep {
+.cds-page-header__sep {
   color: var(--text-muted);
 }
 
-header .title {
+.cds-page-header__title {
   color: var(--text);
   font-weight: 600;
   font-size: 0.9rem;
 }
 
-.page {
+.cds-page {
   max-width: 720px;
   margin: 0 auto;
   padding: 3rem 2rem 5rem;
 }
 
-.page > h1 {
+.cds-page > h1 {
   font-size: 1.75rem;
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -341,18 +348,18 @@ header .title {
   color: var(--text);
 }
 
-.page > .subtitle {
+.cds-page__subtitle {
   color: var(--text-secondary);
   font-size: 1rem;
   line-height: 1.5;
   margin-bottom: 1.35rem;
 }
 
-/* Form field captions — drupal-core (.field-label) + drupal-issue (.field > label); use tokens only */
-.page .field-label,
-.page .field > label {
+/* Form field captions — drupal-core (.cds-field__label) + drupal-issue (.cds-field > label) */
+.cds-page .cds-field__label,
+.cds-page .cds-field > label {
   display: block;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.07em;
@@ -360,14 +367,14 @@ header .title {
   margin-bottom: 0.42rem;
 }
 
-.page .field .hint--url {
+.cds-page .cds-field .cds-hint--url {
   margin-top: 0.4rem;
   line-height: 1.45;
 }
 
-.page .field .hint--url code {
+code {
   font-family: "SF Mono", Consolas, monospace;
-  font-size: 0.72rem;
+  font-size: 0.84em;
   color: var(--link);
   background: var(--bg-elevated);
   border: 1px solid var(--border);
@@ -376,14 +383,103 @@ header .title {
   word-break: break-all;
 }
 
-.launch-row {
+pre {
+  background: var(--bg-dark);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 1.25rem 1.5rem;
+  overflow-x: auto;
+  margin-bottom: 1.25rem;
+}
+
+pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.9rem;
+  color: #c9d1d9;
+}
+
+.cds-hint {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 0.3rem;
+}
+
+.cds-field__label + .cds-hint {
+  margin-bottom: 0.5rem;
+}
+
+/* #636377 on #161619 ~3.5:1 — WCAG 1.4.11 non-text contrast (AA) */
+.cds-field input[type="text"],
+.cds-field select,
+.cds-input-row input {
+  width: 100%;
+  background: #161619;
+  border: 1px solid #636377;
+  border-radius: 8px;
+  padding: 0.65rem 1rem;
+  color: #e8e8e8;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.cds-input-row input {
+  flex: 1;
+  width: auto;
+  padding: 0.7rem 1rem;
+}
+
+.cds-input-row input::placeholder {
+  /* #888 on #161619 ~5.9:1 — WCAG 1.4.3 (AA) */
+  color: #888;
+}
+
+.cds-field select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23a09993' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  padding-right: 2.5rem;
+}
+
+.cds-field input[type="text"][readonly] {
+  color: #aaa;
+  cursor: default;
+}
+
+.cds-field input[type="text"]:focus,
+.cds-field select:focus,
+.cds-input-row input:focus {
+  border-color: var(--action);
+  outline: 2px solid var(--action);
+  outline-offset: 2px;
+}
+
+.cds-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+  margin-bottom: 1.35rem;
+}
+
+.cds-radio-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+
+.cds-launch-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.75rem 1.15rem;
 }
 
-.btn-open {
+.cds-btn-open {
   flex: 1 1 14rem;
   min-width: min(100%, 14rem);
   width: auto;
@@ -398,16 +494,44 @@ header .title {
   transition: background 0.15s ease;
 }
 
-.btn-open:hover {
+.cds-btn-open:hover {
   background: var(--btn-primary-bg-hover);
 }
 
-.btn-open:focus-visible {
+.cds-btn-open:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 
-.launch-note {
+.cds-btn-load {
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-fg);
+  border: none;
+  border-radius: 8px;
+  padding: 0.7rem 1.25rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+
+.cds-btn-load:hover {
+  background: var(--btn-primary-bg-hover);
+}
+
+.cds-btn-load:disabled {
+  background: var(--btn-primary-bg-disabled);
+  color: var(--btn-primary-fg-disabled);
+  cursor: not-allowed;
+}
+
+.cds-btn-load:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.cds-launch-note {
   flex: 1 1 12rem;
   margin: 0;
   font-size: 0.82rem;
@@ -416,7 +540,7 @@ header .title {
   max-width: 22rem;
 }
 
-.status {
+.cds-status {
   font-size: 0.9rem;
   padding: 0.75rem 1rem;
   border-radius: 8px;
@@ -424,35 +548,40 @@ header .title {
   display: none;
 }
 
-.status.loading {
+.cds-status--loading {
   display: block;
   background: #161619;
-  /* #636377 on #161619 ~3.5:1 — WCAG 1.4.11 non-text contrast (AA) */
   border: 1px solid #636377;
   color: #999;
 }
 
-.status.error {
+.cds-status--error {
   display: block;
   background: #1f0f0f;
   border: 1px solid #5a1a1a;
   color: #f87171;
 }
 
-.status.info {
+.cds-status--info {
   display: block;
   background: #0f1a1f;
   border: 1px solid #1a4a5a;
   color: #7dd3fc;
 }
 
-.notes {
-  font-size: 0.88rem;
+.cds-status--sample.cds-status--loading,
+.cds-status--sample.cds-status--error,
+.cds-status--sample.cds-status--info {
+  display: block;
+}
+
+.cds-notes {
+  font-size: 0.92rem;
   color: var(--text-secondary);
   line-height: 1.55;
 }
 
-.notes h2 {
+.cds-notes h2 {
   font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -461,51 +590,801 @@ header .title {
   margin-bottom: 0.65rem;
 }
 
-.notes h2:not(:first-child) {
+.cds-notes h2:not(:first-child) {
   margin-top: 1.35rem;
 }
 
-.notes p,
-.notes ul {
+.cds-notes p,
+.cds-notes ol,
+.cds-notes ul {
   margin: 0 0 1.25rem;
 }
 
-.notes :last-child {
+.cds-notes :last-child {
   margin-bottom: 0;
 }
 
-.notes ul {
+.cds-notes ul {
   padding-left: 1.1rem;
 }
 
-.notes li {
+.cds-notes li {
   margin-bottom: 0.35rem;
 }
 
-.notes a {
+.cds-notes a {
   color: var(--link);
   font-weight: 600;
   text-decoration: none;
 }
 
-.notes a:hover {
+.cds-notes a:hover {
   text-decoration: underline;
   color: var(--link-hover);
 }
 
-.divider {
+.cds-feedback {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.65;
+}
+
+.cds-divider {
   border: 0;
   border-top: 1px solid var(--border-subtle);
   margin: 2.25rem 0;
   height: 0;
 }
 
-.notes--feedback p {
+.cds-input-row {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.35rem;
+}
+
+.cds-issue-panel[hidden] {
+  display: none !important;
+}
+
+.cds-issue-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--link);
+  margin-bottom: 1.75rem;
+  padding: 0.75rem 1rem;
+  background: rgba(2, 168, 226, 0.06);
+  border: 1px solid rgba(2, 168, 226, 0.22);
+  border-radius: 8px;
+}
+
+.cds-issue-title__label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: #888;
+  margin-bottom: 0.2rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.cds-issue-title__link {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.cds-template-badge {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  margin-top: 0.4rem;
+}
+
+.cds-template-badge--core {
+  background: #1a2a1a;
+  color: #86efac;
+  border: 1px solid #166534;
+}
+
+.cds-template-badge--contrib {
+  background: rgba(2, 168, 226, 0.1);
+  color: var(--link);
+  border: 1px solid rgba(2, 168, 226, 0.45);
+}
+
+.cds-manual-notice {
+  font-size: 0.85rem;
+  color: #888;
+  margin-bottom: 1.25rem;
+  padding: 0.65rem 0.9rem;
+  background: #111114;
+  border: 1px solid #222228;
+  border-radius: 6px;
+}
+
+.cds-share-intro {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin: 0 0 0.45rem;
+  max-width: 38rem;
+}
+
+/* Full-width primary CTA (stacked forms, access gate) */
+.cds-btn--block {
+  width: 100%;
+  justify-content: center;
+  text-align: center;
+}
+
+/* ---------------------------------------------------------------------------
+ * Documentation shell (Jekyll default layout) + markdown prose
+ * --------------------------------------------------------------------------- */
+.cds-doc-nav {
+  padding: 1rem 2rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.cds-doc-nav a {
+  font-size: 0.9rem;
+  color: var(--link);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.cds-doc-nav a:hover {
+  color: var(--link-hover);
+  text-decoration: underline;
+}
+
+.cds-doc-main {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 3rem 2rem 6rem;
+}
+
+.cds-doc-main--demo-top {
+  padding-top: 1.5rem;
+}
+
+:where(.cds-doc-main) h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  color: var(--text);
+}
+
+:where(.cds-doc-main) h2 {
+  font-size: 1.35rem;
+  font-weight: 600;
+  margin: 2.5rem 0 0.75rem;
+  color: var(--text);
+}
+
+:where(.cds-doc-main) h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 1.75rem 0 0.5rem;
+  color: var(--text);
+}
+
+:where(.cds-doc-main) p {
+  margin-bottom: 1rem;
+  color: var(--text-secondary);
+}
+
+:where(.cds-doc-main) a {
+  color: var(--link);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+:where(.cds-doc-main) a:hover {
+  color: var(--link-hover);
+  text-decoration: underline;
+}
+
+:where(.cds-doc-main) ul,
+:where(.cds-doc-main) ol {
+  margin: 0 0 1rem 1.5rem;
+  color: var(--text-secondary);
+}
+
+:where(.cds-doc-main) li {
+  margin-bottom: 0.35rem;
+}
+
+:where(.cds-doc-main) hr {
+  border: none;
+  border-top: 1px solid var(--border-subtle);
+  margin: 2rem 0;
+}
+
+.cds-doc-main table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1.25rem;
+  font-size: 0.95rem;
+}
+
+.cds-doc-main th {
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  border-bottom: 2px solid var(--border-subtle);
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.cds-doc-main td {
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+}
+
+.cds-doc-main strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.cds-doc-main blockquote,
+.cds-blockquote {
+  margin: 0 0 1rem;
+  border-left: 3px solid var(--action);
+  padding: 0.2rem 0 0.2rem 1rem;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+.cds-doc-main blockquote p,
+.cds-blockquote p {
+  margin: 0 0 0.5rem;
+}
+
+.cds-doc-main blockquote p:last-child,
+.cds-blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+.cds-doc-main blockquote cite,
+.cds-blockquote cite {
+  display: block;
+  margin-top: 0.65rem;
+  font-size: 0.85rem;
+  font-style: normal;
+  color: var(--text-secondary);
+}
+
+.cds-doc-main img {
+  max-width: 100%;
+}
+
+.cds-doc-cta {
+  margin: 1.25rem 0 1.75rem;
+}
+
+.cds-doc-main a.cds-btn {
+  color: var(--btn-primary-fg);
+  text-decoration: none;
+}
+
+.cds-doc-main a.cds-btn:hover {
+  text-decoration: none;
+}
+
+.cds-doc-main a.cds-btn--secondary {
+  color: var(--text);
+}
+
+.cds-doc-main a.cds-btn--secondary:hover {
+  color: #fff;
+}
+
+.cds-doc-main a.cds-btn--outline {
+  color: var(--text);
+}
+
+.cds-doc-main a.cds-btn--outline:hover {
+  color: #fff;
+}
+
+/* ---------------------------------------------------------------------------
+ * Access gate + callouts (access-denied.html)
+ * --------------------------------------------------------------------------- */
+.cds-access-denied {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 2rem;
+  gap: 2rem;
+}
+
+.cds-gate-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 2.5rem;
+  max-width: 520px;
+  width: 100%;
+}
+
+.cds-emoji-hero {
+  font-size: 2.5rem;
+  margin-bottom: 1.25rem;
+  line-height: 1;
+}
+
+.cds-gate-card h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 0.75rem;
+}
+
+.cds-gate-card .cds-gate-subtitle {
+  font-size: 1rem;
+  color: var(--text-muted);
+  margin-bottom: 2rem;
+  line-height: 1.7;
+}
+
+.cds-callout {
+  background: var(--bg-page);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 2rem;
+  text-align: left;
+}
+
+.cds-callout--with-icon {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  background: var(--bg-elevated);
+  padding: 0.85rem 1.2rem;
+  margin-bottom: 1.75rem;
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  max-width: 36rem;
+}
+
+.cds-callout--with-icon svg {
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.cds-callout__title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+  margin-bottom: 0.85rem;
+}
+
+.cds-checklist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/*
+ * Rows use padding + an absolutely positioned check — not flex on <li> — so mixed
+ * inline content does not become separate flex items. Wrap each row’s copy in a block
+ * (typically <p>) especially when a row has multiple paragraphs or rich markup.
+ */
+.cds-checklist > li {
+  position: relative;
+  display: block;
+  padding-left: calc(0.65rem + 1.05em);
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.cds-checklist > li::before {
+  content: "\2713";
+  position: absolute;
+  left: 0;
+  top: 0.12em;
+  color: var(--action);
+  font-weight: 700;
+  line-height: 1.35;
+  width: 1em;
+  text-align: center;
+}
+
+.cds-checklist > li > p {
+  margin: 0 0 0.45rem;
+}
+
+.cds-checklist > li > p:last-child {
+  margin-bottom: 0;
+}
+
+.cds-checklist a {
+  color: var(--link);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.cds-checklist a:hover {
+  text-decoration: underline;
+  color: var(--link-hover);
+}
+
+.cds-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.cds-access-footer {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.cds-access-footer a {
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+.cds-access-footer a:hover {
+  color: var(--link-hover);
+}
+
+/* Numbered step list (homepage “How it works”, etc.) — use on <ol> */
+.cds-steps {
+  list-style: none;
+  counter-reset: cds-step;
+  padding: 0;
   margin: 0;
 }
 
-.feedback-links {
+.cds-steps > li {
+  counter-increment: cds-step;
+  position: relative;
+  display: block;
+  padding: 1rem 0 1rem calc(1.75rem + 1rem);
+  margin: 0;
+  border-bottom: 1px solid var(--border-subtle);
   color: var(--text-secondary);
   font-size: 0.95rem;
-  line-height: 1.7;
+}
+
+.cds-steps > li p {
+  margin: 0 0 0.75rem;
+}
+
+.cds-steps > li p:last-child {
+  margin-bottom: 0;
+}
+
+.cds-steps > li::before {
+  content: counter(cds-step);
+  position: absolute;
+  left: 0;
+  top: 0.85rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  background: rgba(2, 168, 226, 0.12);
+  border: 1px solid rgba(2, 168, 226, 0.4);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--action);
+}
+
+.cds-steps a,
+.cds-steps .cds-link {
+  color: var(--link);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.cds-steps a:hover,
+.cds-steps .cds-link:hover {
+  text-decoration: underline;
+  color: var(--link-hover);
+}
+
+/* Pattern gallery (components.html) */
+.cds-pattern-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 2.25rem 0 1rem;
+}
+
+.cds-preview-box {
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 2rem;
+}
+
+.cds-preview-box--dashed {
+  border-style: dashed;
+  padding: 1rem;
+}
+
+.cds-preview-box--dashed .cds-gate-card {
+  margin: 0 auto;
+}
+
+/* Max width helpers */
+.cds-mw-40 {
+  max-width: 40rem;
+}
+
+.cds-mw-28 {
+  max-width: 28rem;
+}
+
+.cds-demo-gap-top {
+  margin-top: 1rem;
+}
+
+.cds-demo-gap-section {
+  margin-top: 2.5rem;
+}
+
+/* ---------------------------------------------------------------------------
+ * Homepage hero (index.html)
+ * --------------------------------------------------------------------------- */
+.cds-hero {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 2rem 1.25rem;
+  position: relative;
+}
+
+.cds-hero__logos {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3rem;
+  margin: 0 2rem 2rem;
+}
+
+@media (max-width: 560px) {
+  .cds-hero__logos {
+    gap: 1rem;
+    flex-direction: column;
+  }
+}
+
+.cds-hero__logo--ddev {
+  height: 60px;
+}
+
+.cds-hero__logo--coder {
+  height: 30px;
+}
+
+.cds-hero h1 {
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.75rem;
+  color: var(--text);
+}
+
+.cds-hero__tagline {
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  max-width: 34rem;
+  margin-bottom: 1.75rem;
+  line-height: 1.55;
+}
+
+.cds-announce {
+  max-width: 36rem;
+  margin-bottom: 1.25rem;
+  padding: 0.9rem 1.15rem;
+  text-align: left;
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  background: rgba(2, 168, 226, 0.06);
+  border: 1px solid rgba(2, 168, 226, 0.22);
+  border-radius: var(--radius-sm);
+}
+
+.cds-hero__inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 760px;
+  padding-bottom: 3.5rem;
+}
+
+.cds-scroll-hint {
+  position: absolute;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  animation: cds-bob 2s ease-in-out infinite;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.cds-scroll-hint::after {
+  content: "↓";
+  font-size: 1rem;
+  color: var(--text-secondary);
+}
+
+@keyframes cds-bob {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(6px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cds-scroll-hint {
+    animation: none;
+  }
+}
+
+.cds-details {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 5rem 1.25rem 6rem;
+}
+
+.cds-details section {
+  margin-bottom: 3.25rem;
+}
+
+.cds-details h2 {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  margin-bottom: 1.1rem;
+}
+
+.cds-link-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.cds-link-list a {
+  font-size: 0.95rem;
+}
+
+/* ---------------------------------------------------------------------------
+ * Radio pick cards (drupal-core.html)
+ * --------------------------------------------------------------------------- */
+.cds-pick-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.4rem;
+  text-align: center;
+  flex: 1 1 5.75rem;
+  min-width: 5.5rem;
+  max-width: 8.5rem;
+  min-height: 7.65rem;
+  padding: 0.5rem 0.55rem 0.6rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.cds-pick-card:hover {
+  border-color: #484f58;
+  background: var(--bg-elevated-hover);
+}
+
+.cds-pick-card:has(.cds-pick-card__input:checked) {
+  border-color: var(--action);
+  box-shadow: inset 0 0 0 1px rgba(2, 168, 226, 0.35);
+  background: rgba(2, 168, 226, 0.07);
+}
+
+.cds-pick-card:has(.cds-pick-card__input:focus-visible) {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.cds-pick-card__check {
+  flex-shrink: 0;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0.18rem;
+  margin-bottom: 0.2rem;
+  background: transparent;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+
+.cds-pick-card__check svg {
+  width: 1.05rem;
+  height: 1.05rem;
+  stroke: #fff;
+  stroke-width: 2.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+  opacity: 0;
+  transform: scale(0.65);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.cds-pick-card:has(.cds-pick-card__input:checked) .cds-pick-card__check {
+  background: var(--btn-primary-bg);
+  border-color: var(--btn-primary-bg);
+}
+
+.cds-pick-card:has(.cds-pick-card__input:checked) .cds-pick-card__check svg {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.cds-pick-card__text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 auto;
+  gap: 0.12rem;
+  width: 100%;
+  min-height: 0;
+}
+
+.cds-pick-card__title {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.cds-pick-card__sub {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  line-height: 1.35;
+  max-width: 100%;
 }
