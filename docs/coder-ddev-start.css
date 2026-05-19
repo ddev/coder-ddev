@@ -209,6 +209,64 @@
   margin-left: 0.25rem;
 }
 
+.cds-footnote-link {
+  color: inherit;
+  border-bottom: 1px dotted transparent;
+  text-decoration: none;
+}
+
+.cds-footnote-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cds-footnote-list li a {
+  color: inherit;
+  border-bottom: 1px dotted currentColor;
+  text-decoration: none;
+}
+
+.cds-footnote-list li a:hover {
+  border-bottom: 1px solid currentColor;
+  text-decoration: none;
+}
+
+.cds-footnote-list li code  {
+  color: inherit;
+}
+
+.cds-footnote-list li {
+  margin: 0;
+  padding: 0;
+  scroll-margin-block-start: 6rem;
+}
+
+.cds-footnote-list li:target {
+  animation: footnote-flash 1.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cds-footnote-list li:target {
+    animation: none;
+  }
+}
+
+@keyframes footnote-flash {
+  0%, 50% {
+    box-shadow: inset 0 0 0 999px rgb(255 230 120 / 0.25);
+  }
+
+  100% {
+    box-shadow: inset 0 0 0 999px rgb(255 230 120 / 0);
+  }
+}
+
+
+
 /* Muted note / footnote strip */
 .cds-note {
   width: min(100%, 720px);
@@ -601,7 +659,7 @@ pre code {
   line-height: 1.55;
 }
 
-.cds-notes h2 {
+:where(.cds-notes) h2 {
   font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -624,21 +682,21 @@ pre code {
   margin-bottom: 0;
 }
 
-.cds-notes ul {
+:where(.cds-notes) ul {
   padding-left: 1.1rem;
 }
 
-.cds-notes li {
+:where(.cds-notes) li {
   margin-bottom: 0.35rem;
 }
 
-.cds-notes a {
+:where(.cds-notes) a {
   color: var(--link);
   font-weight: 600;
   text-decoration: none;
 }
 
-.cds-notes a:hover {
+:where(.cds-notes) a:hover {
   text-decoration: underline;
   color: var(--link-hover);
 }
@@ -1249,7 +1307,7 @@ pre code {
 
 .cds-announce {
   max-width: 36rem;
-  margin-bottom: 1.25rem;
+  margin-bottom: 1.75rem;
   padding: 0.9rem 1.15rem;
   text-align: left;
   font-size: 0.95rem;
