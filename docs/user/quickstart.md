@@ -1,20 +1,43 @@
-# Quickstart: Drupal Core Development on coder.ddev.com
+# Quickstart: Drupal Development Workspace Setup on coder.ddev.com
 
-Cloud-hosted DDEV workspaces for Drupal core development. Full environment — Drupal core clone, running site, drush — ready when the startup script completes.
-
-[![Open in Coder](https://coder.ddev.com/open-in-coder.svg)](https://coder.ddev.com/templates/coder/drupal-core/workspace?mode=manual)
+Cloud-hosted DDEV workspaces for Drupal core and contrib development. Full environment — Drupal core clone, running site, drush — ready when the startup script completes.
 
 ---
 
-## 1. Log in
+## 1. Log in or request access
 
-Go to **[coder.ddev.com](https://coder.ddev.com)** and sign in with GitHub.
+Go to **[coder.ddev.com](https://coder.ddev.com)** and sign in with GitHub. You must belong to an approved GitHub organization to use coder.ddev.com.
 
 ---
 
 ## 2. Create a workspace
 
-Click the button above, or go to **Create Workspace** → select the **drupal-core** template → click **Create Workspace**.
+Pick one of the following two guided forms to either load a clean Drupal install, or work on an issue or contrib project.
+
+<div class="cds-tile-grid cds-tile-grid--2">
+  <article class="cds-tile cds-tile--featured">
+    <div class="cds-tile__eyebrow">Recommended</div>
+    <h2 class="cds-tile__title">Guided Drupal Issue picker</h2>
+    <p class="cds-tile__desc">Get started from an issue fork or contrib project using <a href="https://github.com/amateescu/ddev-drupal-contrib"><code>ddev-drupal-contrib</code></a> (or <a href="https://github.com/amateescu/ddev-drupal-dev"><code>ddev-drupal-dev</code></a> for core issues).</p>
+    <div class="cds-tile__actions">
+      <a class="cds-btn cds-btn--primary" href="/drupal-issue">Drupal issue picker</a>
+    </div>
+  </article>
+
+  <article class="cds-tile">
+    <h2 class="cds-tile__title">Vanilla Drupal Core</h2>
+    <p class="cds-tile__desc">Launch into Drupal core on a mainline 10.x, 11.x, or 12.x branch (no contrib modules or issue fork) using <a href="https://github.com/amateescu/ddev-drupal-dev"><code>ddev-drupal-dev</code> </a>conventional project structure.</p>
+    <div class="cds-tile__actions">
+      <a class="cds-btn cds-btn--secondary" href="/drupal-core">Drupal core picker</a>
+    </div>
+  </article>
+</div>
+
+<br>
+
+On the form, select the appropriate Drupal version and install profile, then launch your workspace in Coder.
+
+Inside Coder, you may be asked to "Confirm and Create" to proceed. Clicking "Cancel" drops you into a copy of the selected Coder Workspace template with read-only parameters. Modifying these parameters manually can result in unexpected behaviors and should be avoided. Instead start over on the guided form.
 
 Wait for the startup script to complete. Watch progress in the **Logs** tab.
 
@@ -24,11 +47,16 @@ Wait for the startup script to complete. Watch progress in the **Logs** tab.
 
 Once the workspace is running, click **DDEV Web** in the dashboard to open the Drupal site, or **VS Code** to open the editor (VS Code for Web, pre-pointed at `~/drupal-core`).
 
-The running site has the Umami demo profile installed. Admin credentials: `admin` / `admin`.
+The running site has the profile you selected in step 2 pre-installed.
+
+Admin credentials: `admin` / `admin`  (<em>Please modify if site is shared publicly.</em>)
 
 ---
 
 ## Code layout
+
+
+### Drupal core development
 
 ```
 ~/drupal-core/           # Drupal core git clone — edit files here
@@ -40,6 +68,18 @@ The running site has the Umami demo profile installed. Admin credentials: `admin
 
 Edit files directly in `~/drupal-core/` — changes are immediately reflected in the running site.
 
+### Drupal contrib development
+
+```
+~/module_or_theme_name/  # Drupal contrib project repo — edit files here
+├── web/                 # Drupal docroot.
+├── web/core/            # Drupal core source. (installed via composer)
+├── web/index.php        # Entry point
+├── .ddev/               # DDEV config
+└── composer.json        # Contrib project dependencies
+```
+
+Read more about folder structure and custom ddev contrib commands at [ddev-drupal-contrib](https://github.com/ddev/ddev-drupal-contrib).
 ---
 
 ## Common commands (run in VS Code terminal or `coder ssh <workspace>`)
@@ -68,7 +108,7 @@ ddev ssh
 
 ## Working on a Drupal issue
 
-The fastest way: use the **[Drupal Issue Picker](https://start.coder.ddev.com/drupal-issue)**. Paste a drupal.org issue URL, issue number, or project URL — it auto-detects whether the issue is for Drupal core or a contrib module/theme, fetches the available branches, and opens a pre-configured workspace with the issue branch already checked out. Entering a project URL (e.g. `drupal.org/project/token`) or bare machine name launches a plain contrib dev workspace without a specific issue.
+On the [Guided Drupal Issue Picker](/drupal-issue), paste a drupal.org issue URL, issue number, or project URL — it auto-detects whether the issue is for Drupal core or a contrib module/theme, fetches the available branches, and opens a pre-configured workspace with the issue branch already checked out. Entering a project URL (e.g. `drupal.org/project/token`) or bare machine name launches a plain contrib dev workspace without a specific issue.
 
 When working on an issue, the workspace surfaces issue info in several places:
 
@@ -79,7 +119,7 @@ When working on an issue, the workspace surfaces issue info in several places:
 To push your changes back:
 
 ```bash
-cd ~/drupal-core
+cd ~/drupal-core  # or ~/module_or_theme_name
 
 # ... make changes ...
 
@@ -87,11 +127,11 @@ cd ~/drupal-core
 git push issue HEAD
 ```
 
-Then create or update the merge request on [drupal.org](https://www.drupal.org/project/drupal).
+Then create or update the issue’s associated merge request.
 
 ## First contribution workflow (manual)
 
-If you prefer to set up manually:
+If you prefer to set up a core feature branch manually:
 
 ```bash
 # In the workspace terminal:
@@ -107,7 +147,7 @@ git remote add fork https://git.drupalcode.org/issue/drupal-NNNNN.git
 git push fork my-fix
 ```
 
-Then create a merge request on [drupal.org](https://www.drupal.org/project/drupal).
+Then create a merge request using the link from the output of the prior command.
 
 ---
 
