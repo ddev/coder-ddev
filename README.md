@@ -2,9 +2,14 @@
 
 Coder workspace template for DDEV-based development with Docker-in-Docker support, Node.js, and Git.
 
-**Get started with Drupal core development:**
+**Get started (recommended paths):**
 
-[![Open in Coder](https://coder.ddev.com/open-in-coder.svg)](https://coder.ddev.com/templates/coder/drupal-core/workspace?mode=manual)
+- **Drupal.org issue or project** → [Drupal Issue Picker](https://start.coder.ddev.com/drupal-issue) (auto-detects core vs contrib and prefills sensible defaults)
+- **Multiple DDEV projects in one workspace** → [DDEV Freeform](https://coder.ddev.com/templates/coder/freeform/workspace?mode=manual)
+- **Clean Drupal core without an issue fork** → [Guided Drupal core](https://start.coder.ddev.com/drupal-core) (short context page, then the same manual template)
+- **Browse all templates** → [coder.ddev.com/templates](https://coder.ddev.com/templates)
+
+**Advanced:** open the [manual Drupal core template](https://coder.ddev.com/templates/coder/drupal-core/workspace?mode=manual) directly if you already know every parameter you need.
 
 ## Features
 
