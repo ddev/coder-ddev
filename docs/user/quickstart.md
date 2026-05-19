@@ -68,6 +68,10 @@ Admin credentials: `admin` / `admin`  (<em>Please modify if site is shared publi
 
 Edit files directly in `~/drupal-core/` — changes are immediately reflected in the running site.
 
+<div class="cds-announce">
+Read more about the core development workflow and conventions in the <a href="https://github.com/amateescu/ddev-drupal-dev">amateescu/ddev-drupal-dev</a> add-on documentation.
+</div>
+
 ### Drupal contrib development
 
 ```
@@ -79,7 +83,10 @@ Edit files directly in `~/drupal-core/` — changes are immediately reflected in
 └── composer.json        # Contrib project dependencies
 ```
 
-Read more about folder structure and custom ddev contrib commands at [ddev-drupal-contrib](https://github.com/ddev/ddev-drupal-contrib).
+<div class="cds-announce">
+Read more about contrib folder structure and custom ddev contrib commands in the <a href="https://github.com/ddev/ddev-drupal-contrib">ddev/ddev-drupal-contrib</a> add-on documentation.
+</div>
+
 ---
 
 ## Common commands (run in VS Code terminal or `coder ssh <workspace>`)
