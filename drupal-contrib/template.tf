@@ -687,6 +687,10 @@ COMPOSE_EOF
       fi
 
       if [ "$DRUPAL_INSTALLED" = "false" ]; then
+        if [ ! -f composer.json ]; then
+           log_setup "Creating empty composer.json..."
+           echo '{}' > composer.json
+        fi
         # Add drush as require-dev so expand-composer-json includes it in composer.contrib.json.
         # Direct JSON edit (not `composer require`) per ddev-drupal-contrib README.
         log_setup "Adding drush to require-dev..."
