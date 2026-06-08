@@ -167,12 +167,11 @@ RUN mkdir -p /home/linuxbrew/.linuxbrew && chown -R coder:coder /home/linuxbrew/
 
 USER coder
 RUN /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-RUN /home/linuxbrew/.linuxbrew/bin/brew tap bats-core/bats-core && \
-  /home/linuxbrew/.linuxbrew/bin/brew install \
+RUN /home/linuxbrew/.linuxbrew/bin/brew install \
   bats-core \
-  bats-support \
-  bats-file \
-  bats-assert \
+  bats-core/bats-core/bats-assert \
+  bats-core/bats-core/bats-file \
+  bats-core/bats-core/bats-support \
   claude-code \
   go \
   golangci-lint \
