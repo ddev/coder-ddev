@@ -4,10 +4,6 @@ name: Docs PR Preview
 # and posts a comment with the URL on each PR.
 # On PR close, removes the preview automatically.
 #
-# After merging this workflow, change the GitHub Pages source to:
-#   Branch: gh-pages  /  (root)
-# Then trigger docs-deploy.yml once (workflow_dispatch) to populate gh-pages.
-#
 # Preview URLs: https://start.coder.ddev.com/pr-preview/pr-<N>/
 
 on:
@@ -25,6 +21,9 @@ concurrency:
 jobs:
   preview:
     runs-on: ubuntu-latest
+    env:
+      ACTIONS_RUNNER_FORCE_ACTIONS_NODE_VERSION: node24
+      ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: "true"
     steps:
       - uses: actions/checkout@v4
 
