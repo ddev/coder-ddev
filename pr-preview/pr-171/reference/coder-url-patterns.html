@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Coder URL and Routing Patterns — DDEV Coder Workspaces</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0e0e10;
+      color: #e0e0e0;
+      line-height: 1.7;
+    }
+
+    nav {
+      padding: 1rem 2rem;
+      border-bottom: 1px solid #1c1c1e;
+    }
+
+    nav a {
+      color: #a78bfa;
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+
+    nav a:hover { text-decoration: underline; }
+
+    main {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 3rem 2rem 6rem;
+    }
+
+    h1 { font-size: 2rem; font-weight: 700; margin-bottom: 1rem; letter-spacing: -0.02em; }
+    h2 { font-size: 1.35rem; font-weight: 600; margin: 2.5rem 0 0.75rem; color: #e8e8e8; }
+    h3 { font-size: 1.1rem; font-weight: 600; margin: 1.75rem 0 0.5rem; color: #ddd; }
+
+    p { margin-bottom: 1rem; color: #ccc; }
+
+    a { color: #a78bfa; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    ul, ol { margin: 0 0 1rem 1.5rem; color: #ccc; }
+    li { margin-bottom: 0.35rem; }
+
+    code {
+      background: #1a1a1f;
+      border: 1px solid #2a2a30;
+      padding: 0.15em 0.45em;
+      border-radius: 4px;
+      font-family: 'SF Mono', Consolas, 'Courier New', monospace;
+      font-size: 0.87em;
+      color: #c4b5fd;
+    }
+
+    pre {
+      background: #111115;
+      border: 1px solid #2a2a30;
+      border-radius: 8px;
+      padding: 1.25rem 1.5rem;
+      overflow-x: auto;
+      margin-bottom: 1.25rem;
+    }
+
+    pre code {
+      background: none;
+      border: none;
+      padding: 0;
+      font-size: 0.9rem;
+      color: #c9d1d9;
+    }
+
+    hr {
+      border: none;
+      border-top: 1px solid #1c1c1e;
+      margin: 2rem 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 1.25rem;
+      font-size: 0.95rem;
+    }
+
+    th {
+      text-align: left;
+      padding: 0.6rem 0.75rem;
+      border-bottom: 2px solid #2a2a30;
+      color: #999;
+      font-weight: 600;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    td {
+      padding: 0.6rem 0.75rem;
+      border-bottom: 1px solid #1c1c1e;
+      color: #ccc;
+    }
+
+    strong { color: #e8e8e8; }
+
+    blockquote {
+      border-left: 3px solid #3b2f6e;
+      padding-left: 1rem;
+      color: #999;
+      margin-bottom: 1rem;
+    }
+
+    img { max-width: 100%; }
+
+    /* Skip link — visually hidden until focused; lets keyboard users bypass the site nav.
+       WCAG 2.4.1 Bypass Blocks (Level A) */
+    .skip-link {
+      position: absolute;
+      top: -100%;
+      left: 1rem;
+      background: #7c5af0;
+      color: #fff;
+      padding: 0.5rem 1rem;
+      border-radius: 0 0 6px 6px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-decoration: none;
+      z-index: 999;
+    }
+    .skip-link:focus { top: 0; }
+  </style>
+</head>
+<body>
+  <!-- WCAG 2.4.1 Bypass Blocks (Level A): skip link lets keyboard users jump past the site nav -->
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <!-- aria-label distinguishes this nav landmark when multiple <nav> elements exist on a page.
+       WCAG 2.4.6 Headings and Labels (Level AA) -->
+  <nav aria-label="Site">
+    <a href="/">← DDEV Coder Workspaces</a>
+  </nav>
+  <!-- id="main-content" is the skip link target (WCAG 2.4.1) -->
+  <main id="main-content">
+    <h1 id="coder-url-and-routing-patterns">Coder URL and Routing Patterns</h1>
+
+<p>Reference for how Coder constructs workspace URLs, what environment variables are available, and how this interacts with DDEV’s Traefik router for multi-project routing.</p>
+
+<h2 id="url-anatomy">URL Anatomy</h2>
+
+<p>Coder routes workspace traffic in two distinct ways, each producing a different URL pattern.</p>
+
+<hr />
+
+<h2 id="1-named-app-urls-coder_app-with-subdomain--true">1. Named App URLs (<code class="language-plaintext highlighter-rouge">coder_app</code> with <code class="language-plaintext highlighter-rouge">subdomain = true</code>)</h2>
+
+<p><strong>Official docs:</strong> The URL construction pattern for named apps is not documented in a single canonical place. The closest references are:</p>
+
+<ul>
+  <li><a href="https://coder.com/docs/admin/networking/wildcard-access-url">coder.com/docs/admin/networking/wildcard-access-url</a> — shows the example <code class="language-plaintext highlighter-rouge">8080--main--myworkspace--john.coder.example.com</code></li>
+  <li><a href="https://registry.terraform.io/providers/coder/coder/latest/docs/resources/app">registry.terraform.io — coder_app resource</a> — describes the <code class="language-plaintext highlighter-rouge">subdomain</code> attribute but does not spell out the URL format</li>
+  <li><a href="https://github.com/coder/coder/blob/main/coderd/workspaceapps/appurl/appurl.go">coder/coder source: appurl.go</a> — the Go source that generates the subdomain</li>
+</ul>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>https://{slug}--{workspace}--{owner}.{wildcard-domain}/
+</code></pre></div></div>
+
+<p>When a workspace has only one agent (the normal case), the agent name is omitted. If a workspace defines multiple agents you get:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>https://{slug}--{agent}--{workspace}--{owner}.{wildcard-domain}/
+</code></pre></div></div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Component</th>
+      <th>Example</th>
+      <th>Source</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">slug</code></td>
+      <td><code class="language-plaintext highlighter-rouge">ddev-web</code>, <code class="language-plaintext highlighter-rouge">mailpit</code>, <code class="language-plaintext highlighter-rouge">adminer</code></td>
+      <td><code class="language-plaintext highlighter-rouge">slug</code> attribute on <code class="language-plaintext highlighter-rouge">coder_app</code> resource</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">agent</code></td>
+      <td><code class="language-plaintext highlighter-rouge">main</code></td>
+      <td><code class="language-plaintext highlighter-rouge">coder_agent</code> resource name (only included when multiple agents exist)</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">workspace</code></td>
+      <td><code class="language-plaintext highlighter-rouge">myworkspace</code></td>
+      <td><code class="language-plaintext highlighter-rouge">CODER_WORKSPACE_NAME</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">owner</code></td>
+      <td><code class="language-plaintext highlighter-rouge">rfay</code></td>
+      <td><code class="language-plaintext highlighter-rouge">CODER_WORKSPACE_OWNER</code> (username, not display name)</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">wildcard-domain</code></td>
+      <td><code class="language-plaintext highlighter-rouge">coder.ddev.com</code></td>
+      <td><code class="language-plaintext highlighter-rouge">CODER_WILDCARD_ACCESS_URL</code> minus the leading <code class="language-plaintext highlighter-rouge">*.</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>Example</strong> — a <code class="language-plaintext highlighter-rouge">coder_app</code> with <code class="language-plaintext highlighter-rouge">slug = "mailpit"</code> in workspace <code class="language-plaintext highlighter-rouge">myworkspace</code> owned by <code class="language-plaintext highlighter-rouge">rfay</code>:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>https://mailpit--myworkspace--rfay.coder.ddev.com/
+</code></pre></div></div>
+
+<p>The Coder server terminates TLS and reverse-proxies to the <code class="language-plaintext highlighter-rouge">url</code> configured on the <code class="language-plaintext highlighter-rouge">coder_app</code> (e.g. <code class="language-plaintext highlighter-rouge">http://localhost:8025</code>). The wildcard TLS certificate must cover <code class="language-plaintext highlighter-rouge">*.coder.ddev.com</code>.</p>
+
+<p><strong><code class="language-plaintext highlighter-rouge">share</code> options</strong> — controls who can open the URL:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Value</th>
+      <th>Access</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">"owner"</code></td>
+      <td>Workspace owner only (default)</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">"authenticated"</code></td>
+      <td>Any logged-in Coder user</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">"public"</code></td>
+      <td>Anyone with the URL</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>Limits:</strong> No documented per-workspace limit on <code class="language-plaintext highlighter-rouge">coder_app</code> resources. Use the <code class="language-plaintext highlighter-rouge">order</code> attribute (integer) and <code class="language-plaintext highlighter-rouge">group</code> attribute (string, max 64 chars) to control dashboard layout.</p>
+
+<hr />
+
+<h2 id="2-dashboard-port-forwarding-urls-dynamic-no-coder_app-needed">2. Dashboard Port-Forwarding URLs (dynamic, no <code class="language-plaintext highlighter-rouge">coder_app</code> needed)</h2>
+
+<p><strong>Official docs:</strong> <a href="https://coder.com/docs/admin/networking/port-forwarding">coder.com/docs/admin/networking/port-forwarding</a></p>
+
+<p>Any port in the workspace can be forwarded on demand from the Coder dashboard without declaring a <code class="language-plaintext highlighter-rouge">coder_app</code>. The URL pattern always includes the agent name:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>https://{port}--{agent}--{workspace}--{owner}.{wildcard-domain}/
+</code></pre></div></div>
+
+<p>For HTTPS (port gets TLS passthrough from Coder):</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>https://{port}s--{agent}--{workspace}--{owner}.{wildcard-domain}/
+</code></pre></div></div>
+
+<p><strong>Example</strong> — port 3000 on agent <code class="language-plaintext highlighter-rouge">main</code> in workspace <code class="language-plaintext highlighter-rouge">myworkspace</code>:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>https://3000--main--myworkspace--rfay.coder.ddev.com/
+</code></pre></div></div>
+
+<blockquote>
+  <p><strong>Note:</strong> Each hostname segment must not exceed 63 characters (DNS label limit). Long workspace or owner names can push past this limit, disabling dashboard port forwarding for that port. CLI port forwarding is unaffected.</p>
+</blockquote>
+
+<hr />
+
+<h2 id="3-cli-port-forwarding-localhost-only">3. CLI Port Forwarding (localhost only)</h2>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Single port</span>
+coder port-forward myworkspace <span class="nt">--tcp</span> 8080:80
+
+<span class="c"># Multiple ports / ranges</span>
+coder port-forward myworkspace <span class="nt">--tcp</span> 3000,9990-9999
+
+<span class="c"># Agent-qualified (multi-agent workspaces)</span>
+coder port-forward myworkspace.main <span class="nt">--tcp</span> 8080:80
+</code></pre></div></div>
+
+<p>Traffic arrives at <code class="language-plaintext highlighter-rouge">http://localhost:{local-port}</code> — no Coder domain involved. This bypasses TLS and the wildcard domain entirely.</p>
+
+<hr />
+
+<h2 id="4-ssh-port-forwarding">4. SSH Port Forwarding</h2>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ssh <span class="nt">-L</span> 8080:localhost:8000 coder.myworkspace
+</code></pre></div></div>
+
+<p>Standard OpenSSH local port forwarding through Coder’s SSH proxy. Also localhost-only.</p>
+
+<hr />
+
+<h2 id="environment-variables-in-workspaces">Environment Variables in Workspaces</h2>
+
+<h3 id="identity">Identity</h3>
+
+<p>Variables marked <strong>[native]</strong> are injected by the Coder agent automatically. Variables marked <strong>[template]</strong> are set via <code class="language-plaintext highlighter-rouge">env</code> blocks in the <code class="language-plaintext highlighter-rouge">coder_agent</code> resource and may differ between templates.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Variable</th>
+      <th>Example</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">CODER_WORKSPACE_NAME</code></td>
+      <td><code class="language-plaintext highlighter-rouge">myworkspace</code></td>
+      <td>Workspace name <strong>[native]</strong></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">CODER_WORKSPACE_ID</code></td>
+      <td><code class="language-plaintext highlighter-rouge">&lt;uuid&gt;</code></td>
+      <td>Workspace UUID <strong>[native]</strong></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">CODER_WORKSPACE_TRANSITION</code></td>
+      <td><code class="language-plaintext highlighter-rouge">start</code></td>
+      <td><code class="language-plaintext highlighter-rouge">start</code> or <code class="language-plaintext highlighter-rouge">stop</code> <strong>[native]</strong></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">CODER_WORKSPACE_OWNER_NAME</code></td>
+      <td><code class="language-plaintext highlighter-rouge">rfay</code></td>
+      <td>Owner <strong>username</strong> (set from <code class="language-plaintext highlighter-rouge">data.coder_workspace_owner.me.name</code> in this template) <strong>[template]</strong></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">CODER_WORKSPACE_OWNER_EMAIL</code></td>
+      <td><code class="language-plaintext highlighter-rouge">accounts@ddev.com</code></td>
+      <td>Owner email <strong>[template]</strong></td>
+    </tr>
+  </tbody>
+</table>
+
+<blockquote>
+  <p><strong>Important:</strong> In the drupal-core and freeform templates, <code class="language-plaintext highlighter-rouge">CODER_WORKSPACE_OWNER_NAME</code> holds the <strong>username</strong> (e.g. <code class="language-plaintext highlighter-rouge">rfay</code>), not the display name. It is set from <code class="language-plaintext highlighter-rouge">data.coder_workspace_owner.me.name</code> in the <code class="language-plaintext highlighter-rouge">coder_agent</code> env block. This is what the <code class="language-plaintext highlighter-rouge">coder-routes</code> script uses to build Host-header rules.</p>
+</blockquote>
+
+<h3 id="template--build">Template / Build</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>Variable</th>
+      <th>Example</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">CODER_WORKSPACE_TEMPLATE_NAME</code></td>
+      <td><code class="language-plaintext highlighter-rouge">freeform</code></td>
+      <td>Template name</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">CODER_WORKSPACE_TEMPLATE_VERSION</code></td>
+      <td><code class="language-plaintext highlighter-rouge">v1.2.3</code></td>
+      <td>Template version</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="agent">Agent</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>Variable</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">CODER_AGENT_TOKEN</code></td>
+      <td>Agent auth token</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">CODER_AGENT_NAME</code></td>
+      <td>Agent name (e.g. <code class="language-plaintext highlighter-rouge">main</code>)</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">CODER_AGENT_URL</code></td>
+      <td>Coder server base URL — e.g. <code class="language-plaintext highlighter-rouge">https://staging-coder.ddev.com</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="ideproxy">IDE/Proxy</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>Variable</th>
+      <th>Example</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">VSCODE_PROXY_URI</code></td>
+      <td><code class="language-plaintext highlighter-rouge">https://vscode-web--myworkspace--rfay.coder.ddev.com/proxy//</code></td>
+      <td>VS Code proxy template URI; `` is replaced at runtime</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="deriving-the-wildcard-domain-at-runtime">Deriving the wildcard domain at runtime</h3>
+
+<p>The wildcard domain is <strong>not</strong> directly injected as an env var, but can be extracted from <code class="language-plaintext highlighter-rouge">VSCODE_PROXY_URI</code> or <code class="language-plaintext highlighter-rouge">CODER_AGENT_URL</code>:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># From VSCODE_PROXY_URI (preferred — always a subdomain of the wildcard domain)</span>
+<span class="nv">DOMAIN</span><span class="o">=</span><span class="si">$(</span><span class="nb">echo</span> <span class="s2">"</span><span class="nv">$VSCODE_PROXY_URI</span><span class="s2">"</span> | <span class="nb">sed</span> <span class="nt">-E</span> <span class="s1">'s|https?://[^.]+\.(.+?)(/.*)?$|\1|'</span><span class="si">)</span>
+
+<span class="c"># Fallback: from CODER_AGENT_URL (the Coder server hostname, not the wildcard domain)</span>
+<span class="nv">DOMAIN</span><span class="o">=</span><span class="si">$(</span><span class="nb">echo</span> <span class="s2">"</span><span class="nv">$CODER_AGENT_URL</span><span class="s2">"</span> | <span class="nb">sed</span> <span class="nt">-E</span> <span class="s1">'s|https?://(.+?)(/.*)?$|\1|'</span><span class="si">)</span>
+</code></pre></div></div>
+
+<p>Once you have <code class="language-plaintext highlighter-rouge">DOMAIN</code>, <code class="language-plaintext highlighter-rouge">CODER_WORKSPACE_NAME</code>, and <code class="language-plaintext highlighter-rouge">CODER_WORKSPACE_OWNER_NAME</code>, you can construct any app URL:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">echo</span> <span class="s2">"https://</span><span class="k">${</span><span class="nv">slug</span><span class="k">}</span><span class="s2">--</span><span class="k">${</span><span class="nv">CODER_WORKSPACE_NAME</span><span class="k">}</span><span class="s2">--</span><span class="k">${</span><span class="nv">CODER_WORKSPACE_OWNER_NAME</span><span class="k">}</span><span class="s2">.</span><span class="k">${</span><span class="nv">DOMAIN</span><span class="k">}</span><span class="s2">"</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="server-configuration-requirements">Server Configuration Requirements</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Setting</th>
+      <th>Value</th>
+      <th>Purpose</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">CODER_ACCESS_URL</code></td>
+      <td><code class="language-plaintext highlighter-rouge">https://staging-coder.ddev.com</code></td>
+      <td>Main Coder UI</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">CODER_WILDCARD_ACCESS_URL</code></td>
+      <td><code class="language-plaintext highlighter-rouge">*.coder.ddev.com</code></td>
+      <td>Workspace app subdomains</td>
+    </tr>
+    <tr>
+      <td>TLS cert SANs</td>
+      <td><code class="language-plaintext highlighter-rouge">coder.ddev.com</code>, <code class="language-plaintext highlighter-rouge">*.coder.ddev.com</code></td>
+      <td>Required; DNS-01 challenge for wildcard</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>The wildcard <code class="language-plaintext highlighter-rouge">*.coder.ddev.com</code> covers one level of subdomain only. Dashboard port-forwarding URLs like <code class="language-plaintext highlighter-rouge">8080--main--myworkspace--rfay.coder.ddev.com</code> are still a single-level subdomain of <code class="language-plaintext highlighter-rouge">coder.ddev.com</code>, so the wildcard cert covers them.</p>
+
+<p><strong>Official docs:</strong> <a href="https://coder.com/docs/admin/networking/wildcard-access-url">coder.com/docs/admin/networking/wildcard-access-url</a>, <a href="https://coder.com/docs/admin/setup">coder.com/docs/admin/setup</a></p>
+
+  </main>
+</body>
+</html>
