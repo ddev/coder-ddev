@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>spec-kitty Workflow — DDEV Coder Workspaces</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0e0e10;
+      color: #e0e0e0;
+      line-height: 1.7;
+    }
+
+    nav {
+      padding: 1rem 2rem;
+      border-bottom: 1px solid #1c1c1e;
+    }
+
+    nav a {
+      color: #a78bfa;
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+
+    nav a:hover { text-decoration: underline; }
+
+    main {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 3rem 2rem 6rem;
+    }
+
+    h1 { font-size: 2rem; font-weight: 700; margin-bottom: 1rem; letter-spacing: -0.02em; }
+    h2 { font-size: 1.35rem; font-weight: 600; margin: 2.5rem 0 0.75rem; color: #e8e8e8; }
+    h3 { font-size: 1.1rem; font-weight: 600; margin: 1.75rem 0 0.5rem; color: #ddd; }
+
+    p { margin-bottom: 1rem; color: #ccc; }
+
+    a { color: #a78bfa; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    ul, ol { margin: 0 0 1rem 1.5rem; color: #ccc; }
+    li { margin-bottom: 0.35rem; }
+
+    code {
+      background: #1a1a1f;
+      border: 1px solid #2a2a30;
+      padding: 0.15em 0.45em;
+      border-radius: 4px;
+      font-family: 'SF Mono', Consolas, 'Courier New', monospace;
+      font-size: 0.87em;
+      color: #c4b5fd;
+    }
+
+    pre {
+      background: #111115;
+      border: 1px solid #2a2a30;
+      border-radius: 8px;
+      padding: 1.25rem 1.5rem;
+      overflow-x: auto;
+      margin-bottom: 1.25rem;
+    }
+
+    pre code {
+      background: none;
+      border: none;
+      padding: 0;
+      font-size: 0.9rem;
+      color: #c9d1d9;
+    }
+
+    hr {
+      border: none;
+      border-top: 1px solid #1c1c1e;
+      margin: 2rem 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 1.25rem;
+      font-size: 0.95rem;
+    }
+
+    th {
+      text-align: left;
+      padding: 0.6rem 0.75rem;
+      border-bottom: 2px solid #2a2a30;
+      color: #999;
+      font-weight: 600;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    td {
+      padding: 0.6rem 0.75rem;
+      border-bottom: 1px solid #1c1c1e;
+      color: #ccc;
+    }
+
+    strong { color: #e8e8e8; }
+
+    blockquote {
+      border-left: 3px solid #3b2f6e;
+      padding-left: 1rem;
+      color: #999;
+      margin-bottom: 1rem;
+    }
+
+    img { max-width: 100%; }
+
+    /* Skip link — visually hidden until focused; lets keyboard users bypass the site nav.
+       WCAG 2.4.1 Bypass Blocks (Level A) */
+    .skip-link {
+      position: absolute;
+      top: -100%;
+      left: 1rem;
+      background: #7c5af0;
+      color: #fff;
+      padding: 0.5rem 1rem;
+      border-radius: 0 0 6px 6px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-decoration: none;
+      z-index: 999;
+    }
+    .skip-link:focus { top: 0; }
+  </style>
+</head>
+<body>
+  <!-- WCAG 2.4.1 Bypass Blocks (Level A): skip link lets keyboard users jump past the site nav -->
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <!-- aria-label distinguishes this nav landmark when multiple <nav> elements exist on a page.
+       WCAG 2.4.6 Headings and Labels (Level AA) -->
+  <nav aria-label="Site">
+    <a href="/">← DDEV Coder Workspaces</a>
+  </nav>
+  <!-- id="main-content" is the skip link target (WCAG 2.4.1) -->
+  <main id="main-content">
+    <h1 id="spec-kitty-workflow">spec-kitty Workflow</h1>
+
+<p>spec-kitty is the spec-driven development tool used for significant feature work in this project. It drives an AI agent through a structured lifecycle — discovery → research → spec → plan → implement → review — and keeps the paper trail in the repo.</p>
+
+<h2 id="when-to-use-spec-kitty">When to use spec-kitty</h2>
+
+<p>Use it for:</p>
+<ul>
+  <li>New features or capabilities (new auth, new template type, new user-facing workflow)</li>
+  <li>Breaking changes to infrastructure or user flows</li>
+  <li>Work that touches multiple files and needs a traceable decision record</li>
+</ul>
+
+<p>Skip it for: bug fixes, typos, dependency bumps, config tweaks, one-line changes.</p>
+
+<h2 id="project-structure">Project structure</h2>
+
+<p>Two directories persist in the repo across all missions:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>.kittify/                          # Project-level config (set up once, shared by all missions)
+├── charter/charter.md             # Project governance, quality directives, stakeholder roles
+├── config.yaml                    # spec-kitty project config
+└── skills-manifest.json           # Registered agent skills
+
+kitty-specs/                       # One subdirectory per completed mission (permanent record)
+└── &lt;mission-id&gt;/
+    ├── spec.md                    # Requirements document
+    ├── research.md                # Research summary
+    ├── research/                  # Evidence log + source register CSVs
+    ├── data-model.md              # Entity model for the feature
+    ├── plan.md                    # Approved implementation plan
+    ├── wps.yaml                   # Work-package manifest (authoritative task source)
+    ├── tasks.md / tasks/WP*.md    # Generated task files consumed by agents
+    ├── checklists/requirements.md # Requirement-traceability checklist
+    └── mission-events.jsonl       # Append-only audit log of all state transitions
+</code></pre></div></div>
+
+<h2 id="starting-a-new-mission">Starting a new mission</h2>
+
+<h3 id="1-create-the-feature-scaffold">1. Create the feature scaffold</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>spec-kitty specify &lt;feature-name&gt;
+<span class="c"># e.g.: spec-kitty specify workspace-quotas</span>
+</code></pre></div></div>
+
+<p>This creates <code class="language-plaintext highlighter-rouge">kitty-specs/&lt;mission-id&gt;/</code> with the skeleton files and registers the mission.</p>
+
+<h3 id="2-run-the-agent">2. Run the agent</h3>
+
+<p>From the repo root:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>spec-kitty next <span class="nt">--agent</span> claude <span class="nt">--mission</span> &lt;mission-id&gt;
+</code></pre></div></div>
+
+<p>The agent reads the current mission state and returns the next action. Keep running this command as the agent works through each phase. The state machine progresses through:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>not_started → discovery → specify → plan → tasks_outline → tasks_packages
+           → tasks_finalize → implement → review → accept → done
+</code></pre></div></div>
+
+<p><strong>Important:</strong> Always run <code class="language-plaintext highlighter-rouge">spec-kitty next</code> from the repo root, not from inside a worktree.</p>
+
+<h3 id="3-implementation-lanes">3. Implementation lanes</h3>
+
+<p>During implementation, spec-kitty creates git worktrees (<code class="language-plaintext highlighter-rouge">.worktrees/&lt;mission&gt;-lane-&lt;x&gt;</code>) for parallel work packages. Each lane is an isolated branch. Edits to owned files <strong>must happen inside the correct worktree</strong>, not in the main repo checkout. After implementation:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>spec-kitty merge <span class="nt">--mission</span> &lt;mission-id&gt; <span class="nt">--lane</span> a   <span class="c"># merge lane-a into target branch</span>
+spec-kitty merge <span class="nt">--mission</span> &lt;mission-id&gt; <span class="nt">--lane</span> b   <span class="c"># merge lane-b, etc.</span>
+</code></pre></div></div>
+
+<h3 id="4-review-and-accept">4. Review and accept</h3>
+
+<p>After all work packages are implemented and merged:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>spec-kitty accept <span class="nt">--mission</span> &lt;mission-id&gt;
+</code></pre></div></div>
+
+<p>This validates completeness (all WPs done, all requirements traced) before the PR is opened.</p>
+
+<h2 id="key-files-to-know">Key files to know</h2>
+
+<p><strong><code class="language-plaintext highlighter-rouge">wps.yaml</code></strong> is the single source of truth for what needs to be built. It defines work packages, their dependencies, the files each WP owns, and the subtasks within each WP. The <code class="language-plaintext highlighter-rouge">finalize-tasks</code> step generates <code class="language-plaintext highlighter-rouge">tasks.md</code> and <code class="language-plaintext highlighter-rouge">lanes.json</code> from it. If you need to change scope, edit <code class="language-plaintext highlighter-rouge">wps.yaml</code> before finalize runs.</p>
+
+<p><strong><code class="language-plaintext highlighter-rouge">spec.md</code></strong> contains the requirements (FR-xxx, C-xxx, NFR-xxx). Every requirement should trace to a WP in <code class="language-plaintext highlighter-rouge">wps.yaml</code> and appear in <code class="language-plaintext highlighter-rouge">checklists/requirements.md</code>.</p>
+
+<p><strong><code class="language-plaintext highlighter-rouge">mission-events.jsonl</code></strong> is append-only. Never edit it directly — it’s the audit log of every state transition. If spec-kitty rejects a <code class="language-plaintext highlighter-rouge">move-task</code> because the repo is dirty, commit any loose files first, then retry.</p>
+
+<h2 id="common-pitfalls">Common pitfalls</h2>
+
+<ul>
+  <li><strong>Uncommitted files block transitions.</strong> spec-kitty checks for a clean working tree before advancing state. Commit <code class="language-plaintext highlighter-rouge">mission-events.jsonl</code> and any other loose files before running <code class="language-plaintext highlighter-rouge">next</code> or <code class="language-plaintext highlighter-rouge">move-task</code>.</li>
+  <li><strong>Git signing.</strong> If the environment doesn’t have an SSH signing agent, commits in external repos need <code class="language-plaintext highlighter-rouge">-c gpg.format=openpgp -c commit.gpgsign=false</code>.</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">spec-kitty next</code> from the main repo.</strong> Running it from inside a worktree fails with “must run from the main repository.”</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">--json</code> not supported everywhere.</strong> The <code class="language-plaintext highlighter-rouge">implement</code> subcommand does not accept <code class="language-plaintext highlighter-rouge">--json</code>; drop the flag.</li>
+</ul>
+
+<h2 id="completed-missions">Completed missions</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Mission ID</th>
+      <th>Title</th>
+      <th>PR</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">github-org-gated-signup-01KR1P4G</code></td>
+      <td>GitHub org-gated access for coder.ddev.com</td>
+      <td>#131</td>
+    </tr>
+  </tbody>
+</table>
+
+  </main>
+</body>
+</html>
