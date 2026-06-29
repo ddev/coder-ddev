@@ -36,12 +36,14 @@ jobs:
 
       - name: Point preview at staging-coder.ddev.com
         if: github.event.action != 'closed'
-        run: find ./_site -name "*.html" -exec sed -i 's|https://coder\.ddev\.com|https://staging-coder.ddev.com|g' {} +
+        run: |
+          cp -r ./_site ./_site_preview
+          find ./_site_preview -name "*.html" -exec sed -i 's|https://coder\.ddev\.com|https://staging-coder.ddev.com|g' {} +
 
       - name: Deploy PR preview
         uses: rossjrw/pr-preview-action@v1
         with:
-          source-dir: ./_site
+          source-dir: ./_site_preview
           preview-branch: gh-pages
           umbrella-dir: pr-preview
           token: ${{ secrets.GITHUB_TOKEN }}
