@@ -36,7 +36,9 @@ jobs:
 
       - name: Point preview at staging-coder.ddev.com
         if: github.event.action != 'closed'
-        run: find ./_site -name "*.html" -exec sed -i 's|https://coder\.ddev\.com|https://staging-coder.ddev.com|g' {} +
+        run: |
+          chmod -R a+w ./_site
+          find ./_site -name "*.html" -exec sed -i 's|https://coder\.ddev\.com|https://staging-coder.ddev.com|g' {} +
 
       - name: Deploy PR preview
         uses: rossjrw/pr-preview-action@v1
