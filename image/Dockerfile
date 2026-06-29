@@ -175,7 +175,8 @@ RUN /home/linuxbrew/.linuxbrew/bin/brew install \
   claude-code \
   go \
   golangci-lint \
-  yq
+  yq \
+  zellij
 
 USER root
 # Symlink brew-installed tools to /usr/local/bin so they're available system-wide
