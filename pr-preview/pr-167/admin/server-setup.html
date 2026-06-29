@@ -702,7 +702,7 @@ curl <span class="nt">-fsSL</span> <span class="nt">-o</span> /tmp/coder.deb <sp
 
 <p>On the machine where you’ll manage templates (can be your local machine):</p>
 
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>coder login https://coder.ddev.com
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>coder login https://staging-coder.ddev.com
 </code></pre></div></div>
 
 <h3 id="configure-github-oauth-recommended">Configure GitHub OAuth (recommended)</h3>
@@ -723,8 +723,8 @@ curl <span class="nt">-fsSL</span> <span class="nt">-o</span> /tmp/coder.deb <sp
 
 <ul>
   <li><strong>Application name</strong>: <code class="language-plaintext highlighter-rouge">Coder (coder.ddev.com)</code></li>
-  <li><strong>Homepage URL</strong>: <code class="language-plaintext highlighter-rouge">https://coder.ddev.com</code></li>
-  <li><strong>Authorization callback URL</strong>: <code class="language-plaintext highlighter-rouge">https://coder.ddev.com/api/v2/users/oauth2/github/callback</code></li>
+  <li><strong>Homepage URL</strong>: <code class="language-plaintext highlighter-rouge">https://staging-coder.ddev.com</code></li>
+  <li><strong>Authorization callback URL</strong>: <code class="language-plaintext highlighter-rouge">https://staging-coder.ddev.com/api/v2/users/oauth2/github/callback</code></li>
   <li><strong>Enable Device Flow</strong>: leave unchecked (see note below)</li>
 </ul>
 
@@ -747,8 +747,8 @@ curl <span class="nt">-fsSL</span> <span class="nt">-o</span> /tmp/coder.deb <sp
 
 <ul>
   <li><strong>Application name</strong>: <code class="language-plaintext highlighter-rouge">Coder (coder.ddev.com)</code></li>
-  <li><strong>Homepage URL</strong>: <code class="language-plaintext highlighter-rouge">https://coder.ddev.com</code></li>
-  <li><strong>Authorization callback URL</strong>: <code class="language-plaintext highlighter-rouge">https://coder.ddev.com/api/v2/users/oauth2/github/callback</code></li>
+  <li><strong>Homepage URL</strong>: <code class="language-plaintext highlighter-rouge">https://staging-coder.ddev.com</code></li>
+  <li><strong>Authorization callback URL</strong>: <code class="language-plaintext highlighter-rouge">https://staging-coder.ddev.com/api/v2/users/oauth2/github/callback</code></li>
   <li><strong>Enable Device Flow</strong>: leave unchecked</li>
 </ul>
 
@@ -1232,9 +1232,9 @@ curl <span class="nt">-s</span> http://localhost:9876/
 
 <h3 id="configure-which-events-to-receive">Configure which events to receive</h3>
 
-<p><strong>Deployment-level method</strong> (admin): Go to <code class="language-plaintext highlighter-rouge">https://coder.ddev.com/deployment/notifications?tab=events</code> and set desired events to use the webhook method.</p>
+<p><strong>Deployment-level method</strong> (admin): Go to <code class="language-plaintext highlighter-rouge">https://staging-coder.ddev.com/deployment/notifications?tab=events</code> and set desired events to use the webhook method.</p>
 
-<p><strong>User preferences</strong> (per-user opt-in): Go to <code class="language-plaintext highlighter-rouge">https://coder.ddev.com/settings/notifications</code> and enable specific events. Some events (e.g. “Workspace Created”) are disabled by default and must be explicitly enabled here — the deployment events page only sets the delivery method, not whether the event fires for you.</p>
+<p><strong>User preferences</strong> (per-user opt-in): Go to <code class="language-plaintext highlighter-rouge">https://staging-coder.ddev.com/settings/notifications</code> and enable specific events. Some events (e.g. “Workspace Created”) are disabled by default and must be explicitly enabled here — the deployment events page only sets the delivery method, not whether the event fires for you.</p>
 
 <p>Recommended events to enable:</p>
 <ul>
@@ -1406,7 +1406,7 @@ curl <span class="nt">-fsSL</span> <span class="nt">-o</span> /tmp/coder.deb <sp
 <span class="nb">sudo </span>apt-get <span class="nb">install</span> <span class="nt">-y</span> /tmp/coder.deb
 
 <span class="c"># Set credentials</span>
-<span class="nb">export </span><span class="nv">CODER_URL</span><span class="o">=</span>https://coder.ddev.com
+<span class="nb">export </span><span class="nv">CODER_URL</span><span class="o">=</span>https://staging-coder.ddev.com
 <span class="nb">export </span><span class="nv">CODER_PROVISIONER_DAEMON_KEY</span><span class="o">=</span>&lt;key-from-above&gt;
 
 <span class="c"># Start the provisioner daemon</span>
