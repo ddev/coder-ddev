@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Getting Started with DDEV Coder Workspaces — DDEV Coder Workspaces</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0e0e10;
+      color: #e0e0e0;
+      line-height: 1.7;
+    }
+
+    nav {
+      padding: 1rem 2rem;
+      border-bottom: 1px solid #1c1c1e;
+    }
+
+    nav a {
+      color: #a78bfa;
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+
+    nav a:hover { text-decoration: underline; }
+
+    main {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 3rem 2rem 6rem;
+    }
+
+    h1 { font-size: 2rem; font-weight: 700; margin-bottom: 1rem; letter-spacing: -0.02em; }
+    h2 { font-size: 1.35rem; font-weight: 600; margin: 2.5rem 0 0.75rem; color: #e8e8e8; }
+    h3 { font-size: 1.1rem; font-weight: 600; margin: 1.75rem 0 0.5rem; color: #ddd; }
+
+    p { margin-bottom: 1rem; color: #ccc; }
+
+    a { color: #a78bfa; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    ul, ol { margin: 0 0 1rem 1.5rem; color: #ccc; }
+    li { margin-bottom: 0.35rem; }
+
+    code {
+      background: #1a1a1f;
+      border: 1px solid #2a2a30;
+      padding: 0.15em 0.45em;
+      border-radius: 4px;
+      font-family: 'SF Mono', Consolas, 'Courier New', monospace;
+      font-size: 0.87em;
+      color: #c4b5fd;
+    }
+
+    pre {
+      background: #111115;
+      border: 1px solid #2a2a30;
+      border-radius: 8px;
+      padding: 1.25rem 1.5rem;
+      overflow-x: auto;
+      margin-bottom: 1.25rem;
+    }
+
+    pre code {
+      background: none;
+      border: none;
+      padding: 0;
+      font-size: 0.9rem;
+      color: #c9d1d9;
+    }
+
+    hr {
+      border: none;
+      border-top: 1px solid #1c1c1e;
+      margin: 2rem 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 1.25rem;
+      font-size: 0.95rem;
+    }
+
+    th {
+      text-align: left;
+      padding: 0.6rem 0.75rem;
+      border-bottom: 2px solid #2a2a30;
+      color: #999;
+      font-weight: 600;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    td {
+      padding: 0.6rem 0.75rem;
+      border-bottom: 1px solid #1c1c1e;
+      color: #ccc;
+    }
+
+    strong { color: #e8e8e8; }
+
+    blockquote {
+      border-left: 3px solid #3b2f6e;
+      padding-left: 1rem;
+      color: #999;
+      margin-bottom: 1rem;
+    }
+
+    img { max-width: 100%; }
+
+    /* Skip link — visually hidden until focused; lets keyboard users bypass the site nav.
+       WCAG 2.4.1 Bypass Blocks (Level A) */
+    .skip-link {
+      position: absolute;
+      top: -100%;
+      left: 1rem;
+      background: #7c5af0;
+      color: #fff;
+      padding: 0.5rem 1rem;
+      border-radius: 0 0 6px 6px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-decoration: none;
+      z-index: 999;
+    }
+    .skip-link:focus { top: 0; }
+  </style>
+</head>
+<body>
+  <!-- WCAG 2.4.1 Bypass Blocks (Level A): skip link lets keyboard users jump past the site nav -->
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <!-- aria-label distinguishes this nav landmark when multiple <nav> elements exist on a page.
+       WCAG 2.4.6 Headings and Labels (Level AA) -->
+  <nav aria-label="Site">
+    <a href="/">← DDEV Coder Workspaces</a>
+  </nav>
+  <!-- id="main-content" is the skip link target (WCAG 2.4.1) -->
+  <main id="main-content">
+    <h1 id="getting-started-with-ddev-coder-workspaces">Getting Started with DDEV Coder Workspaces</h1>
+
+<p>This guide helps you create your first DDEV workspace and start developing in the cloud.</p>
+
+<h2 id="what-is-coder">What is Coder?</h2>
+
+<p><strong>Coder</strong> is an open-source platform for creating remote development environments. Instead of developing on your local machine, you work in a cloud-based workspace with all tools pre-installed.</p>
+
+<p><strong>Key concepts:</strong></p>
+<ul>
+  <li><strong>Workspace</strong> - Your personal development environment (like a remote VM)</li>
+  <li><strong>Template</strong> - A blueprint for creating workspaces (pre-configured tools, settings)</li>
+  <li><strong>Agent</strong> - Software running in your workspace that connects to Coder server</li>
+</ul>
+
+<p><strong>What is DDEV?</strong></p>
+
+<p><strong>DDEV</strong> is a local development tool for PHP, Node.js, and Python projects. It uses Docker containers to provide consistent development environments with databases, web servers, and development tools.</p>
+
+<p>With this template, DDEV runs inside your cloud workspace, giving you all DDEV features without local setup.</p>
+
+<h2 id="prerequisites">Prerequisites</h2>
+
+<h3 id="coder-account">Coder Account</h3>
+
+<p>You need access to a Coder server. Ask your administrator for:</p>
+<ul>
+  <li>Coder server URL (e.g., <code class="language-plaintext highlighter-rouge">https://coder.example.com</code>)</li>
+  <li>Username and password (or SSO login)</li>
+  <li>Confirmation that the <code class="language-plaintext highlighter-rouge">user-defined-web</code> template is available</li>
+</ul>
+
+<h3 id="local-tools">Local Tools</h3>
+
+<p>Install on your local machine:</p>
+
+<p><strong>Coder CLI</strong> (required for SSH access):</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># macOS (Homebrew)</span>
+brew <span class="nb">install </span>coder/coder/coder
+
+<span class="c"># Linux (curl)</span>
+curl <span class="nt">-L</span> https://coder.com/install.sh | sh
+
+<span class="c"># Windows (PowerShell)</span>
+winget <span class="nb">install </span>Coder.Coder
+
+<span class="c"># Or download from: https://github.com/coder/coder/releases</span>
+</code></pre></div></div>
+
+<p><strong>SSH client</strong> (usually pre-installed):</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Verify SSH is available</span>
+ssh <span class="nt">-V</span>
+</code></pre></div></div>
+
+<p><strong>Git</strong> (optional, for cloning repositories):</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># macOS</span>
+brew <span class="nb">install </span>git
+
+<span class="c"># Linux</span>
+apt-get <span class="nb">install </span>git  <span class="c"># or yum install git</span>
+
+<span class="c"># Windows</span>
+winget <span class="nb">install </span>Git.Git
+
+<span class="c"># Verify</span>
+git <span class="nt">--version</span>
+</code></pre></div></div>
+
+<h3 id="optional-desktop-vs-code">Optional: Desktop VS Code</h3>
+
+<p>If you prefer desktop VS Code over the web version:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Download from https://code.visualstudio.com/</span>
+<span class="c"># Install Remote-SSH extension</span>
+code <span class="nt">--install-extension</span> ms-vscode-remote.remote-ssh
+</code></pre></div></div>
+
+<h2 id="step-1-login-to-coder">Step 1: Login to Coder</h2>
+
+<h3 id="via-web-ui">Via Web UI</h3>
+
+<ol>
+  <li>Open your Coder server URL in a browser</li>
+  <li>Enter your username and password</li>
+  <li>Click <strong>Login</strong></li>
+</ol>
+
+<p>You’ll see the Coder dashboard.</p>
+
+<h3 id="via-cli">Via CLI</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Login to Coder server</span>
+coder login https://coder.example.com
+
+<span class="c"># Enter your credentials when prompted</span>
+<span class="c"># Or use an API token if provided</span>
+</code></pre></div></div>
+
+<p><strong>Verify login:</strong></p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>coder list
+<span class="c"># Should show your workspaces (empty if this is your first time)</span>
+</code></pre></div></div>
+
+<h2 id="step-2-create-your-first-workspace">Step 2: Create Your First Workspace</h2>
+
+<h3 id="via-web-ui-1">Via Web UI</h3>
+
+<ol>
+  <li>Click <strong>Create Workspace</strong> button</li>
+  <li>Select <strong>user-defined-web</strong> template</li>
+  <li>Enter a workspace name (e.g., <code class="language-plaintext highlighter-rouge">my-first-workspace</code>)
+    <ul>
+      <li>Use lowercase, numbers, hyphens</li>
+      <li>No spaces or special characters</li>
+    </ul>
+  </li>
+  <li>(Optional) Configure parameters:
+    <ul>
+      <li><strong>CPU</strong>: Number of cores (default: 4)</li>
+      <li><strong>Memory</strong>: RAM in GB (default: 8)</li>
+      <li><strong>Node.js version</strong>: Node version (default: 24)</li>
+    </ul>
+  </li>
+  <li>Click <strong>Create Workspace</strong></li>
+</ol>
+
+<p><strong>Wait for workspace to start</strong> (1-3 minutes):</p>
+<ul>
+  <li>Status will change from “Starting” to “Running”</li>
+  <li>You’ll see the workspace dashboard</li>
+</ul>
+
+<h3 id="via-cli-1">Via CLI</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Create workspace with defaults</span>
+coder create <span class="nt">--template</span> user-defined-web my-first-workspace <span class="nt">--yes</span>
+
+<span class="c"># Or with custom parameters</span>
+coder create <span class="nt">--template</span> user-defined-web my-first-workspace <span class="se">\</span>
+  <span class="nt">--parameter</span> <span class="nv">cpu</span><span class="o">=</span>8 <span class="se">\</span>
+  <span class="nt">--parameter</span> <span class="nv">memory</span><span class="o">=</span>16 <span class="se">\</span>
+  <span class="nt">--yes</span>
+</code></pre></div></div>
+
+<p><strong>Check workspace status:</strong></p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>coder list
+<span class="c"># Should show your workspace as "Running"</span>
+</code></pre></div></div>
+
+<h2 id="step-3-access-your-workspace">Step 3: Access Your Workspace</h2>
+
+<h3 id="option-1-vs-code-for-web-recommended-for-beginners">Option 1: VS Code for Web (Recommended for Beginners)</h3>
+
+<ol>
+  <li>In Coder dashboard, find your workspace</li>
+  <li>Under <strong>Apps</strong>, click <strong>VS Code</strong></li>
+  <li>VS Code opens in your browser</li>
+</ol>
+
+<p><strong>You now have a full IDE in the cloud!</strong></p>
+
+<h3 id="option-2-ssh-command-line">Option 2: SSH (Command Line)</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># SSH into workspace</span>
+coder ssh my-first-workspace
+
+<span class="c"># You're now inside your workspace</span>
+<span class="c"># The prompt changes to: coder@my-first-workspace:~$</span>
+</code></pre></div></div>
+
+<p><strong>Run your first command:</strong></p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Check DDEV is installed</span>
+ddev version
+
+<span class="c"># Check Docker is running</span>
+docker ps
+
+<span class="c"># Check Node.js version</span>
+node <span class="nt">--version</span>
+
+<span class="c"># Exit SSH session</span>
+<span class="nb">exit</span>
+</code></pre></div></div>
+
+<h3 id="option-3-desktop-vs-code-with-remote-ssh">Option 3: Desktop VS Code with Remote-SSH</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Configure SSH for Coder workspaces</span>
+coder config-ssh
+
+<span class="c"># Open desktop VS Code</span>
+<span class="c"># Use Remote-SSH extension to connect to: coder.my-first-workspace</span>
+</code></pre></div></div>
+
+<h2 id="step-4-verify-your-environment">Step 4: Verify Your Environment</h2>
+
+<h3 id="check-docker">Check Docker</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Inside workspace (via SSH or VS Code terminal)</span>
+docker ps
+<span class="c"># Should show: CONTAINER ID   IMAGE   COMMAND   ...</span>
+<span class="c"># (Empty list is normal - no containers running yet)</span>
+
+docker info
+<span class="c"># Should show Docker system information</span>
+</code></pre></div></div>
+
+<p>If Docker doesn’t work, see <a href="#troubleshooting">Troubleshooting</a> below.</p>
+
+<h3 id="check-ddev">Check DDEV</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ddev version
+<span class="c"># Should show DDEV version (latest version from image)</span>
+
+ddev list
+<span class="c"># Should show: No running DDEV projects were found.</span>
+</code></pre></div></div>
+
+<h3 id="check-disk-space">Check Disk Space</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">df</span> <span class="nt">-h</span>
+<span class="c"># Should show plenty of free space on / and /home/coder</span>
+</code></pre></div></div>
+
+<h3 id="check-available-resources">Check Available Resources</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># CPU cores</span>
+<span class="nb">nproc</span>
+
+<span class="c"># RAM</span>
+free <span class="nt">-h</span>
+
+<span class="c"># Should match what you configured (default: 4 cores, 8GB RAM)</span>
+</code></pre></div></div>
+
+<h2 id="step-5-create-your-first-ddev-project">Step 5: Create Your First DDEV Project</h2>
+
+<h3 id="option-a-new-project-from-scratch">Option A: New Project from Scratch</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Create project directory</span>
+<span class="nb">mkdir</span> <span class="nt">-p</span> ~/projects/my-site
+<span class="nb">cd</span> ~/projects/my-site
+
+<span class="c"># Initialize DDEV project</span>
+<span class="c"># Choose a project type: php, wordpress, drupal, laravel, etc.</span>
+ddev config <span class="nt">--project-type</span><span class="o">=</span>php <span class="nt">--docroot</span><span class="o">=</span>web
+
+<span class="c"># Start DDEV</span>
+ddev start
+</code></pre></div></div>
+
+<p><strong>Wait for DDEV to start</strong> (1-2 minutes first time):</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Starting my-site...
+...
+Successfully started my-site
+Project can be reached at https://my-site.ddev.site
+</code></pre></div></div>
+
+<h3 id="option-b-clone-existing-project">Option B: Clone Existing Project</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Set up Git SSH first (see Step 8 below)</span>
+
+<span class="c"># Clone your repository</span>
+<span class="nb">cd</span> ~/projects
+git clone git@github.com:username/repo.git my-site
+<span class="nb">cd </span>my-site
+
+<span class="c"># Configure DDEV (if not already configured)</span>
+ddev config <span class="nt">--auto</span>
+
+<span class="c"># Start DDEV</span>
+ddev start
+</code></pre></div></div>
+
+<h3 id="option-c-quick-demo-with-composer-project">Option C: Quick Demo with Composer Project</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Create a Laravel project</span>
+<span class="nb">mkdir</span> <span class="nt">-p</span> ~/projects/demo-laravel
+<span class="nb">cd</span> ~/projects/demo-laravel
+
+<span class="c"># Configure DDEV</span>
+ddev config <span class="nt">--project-type</span><span class="o">=</span>laravel <span class="nt">--docroot</span><span class="o">=</span>public
+
+<span class="c"># Use DDEV's Composer to create Laravel project</span>
+ddev composer create laravel/laravel
+
+<span class="c"># Start DDEV</span>
+ddev start
+</code></pre></div></div>
+
+<h2 id="step-6-access-your-ddev-project">Step 6: Access Your DDEV Project</h2>
+
+<h3 id="understanding-coder-port-forwarding">Understanding Coder Port Forwarding</h3>
+
+<p>DDEV normally uses URLs like <code class="language-plaintext highlighter-rouge">https://my-site.ddev.site</code>, but in Coder, you access projects via <strong>port forwarding</strong>.</p>
+
+<p><strong>How it works:</strong></p>
+<ol>
+  <li>DDEV listens on ports 80/443 inside workspace</li>
+  <li>Coder forwards these ports through its proxy</li>
+  <li>You access via Coder’s forwarded URLs</li>
+</ol>
+
+<h3 id="access-your-project">Access Your Project</h3>
+
+<p><strong>Via Coder Web UI (Recommended):</strong></p>
+<ol>
+  <li>Go to Coder dashboard</li>
+  <li>Find your workspace</li>
+  <li>Under <strong>Apps</strong>, click <strong>DDEV Web</strong></li>
+  <li>Your DDEV project loads in a new tab</li>
+</ol>
+
+<p>The URL follows the pattern: <code class="language-plaintext highlighter-rouge">https://ddev-web--workspace-name--owner.coder.example.com/</code></p>
+
+<p><strong>Via CLI Port Forward:</strong></p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Forward port to your local machine</span>
+coder port-forward my-first-workspace <span class="nt">--tcp</span> 8080:80
+
+<span class="c"># Then access in your browser:</span>
+<span class="c"># http://localhost:8080</span>
+</code></pre></div></div>
+
+<p><strong>Check DDEV status:</strong></p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ddev describe
+<span class="c"># Shows project details and status</span>
+<span class="c"># Note: URLs shown by ddev describe won't work - use Coder's forwarded URLs instead</span>
+</code></pre></div></div>
+
+<h2 id="step-7-make-changes-and-test">Step 7: Make Changes and Test</h2>
+
+<h3 id="edit-files">Edit Files</h3>
+
+<p><strong>Via VS Code for Web:</strong></p>
+<ol>
+  <li>Open VS Code (Apps → VS Code in Coder UI)</li>
+  <li>Navigate to <code class="language-plaintext highlighter-rouge">~/projects/my-site</code></li>
+  <li>Edit files normally</li>
+  <li>Changes are saved automatically</li>
+</ol>
+
+<p><strong>Via SSH and vim:</strong></p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>coder ssh my-first-workspace
+<span class="nb">cd</span> ~/projects/my-site
+vim web/index.php
+</code></pre></div></div>
+
+<h3 id="reload-and-test">Reload and Test</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Refresh your browser to see changes</span>
+<span class="c"># Or use DDEV commands:</span>
+
+ddev describe    <span class="c"># Show project info</span>
+ddev logs        <span class="c"># View container logs</span>
+ddev <span class="nb">exec</span> &lt;cmd&gt;  <span class="c"># Run command in web container</span>
+</code></pre></div></div>
+
+<h3 id="common-ddev-commands">Common DDEV Commands</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Start project</span>
+ddev start
+
+<span class="c"># Stop project</span>
+ddev stop
+
+<span class="c"># Restart project</span>
+ddev restart
+
+<span class="c"># View status</span>
+ddev describe
+
+<span class="c"># View logs</span>
+ddev logs
+
+<span class="c"># SSH into web container</span>
+ddev ssh
+
+<span class="c"># Run Composer</span>
+ddev composer <span class="nb">install</span>
+
+<span class="c"># Run npm</span>
+ddev npm <span class="nb">install
+</span>ddev npm run dev
+
+<span class="c"># Import database</span>
+ddev import-db <span class="nt">--file</span><span class="o">=</span>dump.sql.gz
+
+<span class="c"># Export database</span>
+ddev export-db <span class="nt">--file</span><span class="o">=</span>dump.sql.gz
+
+<span class="c"># View all commands</span>
+ddev <span class="nb">help</span>
+</code></pre></div></div>
+
+<h2 id="step-8-working-with-git">Step 8: Working with Git</h2>
+
+<h3 id="configure-git">Configure Git</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Inside workspace</span>
+git config <span class="nt">--global</span> user.name <span class="s2">"Your Name"</span>
+git config <span class="nt">--global</span> user.email <span class="s2">"your.email@example.com"</span>
+</code></pre></div></div>
+
+<h3 id="set-up-git-ssh-for-private-repositories">Set Up Git SSH for Private Repositories</h3>
+
+<p>To clone private repositories or push to GitHub/GitLab/etc, you need to add your Coder public key to your Git host.</p>
+
+<p><strong>Step 1: Get your Coder public key</strong></p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Inside workspace (via SSH or VS Code terminal)</span>
+coder publickey
+
+<span class="c"># This shows your Coder-managed public key</span>
+<span class="c"># Copy the entire output (starts with ssh-ed25519 or ssh-rsa)</span>
+</code></pre></div></div>
+
+<p><strong>Step 2: Add key to your Git host</strong></p>
+
+<p><strong>For GitHub:</strong></p>
+<ol>
+  <li>Go to https://github.com/settings/keys</li>
+  <li>Click <strong>New SSH key</strong></li>
+  <li>Paste your Coder public key</li>
+  <li>Click <strong>Add SSH key</strong></li>
+</ol>
+
+<p><strong>For GitLab:</strong></p>
+<ol>
+  <li>Go to https://gitlab.com/-/profile/keys</li>
+  <li>Paste your Coder public key</li>
+  <li>Click <strong>Add key</strong></li>
+</ol>
+
+<p><strong>For Bitbucket:</strong></p>
+<ol>
+  <li>Go to https://bitbucket.org/account/settings/ssh-keys/</li>
+  <li>Click <strong>Add key</strong></li>
+  <li>Paste your Coder public key</li>
+</ol>
+
+<p><strong>Step 3: Test SSH connection</strong></p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Test GitHub</span>
+ssh <span class="nt">-T</span> git@github.com
+<span class="c"># Should say: "Hi username! You've successfully authenticated..."</span>
+
+<span class="c"># Test GitLab</span>
+ssh <span class="nt">-T</span> git@gitlab.com
+<span class="c"># Should say: "Welcome to GitLab, @username!"</span>
+</code></pre></div></div>
+
+<h3 id="clone-and-push">Clone and Push</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Clone private repository</span>
+<span class="nb">cd</span> ~/projects
+git clone git@github.com:username/private-repo.git
+
+<span class="c"># Make changes</span>
+<span class="nb">cd </span>private-repo
+<span class="c"># ... edit files ...</span>
+
+<span class="c"># Commit and push</span>
+git add <span class="nb">.</span>
+git commit <span class="nt">-m</span> <span class="s2">"Update from Coder workspace"</span>
+git push
+</code></pre></div></div>
+
+<p><strong>How it works:</strong> Coder’s GitSSH wrapper automatically uses your Coder-managed SSH key for all Git operations. You don’t need to manage SSH keys inside the workspace.</p>
+
+<h2 id="managing-your-workspace">Managing Your Workspace</h2>
+
+<h3 id="stop-workspace-save-costs">Stop Workspace (Save Costs)</h3>
+
+<p>When not actively developing:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Via CLI</span>
+coder stop my-first-workspace
+
+<span class="c"># Via UI: Click "Stop" button on workspace</span>
+</code></pre></div></div>
+
+<p><strong>What happens when stopped:</strong></p>
+<ul>
+  <li>Workspace container stops</li>
+  <li>All files in <code class="language-plaintext highlighter-rouge">/home/coder</code> are preserved</li>
+  <li>DDEV projects are preserved</li>
+  <li>Billing/resource usage stops</li>
+</ul>
+
+<h3 id="start-workspace">Start Workspace</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Via CLI</span>
+coder start my-first-workspace
+
+<span class="c"># Via UI: Click "Start" button on workspace</span>
+</code></pre></div></div>
+
+<p><strong>Startup time:</strong> faster than initial create (no reinstall needed)</p>
+
+<p><strong>After starting:</strong></p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># SSH in</span>
+coder ssh my-first-workspace
+
+<span class="c"># Restart DDEV projects</span>
+<span class="nb">cd</span> ~/projects/my-site
+ddev start
+</code></pre></div></div>
+
+<h3 id="delete-workspace-permanent">Delete Workspace (Permanent)</h3>
+
+<p>⚠️ <strong>Warning:</strong> This deletes all data permanently!</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Via CLI</span>
+coder delete my-first-workspace
+
+<span class="c"># Via UI: Click "Delete" button, confirm</span>
+</code></pre></div></div>
+
+<p><strong>What gets deleted:</strong></p>
+<ul>
+  <li>Workspace container</li>
+  <li>All files in <code class="language-plaintext highlighter-rouge">/home/coder</code></li>
+  <li>All DDEV projects and databases</li>
+  <li>Docker images and volumes inside workspace</li>
+</ul>
+
+<p><strong>Before deleting:</strong></p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Backup important data</span>
+<span class="nb">cd</span> ~/projects
+<span class="nb">tar</span> <span class="nt">-czf</span> backup.tar.gz my-site/
+<span class="c"># Download via VS Code or scp</span>
+</code></pre></div></div>
+
+<h2 id="troubleshooting">Troubleshooting</h2>
+
+<h3 id="workspace-wont-start">Workspace Won’t Start</h3>
+
+<p><strong>Check status:</strong></p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>coder list
+<span class="c"># If stuck in "Starting", check logs:</span>
+coder logs my-first-workspace
+</code></pre></div></div>
+
+<p><strong>Common causes:</strong></p>
+<ul>
+  <li>Template not deployed correctly (contact admin)</li>
+  <li>Resource limits exceeded (contact admin)</li>
+  <li>Sysbox runtime not installed on host (contact admin)</li>
+</ul>
+
+<h3 id="docker-not-working">Docker Not Working</h3>
+
+<p><strong>Symptom:</strong> <code class="language-plaintext highlighter-rouge">Cannot connect to Docker daemon</code></p>
+
+<p><strong>Solution:</strong></p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Check Docker service</span>
+systemctl status docker
+
+<span class="c"># Restart Docker</span>
+<span class="nb">sudo </span>systemctl restart docker
+
+<span class="c"># Wait a few seconds, then test</span>
+docker ps
+</code></pre></div></div>
+
+<p>If still broken, restart workspace: <code class="language-plaintext highlighter-rouge">coder restart my-first-workspace</code></p>
+
+<h3 id="ddev-wont-start">DDEV Won’t Start</h3>
+
+<p><strong>Symptom:</strong> <code class="language-plaintext highlighter-rouge">ddev start</code> fails</p>
+
+<p><strong>Check Docker first:</strong></p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker ps
+<span class="c"># If this fails, fix Docker before DDEV</span>
+</code></pre></div></div>
+
+<p><strong>Common DDEV issues:</strong></p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Reset DDEV project</span>
+ddev poweroff
+ddev start
+
+<span class="c"># Or delete and recreate</span>
+ddev delete <span class="nt">--omit-snapshot</span>
+ddev config <span class="nt">--auto</span>
+ddev start
+</code></pre></div></div>
+
+<h3 id="cant-access-ddev-project">Can’t Access DDEV Project</h3>
+
+<p><strong>Symptom:</strong> Port forwarding shows ports but URLs don’t load</p>
+
+<p><strong>Check:</strong></p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Inside workspace</span>
+ddev describe
+curl localhost:80
+<span class="c"># Should return HTML</span>
+</code></pre></div></div>
+
+<p><strong>Solution:</strong></p>
+<ul>
+  <li>Use Coder’s port forwarding links (not DDEV URLs)</li>
+  <li>Find port URLs in the <strong>Ports</strong> section of Coder web UI</li>
+  <li>DDEV’s URLs (*.ddev.site) won’t work in Coder</li>
+</ul>
+
+<h3 id="git-ssh-not-working">Git SSH Not Working</h3>
+
+<p><strong>Symptom:</strong> <code class="language-plaintext highlighter-rouge">Permission denied (publickey)</code> when cloning</p>
+
+<p><strong>Solution:</strong></p>
+<ol>
+  <li>Get your Coder public key: <code class="language-plaintext highlighter-rouge">coder publickey</code></li>
+  <li>Add that key to GitHub/GitLab (Settings → SSH Keys)</li>
+  <li>Test: <code class="language-plaintext highlighter-rouge">ssh -T git@github.com</code></li>
+  <li>If still failing, regenerate: <code class="language-plaintext highlighter-rouge">coder publickey --reset</code> and add new key to Git host</li>
+</ol>
+
+<h3 id="out-of-disk-space">Out of Disk Space</h3>
+
+<p><strong>Symptom:</strong> <code class="language-plaintext highlighter-rouge">No space left on device</code></p>
+
+<p><strong>Solution:</strong></p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Clean Docker images and volumes</span>
+docker system prune <span class="nt">-a</span> <span class="nt">--volumes</span> <span class="nt">-f</span>
+
+<span class="c"># Check disk usage</span>
+<span class="nb">df</span> <span class="nt">-h</span>
+<span class="nb">du</span> <span class="nt">-sh</span> ~/projects/<span class="k">*</span>
+
+<span class="c"># Delete unused projects</span>
+<span class="nb">rm</span> <span class="nt">-rf</span> ~/projects/old-project
+</code></pre></div></div>
+
+<h3 id="workspace-is-slow">Workspace is Slow</h3>
+
+<p><strong>Check resources:</strong></p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Inside workspace</span>
+top        <span class="c"># Check CPU usage</span>
+free <span class="nt">-h</span>    <span class="c"># Check RAM usage</span>
+docker stats  <span class="c"># Check Docker container resources</span>
+</code></pre></div></div>
+
+<p><strong>Solution:</strong></p>
+<ul>
+  <li>Stop unused DDEV projects: <code class="language-plaintext highlighter-rouge">ddev stop --all</code></li>
+  <li>Increase workspace resources (delete and recreate with higher CPU/RAM)</li>
+  <li>Contact admin to increase default resources</li>
+</ul>
+
+<h2 id="next-steps">Next Steps</h2>
+
+<h3 id="learn-more-about-ddev">Learn More About DDEV</h3>
+
+<ul>
+  <li><strong><a href="https://docs.ddev.com/">DDEV Documentation</a></strong> - Full DDEV docs</li>
+  <li><strong><a href="https://docs.ddev.com/en/stable/users/quickstart/">DDEV Quickstart</a></strong> - DDEV basics</li>
+  <li><strong><a href="https://docs.ddev.com/en/stable/users/usage/commands/">DDEV Commands</a></strong> - Command reference</li>
+</ul>
+
+<h3 id="learn-more-about-coder">Learn More About Coder</h3>
+
+<ul>
+  <li><strong><a href="/user/using-workspaces.html">Using Workspaces</a></strong> - Daily workflows and tips</li>
+  <li><strong><a href="https://coder.com/docs/cli">Coder CLI</a></strong> - CLI reference</li>
+  <li><strong><a href="https://coder.com/docs/ides/web-ides">VS Code for Web</a></strong> - IDE features</li>
+</ul>
+
+<h3 id="try-more-project-types">Try More Project Types</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># WordPress</span>
+ddev config <span class="nt">--project-type</span><span class="o">=</span>wordpress <span class="nt">--docroot</span><span class="o">=</span>web
+ddev composer create roots/bedrock
+
+<span class="c"># Drupal</span>
+ddev config <span class="nt">--project-type</span><span class="o">=</span>drupal <span class="nt">--docroot</span><span class="o">=</span>web
+ddev composer create drupal/recommended-project
+
+<span class="c"># Laravel</span>
+ddev config <span class="nt">--project-type</span><span class="o">=</span>laravel <span class="nt">--docroot</span><span class="o">=</span>public
+ddev composer create laravel/laravel
+
+<span class="c"># Node.js (generic)</span>
+ddev config <span class="nt">--project-type</span><span class="o">=</span>php <span class="nt">--docroot</span><span class="o">=</span><span class="nb">.</span>
+<span class="nb">echo</span> <span class="s2">"console.log('Hello');"</span> <span class="o">&gt;</span> server.js
+node server.js
+
+<span class="c"># Static site</span>
+ddev config <span class="nt">--project-type</span><span class="o">=</span>php <span class="nt">--docroot</span><span class="o">=</span><span class="nb">.</span>
+<span class="nb">echo</span> <span class="s2">"&lt;h1&gt;Hello World&lt;/h1&gt;"</span> <span class="o">&gt;</span> index.html
+ddev start
+</code></pre></div></div>
+
+<h3 id="customize-your-workspace">Customize Your Workspace</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Install additional tools</span>
+<span class="nb">sudo </span>apt-get update
+<span class="nb">sudo </span>apt-get <span class="nb">install</span> &lt;package&gt;
+
+<span class="c"># Install global npm packages</span>
+npm <span class="nb">install</span> <span class="nt">-g</span> &lt;package&gt;
+
+<span class="c"># Add shell aliases</span>
+<span class="nb">echo</span> <span class="s1">'alias ll="ls -la"'</span> <span class="o">&gt;&gt;</span> ~/.bashrc
+<span class="nb">source</span> ~/.bashrc
+</code></pre></div></div>
+
+<p><strong>Note:</strong> Changes to system packages are lost when workspace is deleted. For permanent changes, ask admin to modify Docker image.</p>
+
+<h2 id="tips-and-best-practices">Tips and Best Practices</h2>
+
+<h3 id="file-organization">File Organization</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>~/projects/              <span class="c"># All DDEV projects here</span>
+  ├── project1/
+  ├── project2/
+  └── project3/
+~/.ddev/                 <span class="c"># DDEV global config (auto-created)</span>
+~/.ssh/                  <span class="c"># SSH keys (managed by Coder)</span>
+</code></pre></div></div>
+
+<h3 id="resource-management">Resource Management</h3>
+
+<ul>
+  <li><strong>Stop workspaces</strong> when not in use (saves costs)</li>
+  <li><strong>Stop unused DDEV projects</strong>: <code class="language-plaintext highlighter-rouge">ddev stop --all</code></li>
+  <li><strong>Clean Docker regularly</strong>: <code class="language-plaintext highlighter-rouge">docker system prune -a</code></li>
+</ul>
+
+<h3 id="backup-important-data">Backup Important Data</h3>
+
+<ul>
+  <li><strong>Commit to Git</strong> regularly (safest backup)</li>
+  <li><strong>Export databases</strong>: <code class="language-plaintext highlighter-rouge">ddev export-db --file=backup.sql.gz</code></li>
+  <li><strong>Download files</strong> via VS Code or <code class="language-plaintext highlighter-rouge">scp</code> (after <code class="language-plaintext highlighter-rouge">coder config-ssh</code>)</li>
+</ul>
+
+<h3 id="performance">Performance</h3>
+
+<ul>
+  <li><strong>Use smaller workspaces</strong> for simple projects (2 CPU, 4GB RAM)</li>
+  <li><strong>Increase resources</strong> for large projects (8 CPU, 16GB RAM)</li>
+  <li><strong>Stop background services</strong> when not needed</li>
+</ul>
+
+<h2 id="getting-help">Getting Help</h2>
+
+<h3 id="documentation">Documentation</h3>
+
+<ul>
+  <li><a href="/user/using-workspaces.html">Using Workspaces</a> - Advanced workflows</li>
+  <li><a href="/admin/troubleshooting.html">Troubleshooting Guide</a> - Detailed debugging</li>
+  <li><a href="https://docs.ddev.com/">DDEV Docs</a> - DDEV reference</li>
+</ul>
+
+<h3 id="support">Support</h3>
+
+<ul>
+  <li><strong>Ask your administrator</strong> for Coder-specific issues</li>
+  <li><strong>GitHub Issues</strong>: <a href="https://github.com/ddev/coder-ddev/issues">Report bugs</a></li>
+  <li><strong>DDEV Community</strong>: <a href="https://discord.gg/hCZFfAMc5k">DDEV Discord</a></li>
+  <li><strong>Coder Community</strong>: <a href="https://discord.gg/coder">Coder Discord</a></li>
+</ul>
+
+<h3 id="before-asking-for-help">Before Asking for Help</h3>
+
+<ol>
+  <li>Check this guide’s <a href="#troubleshooting">Troubleshooting</a> section</li>
+  <li>Review <a href="/admin/troubleshooting.html">Troubleshooting Guide</a></li>
+  <li>Collect error messages and logs</li>
+  <li>Try restarting workspace: <code class="language-plaintext highlighter-rouge">coder restart my-first-workspace</code></li>
+</ol>
+
+<hr />
+
+<p><strong>Congratulations!</strong> You’ve created your first DDEV workspace. Happy coding! 🎉</p>
+
+  </main>
+</body>
+</html>

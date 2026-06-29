@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Comparison to Local DDEV — DDEV Coder Workspaces</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0e0e10;
+      color: #e0e0e0;
+      line-height: 1.7;
+    }
+
+    nav {
+      padding: 1rem 2rem;
+      border-bottom: 1px solid #1c1c1e;
+    }
+
+    nav a {
+      color: #a78bfa;
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+
+    nav a:hover { text-decoration: underline; }
+
+    main {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 3rem 2rem 6rem;
+    }
+
+    h1 { font-size: 2rem; font-weight: 700; margin-bottom: 1rem; letter-spacing: -0.02em; }
+    h2 { font-size: 1.35rem; font-weight: 600; margin: 2.5rem 0 0.75rem; color: #e8e8e8; }
+    h3 { font-size: 1.1rem; font-weight: 600; margin: 1.75rem 0 0.5rem; color: #ddd; }
+
+    p { margin-bottom: 1rem; color: #ccc; }
+
+    a { color: #a78bfa; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    ul, ol { margin: 0 0 1rem 1.5rem; color: #ccc; }
+    li { margin-bottom: 0.35rem; }
+
+    code {
+      background: #1a1a1f;
+      border: 1px solid #2a2a30;
+      padding: 0.15em 0.45em;
+      border-radius: 4px;
+      font-family: 'SF Mono', Consolas, 'Courier New', monospace;
+      font-size: 0.87em;
+      color: #c4b5fd;
+    }
+
+    pre {
+      background: #111115;
+      border: 1px solid #2a2a30;
+      border-radius: 8px;
+      padding: 1.25rem 1.5rem;
+      overflow-x: auto;
+      margin-bottom: 1.25rem;
+    }
+
+    pre code {
+      background: none;
+      border: none;
+      padding: 0;
+      font-size: 0.9rem;
+      color: #c9d1d9;
+    }
+
+    hr {
+      border: none;
+      border-top: 1px solid #1c1c1e;
+      margin: 2rem 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 1.25rem;
+      font-size: 0.95rem;
+    }
+
+    th {
+      text-align: left;
+      padding: 0.6rem 0.75rem;
+      border-bottom: 2px solid #2a2a30;
+      color: #999;
+      font-weight: 600;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    td {
+      padding: 0.6rem 0.75rem;
+      border-bottom: 1px solid #1c1c1e;
+      color: #ccc;
+    }
+
+    strong { color: #e8e8e8; }
+
+    blockquote {
+      border-left: 3px solid #3b2f6e;
+      padding-left: 1rem;
+      color: #999;
+      margin-bottom: 1rem;
+    }
+
+    img { max-width: 100%; }
+
+    /* Skip link — visually hidden until focused; lets keyboard users bypass the site nav.
+       WCAG 2.4.1 Bypass Blocks (Level A) */
+    .skip-link {
+      position: absolute;
+      top: -100%;
+      left: 1rem;
+      background: #7c5af0;
+      color: #fff;
+      padding: 0.5rem 1rem;
+      border-radius: 0 0 6px 6px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-decoration: none;
+      z-index: 999;
+    }
+    .skip-link:focus { top: 0; }
+  </style>
+</head>
+<body>
+  <!-- WCAG 2.4.1 Bypass Blocks (Level A): skip link lets keyboard users jump past the site nav -->
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <!-- aria-label distinguishes this nav landmark when multiple <nav> elements exist on a page.
+       WCAG 2.4.6 Headings and Labels (Level AA) -->
+  <nav aria-label="Site">
+    <a href="/">← DDEV Coder Workspaces</a>
+  </nav>
+  <!-- id="main-content" is the skip link target (WCAG 2.4.1) -->
+  <main id="main-content">
+    <h1 id="comparison-to-local-ddev">Comparison to Local DDEV</h1>
+
+<p>This guide is for teams and developers familiar with local DDEV who are evaluating this Coder template or planning migration.</p>
+
+<h2 id="executive-summary">Executive Summary</h2>
+
+<p><strong>Local DDEV:</strong></p>
+<ul>
+  <li>Runs on your laptop/desktop</li>
+  <li>Uses local Docker Desktop or Docker Engine</li>
+  <li>Direct filesystem access</li>
+  <li>Local port binding (*.ddev.site domains)</li>
+  <li>No authentication, single user</li>
+</ul>
+
+<p><strong>DDEV in Coder:</strong></p>
+<ul>
+  <li>Runs in cloud workspace (remote container)</li>
+  <li>Uses Docker-in-Docker via Sysbox runtime</li>
+  <li>Remote filesystem (persistent volumes)</li>
+  <li>Port forwarding via Coder proxy</li>
+  <li>Multi-user, authenticated, team-managed</li>
+</ul>
+
+<h2 id="architecture-comparison">Architecture Comparison</h2>
+
+<h3 id="local-ddev-architecture">Local DDEV Architecture</h3>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┌─────────────────────────────────┐
+│ Your Local Machine              │
+│                                 │
+│ ┌─────────────────────────────┐ │
+│ │ Docker Desktop / Engine     │ │
+│ │ ┌─────────────────────────┐ │ │
+│ │ │ DDEV Containers         │ │ │
+│ │ │ - Web (PHP/Node)        │ │ │
+│ │ │ - Database              │ │ │
+│ │ │ - Router (*.ddev.site)  │ │ │
+│ │ └─────────────────────────┘ │ │
+│ └─────────────────────────────┘ │
+│                                 │
+│ Local filesystem                │
+│ ~/projects/my-site/             │
+└─────────────────────────────────┘
+</code></pre></div></div>
+
+<p><strong>Key points:</strong></p>
+<ul>
+  <li>DDEV talks directly to local Docker</li>
+  <li>Project files on local filesystem</li>
+  <li><code class="language-plaintext highlighter-rouge">*.ddev.site</code> domains via ddev-router</li>
+  <li>No network latency</li>
+</ul>
+
+<h3 id="ddev-in-coder-architecture">DDEV in Coder Architecture</h3>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┌─────────────────────────────────────────┐
+│ Coder Workspace (Cloud Container)      │
+│                                         │
+│ ┌─────────────────────────────────────┐ │
+│ │ Docker Daemon (Sysbox)              │ │
+│ │ ┌─────────────────────────────────┐ │ │
+│ │ │ DDEV Containers                 │ │ │
+│ │ │ - Web (PHP/Node)                │ │ │
+│ │ │ - Database                      │ │ │
+│ │ │ (No router, port forward)       │ │ │
+│ │ └─────────────────────────────────┘ │ │
+│ └─────────────────────────────────────┘ │
+│                                         │
+│ /home/coder/ (persistent volume)       │
+│ └── projects/my-site/                  │
+└─────────────────────────────────────────┘
+         │
+         ▼ (Coder proxy)
+┌─────────────────────────────────────────┐
+│ Your Browser                            │
+│ - VS Code for Web                       │
+│ - Forwarded ports (HTTP/HTTPS)          │
+└─────────────────────────────────────────┘
+</code></pre></div></div>
+
+<p><strong>Key differences:</strong></p>
+<ul>
+  <li>Nested Docker (Docker-in-Docker via Sysbox)</li>
+  <li>Remote filesystem (persistent across sessions)</li>
+  <li>Port forwarding instead of *.ddev.site</li>
+  <li>Network latency for file operations</li>
+</ul>
+
+<h2 id="detailed-differences">Detailed Differences</h2>
+
+<h3 id="1-docker-runtime">1. Docker Runtime</h3>
+
+<p><strong>Local DDEV:</strong></p>
+<ul>
+  <li>Uses Docker Desktop (macOS/Windows) or Docker Engine (Linux)</li>
+  <li>DDEV talks to Docker socket: <code class="language-plaintext highlighter-rouge">/var/run/docker.sock</code></li>
+  <li>Privileged operations allowed</li>
+</ul>
+
+<p><strong>Coder DDEV:</strong></p>
+<ul>
+  <li>Uses Docker-in-Docker via Sysbox runtime</li>
+  <li>Each workspace has isolated Docker daemon</li>
+  <li>Sysbox provides security without <code class="language-plaintext highlighter-rouge">--privileged</code></li>
+  <li>Docker data in dedicated volume: <code class="language-plaintext highlighter-rouge">/var/lib/docker</code></li>
+</ul>
+
+<p><strong>Implications:</strong></p>
+<ul>
+  <li>✅ Better isolation (workspaces can’t interfere)</li>
+  <li>✅ Multi-user safe (no shared Docker daemon)</li>
+  <li>⚠️ Slightly slower Docker operations (nested overhead)</li>
+  <li>⚠️ Can’t access host Docker from workspace</li>
+</ul>
+
+<h3 id="2-networking">2. Networking</h3>
+
+<p><strong>Local DDEV:</strong></p>
+<ul>
+  <li>Uses <code class="language-plaintext highlighter-rouge">ddev-router</code> container for *.ddev.site domains</li>
+  <li>Direct port binding to localhost</li>
+  <li>mDNS for .ddev.site resolution</li>
+  <li>LAN access possible (optional)</li>
+</ul>
+
+<p><strong>Coder DDEV:</strong></p>
+<ul>
+  <li>No ddev-router (not needed)</li>
+  <li>Port forwarding via Coder proxy</li>
+  <li>Access via DDEV Web app URL: <code class="language-plaintext highlighter-rouge">https://ddev-web--workspace--owner.coder.example.com/</code></li>
+  <li>*.ddev.site URLs don’t work</li>
+</ul>
+
+<p><strong>Migration:</strong></p>
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Local .ddev/config.yaml (not needed in Coder)</span>
+<span class="na">router_http_port</span><span class="pi">:</span> <span class="s2">"</span><span class="s">80"</span>
+<span class="na">router_https_port</span><span class="pi">:</span> <span class="s2">"</span><span class="s">443"</span>
+<span class="na">use_dns_when_possible</span><span class="pi">:</span> <span class="no">true</span>
+
+<span class="c1"># Coder .ddev/config.yaml (simplified)</span>
+<span class="c1"># router_disabled: true  # Optional</span>
+</code></pre></div></div>
+
+<p><strong>Access patterns:</strong></p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Local DDEV</span>
+curl https://my-site.ddev.site
+
+<span class="c"># Coder DDEV</span>
+<span class="c"># Use Coder UI port forwarding or:</span>
+coder port-forward my-workspace <span class="nt">--tcp</span> 80:80
+curl http://localhost:80
+</code></pre></div></div>
+
+<h3 id="3-filesystem">3. Filesystem</h3>
+
+<p><strong>Local DDEV:</strong></p>
+<ul>
+  <li>Project files on local filesystem (e.g., <code class="language-plaintext highlighter-rouge">~/projects/my-site</code>)</li>
+  <li>Mounted into containers via Docker bind mounts</li>
+  <li>Fast file operations (native filesystem)</li>
+  <li>NFS option for macOS (optional)</li>
+</ul>
+
+<p><strong>Coder DDEV:</strong></p>
+<ul>
+  <li>Project files on remote volume (<code class="language-plaintext highlighter-rouge">/home/coder/projects/my-site</code>)</li>
+  <li>Persistent across workspace restarts</li>
+  <li>Mounted into DDEV containers (nested mount)</li>
+  <li>Network latency for file operations</li>
+</ul>
+
+<p><strong>Performance comparison:</strong>
+| Operation | Local DDEV | Coder DDEV |
+|———–|————|————|
+| Read file | ~1ms | ~5-20ms |
+| Write file | ~1ms | ~10-50ms |
+| Composer install | Fast | Slower |
+| npm install | Fast | Slower |
+| Database query | Fast | Similar |
+| Page render | Fast | Similar |</p>
+
+<p><strong>Optimization:</strong></p>
+<ul>
+  <li>Use NFS mount in Coder: <code class="language-plaintext highlighter-rouge">nfs_mount_enabled: true</code> in <code class="language-plaintext highlighter-rouge">.ddev/config.yaml</code></li>
+  <li>Disable Xdebug when not needed: <code class="language-plaintext highlighter-rouge">ddev xdebug off</code></li>
+  <li>Use Docker layer caching for builds</li>
+</ul>
+
+<h3 id="4-ide-and-development-environment">4. IDE and Development Environment</h3>
+
+<p><strong>Local DDEV:</strong></p>
+<ul>
+  <li>Desktop IDE (VS Code, PHPStorm, Sublime)</li>
+  <li>Direct filesystem access</li>
+  <li>Local terminal</li>
+  <li>Native performance</li>
+</ul>
+
+<p><strong>Coder DDEV:</strong></p>
+<ul>
+  <li>VS Code for Web (browser-based)</li>
+  <li>Remote filesystem (via Coder agent)</li>
+  <li>Remote terminal (via SSH or VS Code)</li>
+  <li>Network latency for file operations</li>
+</ul>
+
+<p><strong>Desktop IDE with Coder:</strong></p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Configure SSH</span>
+coder config-ssh
+
+<span class="c"># VS Code Remote-SSH</span>
+<span class="c"># Connect to: coder.my-workspace</span>
+
+<span class="c"># PHPStorm</span>
+<span class="c"># Tools → Deployment → Add Server</span>
+<span class="c"># Type: SFTP, Host: coder.my-workspace (from SSH config)</span>
+</code></pre></div></div>
+
+<p><strong>Tradeoffs:</strong>
+| Aspect | Desktop IDE + Local DDEV | VS Code Web + Coder DDEV |
+|——–|————————–|————————–|
+| Latency | None | 10-100ms |
+| Extensions | All available | Most available |
+| GPU features | Full support | Limited |
+| Offline work | Yes | No |
+| Setup time | Manual Docker install | Zero (pre-configured) |
+| Team consistency | Varies | Identical |</p>
+
+<h3 id="5-team-collaboration">5. Team Collaboration</h3>
+
+<p><strong>Local DDEV:</strong></p>
+<ul>
+  <li>Each developer has own setup</li>
+  <li>Configuration drift possible</li>
+  <li>Manual environment setup (documentation)</li>
+  <li>No centralized management</li>
+</ul>
+
+<p><strong>Coder DDEV:</strong></p>
+<ul>
+  <li>Identical environments for all users</li>
+  <li>Centralized template management</li>
+  <li>Zero-setup onboarding (create workspace)</li>
+  <li>Admin controls resources, versions</li>
+</ul>
+
+<p><strong>Example: Onboarding time</strong></p>
+
+<p><strong>Local DDEV:</strong></p>
+<ol>
+  <li>Install Docker Desktop (5-10 min)</li>
+  <li>Install DDEV (5 min)</li>
+  <li>Install IDE (5-10 min)</li>
+  <li>Clone repository (5 min)</li>
+  <li>Install dependencies (10-30 min)</li>
+  <li>Configure environment (10-30 min)</li>
+  <li>Troubleshoot issues (0-120 min)</li>
+</ol>
+
+<p><strong>Total: 40 minutes to 3+ hours</strong></p>
+
+<p><strong>Coder DDEV:</strong></p>
+<ol>
+  <li>Get Coder credentials (1 min)</li>
+  <li>Create workspace (2 min)</li>
+  <li>Clone repository (5 min)</li>
+  <li>Start DDEV (2 min)</li>
+</ol>
+
+<p><strong>Total: 10 minutes</strong></p>
+
+<h3 id="6-resource-management">6. Resource Management</h3>
+
+<p><strong>Local DDEV:</strong></p>
+<ul>
+  <li>Uses local machine resources (RAM, CPU, disk)</li>
+  <li>Limited by laptop/desktop specs</li>
+  <li>Must manage Docker resource limits</li>
+  <li>Affects battery life (laptops)</li>
+</ul>
+
+<p><strong>Coder DDEV:</strong></p>
+<ul>
+  <li>Uses cloud resources (configurable)</li>
+  <li>Scalable per project needs</li>
+  <li>Doesn’t affect local machine</li>
+  <li>Can use powerful cloud machines for heavy workloads</li>
+</ul>
+
+<p><strong>Example configurations:</strong></p>
+
+<p><strong>Local laptop:</strong></p>
+<ul>
+  <li>16GB RAM, 4-core CPU</li>
+  <li>Supports 2-3 DDEV projects simultaneously</li>
+  <li>Docker Desktop limit: 8GB RAM, 2 cores</li>
+</ul>
+
+<p><strong>Coder workspace:</strong></p>
+<ul>
+  <li>Default: 8GB RAM, 4 cores</li>
+  <li>Configurable: up to 64GB RAM, 32 cores</li>
+  <li>Dedicated Docker volume (no local disk impact)</li>
+  <li>Stop workspace when not in use (save costs)</li>
+</ul>
+
+<h3 id="7-persistence-and-backup">7. Persistence and Backup</h3>
+
+<p><strong>Local DDEV:</strong></p>
+<ul>
+  <li>Projects on local disk</li>
+  <li>Time Machine / manual backups</li>
+  <li>Git for code (must push)</li>
+  <li>Database snapshots: <code class="language-plaintext highlighter-rouge">ddev snapshot</code></li>
+</ul>
+
+<p><strong>Coder DDEV:</strong></p>
+<ul>
+  <li>Projects on persistent remote volume</li>
+  <li>Volume survives workspace stop/restart</li>
+  <li>Git for code (must push)</li>
+  <li>Database snapshots: <code class="language-plaintext highlighter-rouge">ddev snapshot</code> (works same)</li>
+  <li>Admin can backup volumes (host-level)</li>
+</ul>
+
+<p><strong>Data loss scenarios:</strong></p>
+
+<p><strong>Local DDEV:</strong></p>
+<ul>
+  <li>❌ Disk failure (no backup)</li>
+  <li>❌ Laptop stolen/lost</li>
+  <li>✅ Git push before failure</li>
+  <li>⚠️ Database not in Git (use snapshots)</li>
+</ul>
+
+<p><strong>Coder DDEV:</strong></p>
+<ul>
+  <li>✅ Workspace stop/restart (data preserved)</li>
+  <li>✅ Volume backed up (admin configured)</li>
+  <li>❌ Workspace deletion (permanent)</li>
+  <li>⚠️ Database not in Git (use snapshots)</li>
+</ul>
+
+<p><strong>Best practices:</strong></p>
+<ul>
+  <li><strong>Always commit and push code regularly</strong> (both)</li>
+  <li><strong>Use <code class="language-plaintext highlighter-rouge">ddev snapshot</code> before risky operations</strong> (both)</li>
+  <li><strong>Export databases periodically</strong> (both)</li>
+  <li><strong>Don’t store secrets in workspace</strong> (both)</li>
+</ul>
+
+<h2 id="benefits-of-coder-ddev">Benefits of Coder DDEV</h2>
+
+<h3 id="1-team-consistency">1. Team Consistency</h3>
+
+<p><strong>Problem with local DDEV:</strong></p>
+<ul>
+  <li>Developer A: macOS, Docker Desktop, DDEV 1.23, PHP 8.1</li>
+  <li>Developer B: Windows, Docker Desktop, DDEV 1.24, PHP 8.2</li>
+  <li>Developer C: Linux, Docker Engine, DDEV 1.22, PHP 8.1</li>
+</ul>
+
+<p>Result: “It works on my machine” syndrome.</p>
+
+<p><strong>Solution with Coder:</strong></p>
+<ul>
+  <li>All developers: Ubuntu 24.04, DDEV 1.24.10, PHP 8.1 (same image)</li>
+  <li>Update template → everyone gets update</li>
+  <li>No configuration drift</li>
+</ul>
+
+<h3 id="2-zero-setup-onboarding">2. Zero-Setup Onboarding</h3>
+
+<p><strong>Local DDEV onboarding:</strong></p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Developer's first day</span>
+brew <span class="nb">install </span>docker  <span class="c"># or download Docker Desktop</span>
+<span class="c"># Wait for Docker to install...</span>
+<span class="c"># Configure Docker resources...</span>
+brew <span class="nb">install </span>ddev
+ddev config <span class="nt">--auto</span>
+ddev start
+<span class="c"># Troubleshoot Docker networking issues...</span>
+<span class="c"># Troubleshoot permissions...</span>
+<span class="c"># Troubleshoot port conflicts...</span>
+</code></pre></div></div>
+
+<p><strong>Coder DDEV onboarding:</strong></p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Developer's first day</span>
+coder create <span class="nt">--template</span> user-defined-web my-workspace <span class="nt">--yes</span>
+<span class="c"># Done!</span>
+</code></pre></div></div>
+
+<h3 id="3-powerful-resources">3. Powerful Resources</h3>
+
+<p><strong>Local laptop limitations:</strong></p>
+<ul>
+  <li>Building large Docker images: slow</li>
+  <li>Running multiple projects: swapping</li>
+  <li>Composer/npm with many packages: slow</li>
+  <li>Database imports: slow</li>
+</ul>
+
+<p><strong>Coder workspace:</strong></p>
+<ul>
+  <li>Configurable resources (8GB, 16GB, 32GB RAM)</li>
+  <li>Fast cloud CPUs</li>
+  <li>SSD storage</li>
+  <li>Run intensive tasks without affecting local machine</li>
+</ul>
+
+<h3 id="4-remote-work-friendly">4. Remote Work Friendly</h3>
+
+<p><strong>Local DDEV on weak laptop:</strong></p>
+<ul>
+  <li>Slow Docker performance</li>
+  <li>Limited battery life</li>
+  <li>Can’t work from tablet/Chromebook</li>
+</ul>
+
+<p><strong>Coder DDEV:</strong></p>
+<ul>
+  <li>Access from any device with browser</li>
+  <li>Work from iPad, Chromebook, hotel computer</li>
+  <li>Same performance regardless of device</li>
+</ul>
+
+<h3 id="5-centralized-management">5. Centralized Management</h3>
+
+<p><strong>Admins can:</strong></p>
+<ul>
+  <li>Update DDEV version for all workspaces (rebuild image)</li>
+  <li>Set resource limits (prevent abuse)</li>
+  <li>Backup all workspaces (host-level)</li>
+  <li>Monitor usage and costs</li>
+  <li>Enforce security policies</li>
+</ul>
+
+<p><strong>Not possible with local DDEV.</strong></p>
+
+<h2 id="tradeoffs-of-coder-ddev">Tradeoffs of Coder DDEV</h2>
+
+<h3 id="1-internet-dependency">1. Internet Dependency</h3>
+
+<p><strong>Local DDEV:</strong></p>
+<ul>
+  <li>✅ Works offline (once installed)</li>
+  <li>✅ No network latency</li>
+</ul>
+
+<p><strong>Coder DDEV:</strong></p>
+<ul>
+  <li>❌ Requires internet connection</li>
+  <li>⚠️ Network latency (10-100ms)</li>
+  <li>⚠️ Slow/unreliable internet = bad experience</li>
+</ul>
+
+<p><strong>Mitigation:</strong></p>
+<ul>
+  <li>Use fast internet (50+ Mbps)</li>
+  <li>Deploy Coder close to users (low latency)</li>
+  <li>Cache Docker images in workspace</li>
+</ul>
+
+<h3 id="2-filesystem-performance">2. Filesystem Performance</h3>
+
+<p><strong>Local DDEV:</strong></p>
+<ul>
+  <li>Fast file operations (native filesystem)</li>
+  <li><code class="language-plaintext highlighter-rouge">composer install</code>: 30 seconds</li>
+</ul>
+
+<p><strong>Coder DDEV:</strong></p>
+<ul>
+  <li>Slower file operations (remote volume)</li>
+  <li><code class="language-plaintext highlighter-rouge">composer install</code>: 60-90 seconds</li>
+</ul>
+
+<p><strong>Mitigation:</strong></p>
+<ul>
+  <li>Use NFS: <code class="language-plaintext highlighter-rouge">nfs_mount_enabled: true</code></li>
+  <li>Use Docker layer caching</li>
+  <li>Accept tradeoff for benefits</li>
+</ul>
+
+<h3 id="3-ide-limitations">3. IDE Limitations</h3>
+
+<p><strong>Local DDEV:</strong></p>
+<ul>
+  <li>Full desktop IDE (PHPStorm, VS Code, Sublime)</li>
+  <li>All extensions available</li>
+  <li>Native performance</li>
+</ul>
+
+<p><strong>Coder DDEV:</strong></p>
+<ul>
+  <li>VS Code for Web (most extensions work)</li>
+  <li>Some extensions unavailable (require desktop)</li>
+  <li>Network latency</li>
+</ul>
+
+<p><strong>Mitigation:</strong></p>
+<ul>
+  <li>Use desktop VS Code with Remote-SSH</li>
+  <li>Use PHPStorm with SFTP deployment</li>
+  <li>Most developers adapt to VS Code for Web</li>
+</ul>
+
+<h3 id="4-ddevsite-urls-dont-work">4. *.ddev.site URLs Don’t Work</h3>
+
+<p><strong>Local DDEV:</strong></p>
+<ul>
+  <li>Access via: <code class="language-plaintext highlighter-rouge">https://my-site.ddev.site</code></li>
+  <li>Multiple projects: <code class="language-plaintext highlighter-rouge">https://site1.ddev.site</code>, <code class="language-plaintext highlighter-rouge">https://site2.ddev.site</code></li>
+</ul>
+
+<p><strong>Coder DDEV:</strong></p>
+<ul>
+  <li>Access via port forwarding: <code class="language-plaintext highlighter-rouge">https://coder.example.com/port/12345</code></li>
+  <li>Multiple projects: different ports</li>
+</ul>
+
+<p><strong>Mitigation:</strong></p>
+<ul>
+  <li>Use Coder UI to find port links (bookmark them)</li>
+  <li>Configure custom domains (admin)</li>
+  <li>Accept tradeoff for remote access benefits</li>
+</ul>
+
+<h3 id="5-cost-considerations">5. Cost Considerations</h3>
+
+<p><strong>Local DDEV:</strong></p>
+<ul>
+  <li>Free (uses your hardware)</li>
+  <li>One-time laptop/desktop cost</li>
+</ul>
+
+<p><strong>Coder DDEV:</strong></p>
+<ul>
+  <li>Cloud compute costs (per workspace per hour)</li>
+  <li>Storage costs (per GB per month)</li>
+</ul>
+
+<p><strong>Example costs</strong> (AWS us-east-1, 2024):</p>
+<ul>
+  <li>4 vCPU, 8GB RAM: ~$0.15/hour = $110/month (24/7)</li>
+  <li>Stop when not in use: ~$30/month (8 hours/day, 5 days/week)</li>
+  <li>Storage (50GB): ~$5/month</li>
+</ul>
+
+<p><strong>Mitigation:</strong></p>
+<ul>
+  <li>Stop workspaces when not in use</li>
+  <li>Use smaller workspaces for simple projects</li>
+  <li>Savings from reduced onboarding time, consistency, IT support</li>
+</ul>
+
+<h2 id="migration-guide">Migration Guide</h2>
+
+<h3 id="for-organizations">For Organizations</h3>
+
+<p><strong>1. Evaluate:</strong></p>
+<ul>
+  <li>Try Coder with 2-3 developers</li>
+  <li>Test typical workflows</li>
+  <li>Measure onboarding time improvement</li>
+  <li>Compare costs vs benefits</li>
+</ul>
+
+<p><strong>2. Plan:</strong></p>
+<ul>
+  <li>Choose cloud provider (AWS, GCP, Azure, on-prem)</li>
+  <li>Install Coder server</li>
+  <li>Install Sysbox on agent nodes</li>
+  <li>Build and deploy user-defined-web template</li>
+</ul>
+
+<p><strong>3. Pilot:</strong></p>
+<ul>
+  <li>Onboard 5-10 developers</li>
+  <li>Collect feedback</li>
+  <li>Iterate on template configuration</li>
+  <li>Document workflows</li>
+</ul>
+
+<p><strong>4. Rollout:</strong></p>
+<ul>
+  <li>Onboard remaining developers</li>
+  <li>Deprecate local DDEV (optional)</li>
+  <li>Monitor usage and costs</li>
+</ul>
+
+<h3 id="for-individual-projects">For Individual Projects</h3>
+
+<p><strong>1. Clone project:</strong></p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># In Coder workspace</span>
+<span class="nb">cd</span> ~/projects
+git clone git@github.com:org/project.git
+<span class="nb">cd </span>project
+</code></pre></div></div>
+
+<p><strong>2. Copy DDEV config:</strong></p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Local machine (if you have custom .ddev/config.yaml)</span>
+scp <span class="nt">-r</span> .ddev my-workspace:~/projects/project/
+
+<span class="c"># Or commit to Git:</span>
+git add .ddev/
+git commit <span class="nt">-m</span> <span class="s2">"Add DDEV config"</span>
+git push
+</code></pre></div></div>
+
+<p><strong>3. Adjust config for Coder:</strong></p>
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># .ddev/config.yaml</span>
+
+<span class="c1"># Remove local-specific settings</span>
+<span class="c1"># router_http_port: "80"  # Not needed in Coder</span>
+<span class="c1"># router_https_port: "443"  # Not needed in Coder</span>
+
+<span class="c1"># Optional: disable router (saves resources)</span>
+<span class="c1"># router_disabled: true</span>
+
+<span class="c1"># Optional: enable NFS (if file operations slow)</span>
+<span class="c1"># nfs_mount_enabled: true</span>
+
+<span class="c1"># Keep all other settings</span>
+</code></pre></div></div>
+
+<p><strong>4. Start project:</strong></p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ddev start
+</code></pre></div></div>
+
+<p><strong>5. Test:</strong></p>
+<ul>
+  <li>Access via Coder port forwarding</li>
+  <li>Run tests: <code class="language-plaintext highlighter-rouge">ddev exec phpunit</code></li>
+  <li>Check database: <code class="language-plaintext highlighter-rouge">ddev mysql</code></li>
+  <li>Import production database: <code class="language-plaintext highlighter-rouge">ddev import-db --url=...</code></li>
+</ul>
+
+<p><strong>6. Document differences:</strong></p>
+<div class="language-markdown highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="gh"># Project README update</span>
+
+<span class="gu">## Local DDEV</span>
+Access: https://project.ddev.site
+
+<span class="gu">## Coder DDEV</span>
+<span class="p">1.</span> Create workspace: <span class="sb">`coder create --template user-defined-web my-workspace`</span>
+<span class="p">2.</span> Clone project: <span class="sb">`git clone ...`</span>
+<span class="p">3.</span> Start DDEV: <span class="sb">`ddev start`</span>
+<span class="p">4.</span> Access via Coder UI port forwarding (port 80/443)
+</code></pre></div></div>
+
+<h3 id="common-migration-issues">Common Migration Issues</h3>
+
+<p><strong>Issue 1: Custom local configuration</strong></p>
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Local .ddev/config.yaml</span>
+<span class="na">web_environment</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="s">API_KEY=local-secret-key</span>  <span class="c1"># Don't commit secrets!</span>
+
+<span class="c1"># Solution: Use .ddev/.env (gitignored)</span>
+<span class="c1"># .ddev/.env</span>
+<span class="s">API_KEY=secret-key</span>
+
+<span class="c1"># .ddev/config.yaml</span>
+<span class="na">web_environment</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="s">API_KEY=${API_KEY}</span>
+</code></pre></div></div>
+
+<p><strong>Issue 2: Local file paths</strong></p>
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// Local code</span>
+<span class="k">require_once</span> <span class="s1">'/Users/john/projects/library/autoload.php'</span><span class="p">;</span>
+
+<span class="c1">// Solution: Use relative paths</span>
+<span class="k">require_once</span> <span class="k">__DIR__</span> <span class="mf">.</span> <span class="s1">'/../library/autoload.php'</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p><strong>Issue 3: *.ddev.site hardcoded</strong></p>
+<div class="language-javascript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// Local code</span>
+<span class="kd">const</span> <span class="nx">API_URL</span> <span class="o">=</span> <span class="dl">'</span><span class="s1">https://api.ddev.site</span><span class="dl">'</span><span class="p">;</span>
+
+<span class="c1">// Solution: Use environment variable</span>
+<span class="kd">const</span> <span class="nx">API_URL</span> <span class="o">=</span> <span class="nx">process</span><span class="p">.</span><span class="nx">env</span><span class="p">.</span><span class="nx">API_URL</span> <span class="o">||</span> <span class="dl">'</span><span class="s1">https://api.ddev.site</span><span class="dl">'</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p><strong>Issue 4: Performance-sensitive operations</strong></p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Local: fast</span>
+npm <span class="nb">install</span>  <span class="c"># 30 seconds</span>
+
+<span class="c"># Coder: slower</span>
+ddev npm <span class="nb">install</span>  <span class="c"># 60-90 seconds</span>
+
+<span class="c"># Solution: Accept tradeoff or cache node_modules in Docker image</span>
+</code></pre></div></div>
+
+<h2 id="when-to-use-which">When to Use Which</h2>
+
+<h3 id="use-local-ddev-when">Use Local DDEV when:</h3>
+
+<p>✅ <strong>Solo developer, personal projects</strong></p>
+<ul>
+  <li>No team coordination needed</li>
+  <li>You control your machine</li>
+  <li>Offline work required</li>
+</ul>
+
+<p>✅ <strong>Optimal performance critical</strong></p>
+<ul>
+  <li>Heavy file operations</li>
+  <li>Real-time compilation watchers</li>
+  <li>Can’t tolerate network latency</li>
+</ul>
+
+<p>✅ <strong>Very limited budget</strong></p>
+<ul>
+  <li>Cloud costs not acceptable</li>
+  <li>Have powerful local machine</li>
+</ul>
+
+<p>✅ <strong>Fully offline work</strong></p>
+<ul>
+  <li>No reliable internet</li>
+  <li>Security requires air-gapped dev</li>
+</ul>
+
+<h3 id="use-coder-ddev-when">Use Coder DDEV when:</h3>
+
+<p>✅ <strong>Team development</strong></p>
+<ul>
+  <li>Multiple developers</li>
+  <li>Need consistent environments</li>
+  <li>Onboarding time matters</li>
+</ul>
+
+<p>✅ <strong>Remote work</strong></p>
+<ul>
+  <li>Distributed team</li>
+  <li>Work from multiple locations/devices</li>
+  <li>Weak laptops, tablets</li>
+</ul>
+
+<p>✅ <strong>Centralized management</strong></p>
+<ul>
+  <li>IT wants control</li>
+  <li>Compliance/security requirements</li>
+  <li>Resource quotas needed</li>
+</ul>
+
+<p>✅ <strong>Fast onboarding</strong></p>
+<ul>
+  <li>High turnover</li>
+  <li>Contractors/interns</li>
+  <li>Training environments</li>
+</ul>
+
+<p>✅ <strong>Scalable resources</strong></p>
+<ul>
+  <li>Projects need more than laptop can provide</li>
+  <li>Heavy builds, large databases</li>
+</ul>
+
+<h3 id="hybrid-approach">Hybrid Approach</h3>
+
+<p>Some teams use both:</p>
+
+<p><strong>Developers choose:</strong></p>
+<ul>
+  <li>Local DDEV for daily work (fast)</li>
+  <li>Coder DDEV for testing, demos, reviews</li>
+  <li>Coder DDEV for onboarding new team members</li>
+</ul>
+
+<p><strong>Projects decide:</strong></p>
+<ul>
+  <li>Simple projects: local DDEV</li>
+  <li>Complex projects: Coder DDEV</li>
+  <li>Prototypes: local DDEV</li>
+  <li>Production-like environments: Coder DDEV</li>
+</ul>
+
+<h2 id="frequently-asked-questions">Frequently Asked Questions</h2>
+
+<p><strong>Q: Can I use my existing .ddev/config.yaml?</strong></p>
+
+<p>A: Yes, mostly. Remove local-specific settings like <code class="language-plaintext highlighter-rouge">router_http_port</code>. Most settings work identically.</p>
+
+<p><strong>Q: Do all DDEV project types work?</strong></p>
+
+<p>A: Yes, all 20+ project types work (WordPress, Drupal, Laravel, etc.). DDEV is identical; only access method changes.</p>
+
+<p><strong>Q: Can I use Xdebug?</strong></p>
+
+<p>A: Yes, <code class="language-plaintext highlighter-rouge">ddev xdebug on</code> works. Configure your IDE for remote debugging via SSH.</p>
+
+<p><strong>Q: What about PHPStorm?</strong></p>
+
+<p>A: Use PHPStorm with SFTP deployment mode and remote interpreter. Not as seamless as local but works.</p>
+
+<p><strong>Q: Is it slower?</strong></p>
+
+<p>A: File operations are slower (network latency). Database queries and page loads are similar. Tradeoff for remote access and team consistency.</p>
+
+<p><strong>Q: Can I work offline?</strong></p>
+
+<p>A: No, internet required. Local DDEV better for offline work.</p>
+
+<p><strong>Q: What if workspace is deleted?</strong></p>
+
+<p>A: All data lost (like deleting local project). Always commit and push to Git. Admins can backup volumes.</p>
+
+<p><strong>Q: How much does it cost?</strong></p>
+
+<p>A: Depends on cloud provider and usage. ~$30-110/month per workspace. Stop when not in use to save costs.</p>
+
+<p><strong>Q: Can I migrate back to local DDEV?</strong></p>
+
+<p>A: Yes, easily. Clone Git repo, use same .ddev/config.yaml, run <code class="language-plaintext highlighter-rouge">ddev start</code>.</p>
+
+<h2 id="conclusion">Conclusion</h2>
+
+<p><strong>Coder DDEV is not a replacement for local DDEV in all cases.</strong> It’s a different deployment model with different tradeoffs.</p>
+
+<p><strong>Best for:</strong></p>
+<ul>
+  <li>Teams prioritizing consistency and onboarding speed</li>
+  <li>Remote/distributed teams</li>
+  <li>Organizations with centralized IT management</li>
+  <li>Projects needing more resources than laptops provide</li>
+</ul>
+
+<p><strong>Local DDEV still best for:</strong></p>
+<ul>
+  <li>Solo developers with good local setup</li>
+  <li>Performance-critical workflows</li>
+  <li>Offline work requirements</li>
+  <li>Budget-constrained personal projects</li>
+</ul>
+
+<p><strong>Key insight:</strong> Most teams value consistency, onboarding speed, and remote access over filesystem performance. But evaluate based on your specific needs.</p>
+
+<h2 id="additional-resources">Additional Resources</h2>
+
+<ul>
+  <li><a href="https://docs.ddev.com/">DDEV Documentation</a> - Official DDEV docs</li>
+  <li><a href="https://coder.com/docs">Coder Documentation</a> - Official Coder docs</li>
+  <li><a href="/user/getting-started.html">Getting Started Guide</a> - New to Coder DDEV</li>
+  <li><a href="/admin/operations-guide.html">Operations Guide</a> - Deployment and management</li>
+  <li><a href="https://github.com/ddev/coder-ddev/issues">GitHub Issues</a> - Ask questions, report issues</li>
+</ul>
+
+  </main>
+</body>
+</html>
