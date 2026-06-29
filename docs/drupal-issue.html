@@ -493,7 +493,7 @@
     const CODER_BASE = 'https://coder.ddev.com';
     const CODER_TEMPLATE_CORE   = 'coder/drupal-core';
     const CODER_TEMPLATE_CONTRIB = 'coder/drupal-contrib';
-    const { sanitizeWorkspaceName, workspaceNameFromCoreChoices, suggestedIssueForkWorkspaceName, applyWorkspaceNameFieldValidation, bindWorkspaceNameFieldValidation } = window.CoderWorkspace;
+    const { sanitizeWorkspaceName, workspaceNameFromCoreChoices, suggestedIssueForkWorkspaceName, applyWorkspaceNameFieldValidation, bindWorkspaceNameFieldValidation, CORE_DISABLE_PARAMS } = window.CoderWorkspace;
 
     function updateWorkspaceUrlSlug(inputId, spanId) {
       const input = document.getElementById(inputId);
@@ -538,14 +538,14 @@
           'https://www.drupal.org/api-d7/node.json?field_project_machine_name='
             + encodeURIComponent(projectName)
         );
-        if (!resp.ok) return 'module';
+        if (!resp.ok) return null;
         const data = await resp.json();
         const project = data.list && data.list[0];
-        if (!project) return 'module';
+        if (!project) return null;
         // field_project_type is "full" for both modules and themes; node type is reliable.
         return normalizeProjectType(project.type);
       } catch (_) {
-        return 'module';
+        return null;
       }
     }
 
@@ -681,7 +681,11 @@
       clearStatus();
       document.getElementById('plain-project-display').textContent = projectName;
       currentProjectName = projectName;
-      currentProjectType = await fetchDrupalOrgProjectType(projectName);
+      const fetchedPlainType = await fetchDrupalOrgProjectType(projectName);
+      if (fetchedPlainType === null) {
+        setStatus('Could not detect project type for ' + projectName + ' - defaulting to module. If this is a theme, adjust the template parameter after launch.', 'info');
+      }
+      currentProjectType = fetchedPlainType || 'module';
       syncPlainWorkspaceName();
       document.getElementById('plain-dev-form').hidden = false;
     }
@@ -723,7 +727,11 @@
         currentProjectName = projectName;
         currentIsContrib = (projectName !== 'drupal');
         if (currentIsContrib) {
-          currentProjectType = await fetchDrupalOrgProjectType(projectName);
+          const fetchedType = await fetchDrupalOrgProjectType(projectName);
+          if (fetchedType === null) {
+            console.warn('Could not detect project type for', projectName, '- defaulting to module');
+          }
+          currentProjectType = fetchedType || 'module';
         } else {
           currentProjectType = 'module';
         }
@@ -844,7 +852,6 @@
       }
     }
 
-    const CORE_DISABLE_PARAMS = 'issue_fork,issue_branch,drupal_version,install_profile,share_drupal_site';
     const CONTRIB_DISABLE_PARAMS = 'project_name,project_type,issue_fork,issue_branch,drupal_version,install_profile,share_drupal_site';
 
     function getShareDrupalSite(fieldName) {
@@ -868,7 +875,7 @@
       return base + '?' + params.toString();
     }
 
-    function buildContribIssueUrl(projectName, issueNumber, issueBranch, installProfile, drupalVersion, workspaceName, shareDrupalSite, projectType) {
+    function buildContribIssueUrl(projectName, issueFork, issueBranch, installProfile, drupalVersion, workspaceName, shareDrupalSite, projectType) {
       const base = CODER_BASE + '/templates/' + CODER_TEMPLATE_CONTRIB + '/workspace';
       const params = new URLSearchParams({
         mode: 'auto',
@@ -876,7 +883,7 @@
         disable_params: CONTRIB_DISABLE_PARAMS,
         'param.project_name': projectName,
         'param.project_type': projectType || 'module',
-        'param.issue_fork': issueNumber,
+        'param.issue_fork': issueFork,
         'param.issue_branch': issueBranch,
         'param.install_profile': installProfile,
         'param.drupal_version': drupalVersion,
@@ -926,7 +933,7 @@
       let url;
       if (currentIsContrib) {
         url = buildContribIssueUrl(
-          currentProjectName, currentNid, branch, profile, drupalVersion, wsName, shareDrupalSite, currentProjectType
+          currentProjectName, currentIssueFork, branch, profile, drupalVersion, wsName, shareDrupalSite, currentProjectType
         );
       } else {
         url = buildCoreUrl(currentIssueFork, branch, profile, drupalVersion, wsName, shareDrupalSite);
@@ -999,8 +1006,11 @@
         const projectType = (currentProjectName === project && currentProjectType)
           ? currentProjectType
           : await fetchDrupalOrgProjectType(project);
+        if (!projectType) {
+          setStatus('Could not detect project type; assuming module. If this is a theme, the workspace may need manual configuration after launch.', 'info');
+        }
         url = buildContribIssueUrl(
-          project, nidFromFork, branch, profile, drupalVersion, wsName, shareDrupalSite, projectType
+          project, fork, branch, profile, drupalVersion, wsName, shareDrupalSite, projectType
         );
       }
       window.open(url, '_blank');

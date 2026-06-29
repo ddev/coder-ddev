@@ -175,7 +175,7 @@
   <script>
     const CODER_BASE = 'https://coder.ddev.com';
     const CODER_TEMPLATE_CORE = 'coder/drupal-core';
-    const { sanitizeWorkspaceName, workspaceNameFromCoreChoices, applyWorkspaceNameFieldValidation, bindWorkspaceNameFieldValidation } = window.CoderWorkspace;
+    const { sanitizeWorkspaceName, workspaceNameFromCoreChoices, applyWorkspaceNameFieldValidation, bindWorkspaceNameFieldValidation, CORE_DISABLE_PARAMS } = window.CoderWorkspace;
 
     function suggestedWorkspaceName() {
       const ver = document.querySelector('input[name="drupal_version"]:checked').value;
@@ -196,8 +196,6 @@
       const v = input.value.trim();
       span.textContent = v ? sanitizeWorkspaceName(v) : '\u2026';
     }
-
-    const CORE_DISABLE_PARAMS = 'issue_fork,issue_branch,drupal_version,install_profile,share_drupal_site';
 
     function buildCorePlainUrl(drupalVersion, installProfile, workspaceName, shareDrupalSite) {
       const base = CODER_BASE + '/templates/' + CODER_TEMPLATE_CORE + '/workspace';

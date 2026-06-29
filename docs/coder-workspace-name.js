@@ -6,6 +6,7 @@
 
   const MAX_WORKSPACE_NAME_LENGTH = 32;
   const WORKSPACE_NAME_TOO_LONG_MESSAGE = 'Workspace Name cannot be longer than 32 characters';
+  const CORE_DISABLE_PARAMS = 'issue_fork,issue_branch,drupal_version,install_profile,share_drupal_site';
 
   const PROFILE_SLUG = {
     demo_umami: 'umami',
@@ -57,15 +58,21 @@
     const nidSeg = String(issueNid);
     const withNid = sanitizeWorkspaceName(base + '-' + nidSeg);
 
+    function cap(name) {
+      return name.length > MAX_WORKSPACE_NAME_LENGTH
+        ? sanitizeWorkspaceName(name.slice(0, MAX_WORKSPACE_NAME_LENGTH))
+        : name;
+    }
+
     if (branchOptionCount > 1 && branchName) {
       const withBranch = sanitizeWorkspaceName(base + '-' + branchName);
       if (withBranch.length > MAX_WORKSPACE_NAME_LENGTH) {
-        return withNid;
+        return cap(withNid);
       }
       return withBranch;
     }
 
-    return withNid;
+    return cap(withNid);
   }
 
   /**
@@ -141,6 +148,7 @@
   global.CoderWorkspace = {
     MAX_WORKSPACE_NAME_LENGTH: MAX_WORKSPACE_NAME_LENGTH,
     WORKSPACE_NAME_TOO_LONG_MESSAGE: WORKSPACE_NAME_TOO_LONG_MESSAGE,
+    CORE_DISABLE_PARAMS: CORE_DISABLE_PARAMS,
     PROFILE_SLUG: PROFILE_SLUG,
     VERSION_SLUG: VERSION_SLUG,
     sanitizeWorkspaceName: sanitizeWorkspaceName,
