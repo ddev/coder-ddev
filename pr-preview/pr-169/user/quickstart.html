@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quickstart: Drupal Core Development on coder.ddev.com — DDEV Coder Workspaces</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0e0e10;
+      color: #e0e0e0;
+      line-height: 1.7;
+    }
+
+    nav {
+      padding: 1rem 2rem;
+      border-bottom: 1px solid #1c1c1e;
+    }
+
+    nav a {
+      color: #a78bfa;
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+
+    nav a:hover { text-decoration: underline; }
+
+    main {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 3rem 2rem 6rem;
+    }
+
+    h1 { font-size: 2rem; font-weight: 700; margin-bottom: 1rem; letter-spacing: -0.02em; }
+    h2 { font-size: 1.35rem; font-weight: 600; margin: 2.5rem 0 0.75rem; color: #e8e8e8; }
+    h3 { font-size: 1.1rem; font-weight: 600; margin: 1.75rem 0 0.5rem; color: #ddd; }
+
+    p { margin-bottom: 1rem; color: #ccc; }
+
+    a { color: #a78bfa; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    ul, ol { margin: 0 0 1rem 1.5rem; color: #ccc; }
+    li { margin-bottom: 0.35rem; }
+
+    code {
+      background: #1a1a1f;
+      border: 1px solid #2a2a30;
+      padding: 0.15em 0.45em;
+      border-radius: 4px;
+      font-family: 'SF Mono', Consolas, 'Courier New', monospace;
+      font-size: 0.87em;
+      color: #c4b5fd;
+    }
+
+    pre {
+      background: #111115;
+      border: 1px solid #2a2a30;
+      border-radius: 8px;
+      padding: 1.25rem 1.5rem;
+      overflow-x: auto;
+      margin-bottom: 1.25rem;
+    }
+
+    pre code {
+      background: none;
+      border: none;
+      padding: 0;
+      font-size: 0.9rem;
+      color: #c9d1d9;
+    }
+
+    hr {
+      border: none;
+      border-top: 1px solid #1c1c1e;
+      margin: 2rem 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 1.25rem;
+      font-size: 0.95rem;
+    }
+
+    th {
+      text-align: left;
+      padding: 0.6rem 0.75rem;
+      border-bottom: 2px solid #2a2a30;
+      color: #999;
+      font-weight: 600;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    td {
+      padding: 0.6rem 0.75rem;
+      border-bottom: 1px solid #1c1c1e;
+      color: #ccc;
+    }
+
+    strong { color: #e8e8e8; }
+
+    blockquote {
+      border-left: 3px solid #3b2f6e;
+      padding-left: 1rem;
+      color: #999;
+      margin-bottom: 1rem;
+    }
+
+    img { max-width: 100%; }
+
+    /* Skip link — visually hidden until focused; lets keyboard users bypass the site nav.
+       WCAG 2.4.1 Bypass Blocks (Level A) */
+    .skip-link {
+      position: absolute;
+      top: -100%;
+      left: 1rem;
+      background: #7c5af0;
+      color: #fff;
+      padding: 0.5rem 1rem;
+      border-radius: 0 0 6px 6px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-decoration: none;
+      z-index: 999;
+    }
+    .skip-link:focus { top: 0; }
+  </style>
+</head>
+<body>
+  <!-- WCAG 2.4.1 Bypass Blocks (Level A): skip link lets keyboard users jump past the site nav -->
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <!-- aria-label distinguishes this nav landmark when multiple <nav> elements exist on a page.
+       WCAG 2.4.6 Headings and Labels (Level AA) -->
+  <nav aria-label="Site">
+    <a href="/">← DDEV Coder Workspaces</a>
+  </nav>
+  <!-- id="main-content" is the skip link target (WCAG 2.4.1) -->
+  <main id="main-content">
+    <h1 id="quickstart-drupal-core-development-on-coderddevcom">Quickstart: Drupal Core Development on coder.ddev.com</h1>
+
+<p>Cloud-hosted DDEV workspaces for Drupal core development. Full environment — Drupal core clone, running site, drush — ready when the startup script completes.</p>
+
+<p><a href="https://coder.ddev.com/templates/coder/drupal-core/workspace?mode=manual"><img src="https://coder.ddev.com/open-in-coder.svg" alt="Open in Coder" /></a></p>
+
+<hr />
+
+<h2 id="1-log-in">1. Log in</h2>
+
+<p>Go to <strong><a href="https://coder.ddev.com">coder.ddev.com</a></strong> and sign in with GitHub.</p>
+
+<hr />
+
+<h2 id="2-create-a-workspace">2. Create a workspace</h2>
+
+<p>Click the button above, or go to <strong>Create Workspace</strong> → select the <strong>drupal-core</strong> template → click <strong>Create Workspace</strong>.</p>
+
+<p>Wait for the startup script to complete. Watch progress in the <strong>Logs</strong> tab.</p>
+
+<hr />
+
+<h2 id="3-open-your-environment">3. Open your environment</h2>
+
+<p>Once the workspace is running, click <strong>DDEV Web</strong> in the dashboard to open the Drupal site, or <strong>VS Code</strong> to open the editor (VS Code for Web, pre-pointed at <code class="language-plaintext highlighter-rouge">~/drupal-core</code>).</p>
+
+<p>The running site has the Umami demo profile installed. Admin credentials: <code class="language-plaintext highlighter-rouge">admin</code> / <code class="language-plaintext highlighter-rouge">admin</code>.</p>
+
+<hr />
+
+<h2 id="code-layout">Code layout</h2>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>~/drupal-core/           # Drupal core git clone — edit files here
+├── core/                # Drupal core source
+├── index.php            # Entry point
+├── .ddev/               # DDEV config
+└── composer.local.json  # Local dependencies (drush, dev modules)
+</code></pre></div></div>
+
+<p>Edit files directly in <code class="language-plaintext highlighter-rouge">~/drupal-core/</code> — changes are immediately reflected in the running site.</p>
+
+<hr />
+
+<h2 id="common-commands-run-in-vs-code-terminal-or-coder-ssh-workspace">Common commands (run in VS Code terminal or <code class="language-plaintext highlighter-rouge">coder ssh &lt;workspace&gt;</code>)</h2>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Get a one-time admin login link</span>
+ddev drush uli
+
+<span class="c"># Clear cache</span>
+ddev drush cr
+
+<span class="c"># Run Drupal tests (provided by ddev-drupal-dev add-on)</span>
+ddev phpunit core/modules/node
+
+<span class="c"># Install a contrib module for development</span>
+ddev add-module token
+
+<span class="c"># Open the site in your browser</span>
+ddev launch
+
+<span class="c"># SSH into the web container</span>
+ddev ssh
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="working-on-a-drupal-issue">Working on a Drupal issue</h2>
+
+<p>The fastest way: use the <strong><a href="https://start.coder.ddev.com/drupal-issue">Drupal Issue Picker</a></strong>. Paste a drupal.org issue URL, issue number, or project URL — it auto-detects whether the issue is for Drupal core or a contrib module/theme, fetches the available branches, and opens a pre-configured workspace with the issue branch already checked out. Entering a project URL (e.g. <code class="language-plaintext highlighter-rouge">drupal.org/project/token</code>) or bare machine name launches a plain contrib dev workspace without a specific issue.</p>
+
+<p>When working on an issue, the workspace surfaces issue info in several places:</p>
+
+<ul>
+  <li><strong>Workspace resource page</strong> — the <code class="language-plaintext highlighter-rouge">issue_url</code> metadata item links directly to the drupal.org issue</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">~/WELCOME.txt</code></strong> — shows the issue number, title, and URL</li>
+  <li><strong>Drupal site name</strong> — set to <code class="language-plaintext highlighter-rouge">#NNNN: issue title</code> during install (visible in the site header)</li>
+</ul>
+
+<p>To push your changes back:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd</span> ~/drupal-core
+
+<span class="c"># ... make changes ...</span>
+
+<span class="c"># Push to the issue fork (remote is already added by the setup)</span>
+git push issue HEAD
+</code></pre></div></div>
+
+<p>Then create or update the merge request on <a href="https://www.drupal.org/project/drupal">drupal.org</a>.</p>
+
+<h2 id="first-contribution-workflow-manual">First contribution workflow (manual)</h2>
+
+<p>If you prefer to set up manually:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># In the workspace terminal:</span>
+<span class="nb">cd</span> ~/drupal-core
+
+<span class="c"># Create a branch</span>
+git checkout <span class="nt">-b</span> my-fix
+
+<span class="c"># ... make changes ...</span>
+
+<span class="c"># Add a fork remote and push</span>
+git remote add fork https://git.drupalcode.org/issue/drupal-NNNNN.git
+git push fork my-fix
+</code></pre></div></div>
+
+<p>Then create a merge request on <a href="https://www.drupal.org/project/drupal">drupal.org</a>.</p>
+
+<hr />
+
+<h2 id="workspace-lifecycle">Workspace lifecycle</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Action</th>
+      <th>Effect</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Stop</strong> workspace</td>
+      <td>Containers stop; your files persist on disk</td>
+    </tr>
+    <tr>
+      <td><strong>Start</strong> workspace</td>
+      <td>No reinstall needed; picks up where you left off</td>
+    </tr>
+    <tr>
+      <td><strong>Delete</strong> workspace</td>
+      <td>All data deleted permanently</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr />
+
+<h2 id="troubleshooting">Troubleshooting</h2>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Check setup status</span>
+<span class="nb">cat</span> ~/SETUP_STATUS.txt
+
+<span class="c"># View setup log</span>
+<span class="nb">tail</span> <span class="nt">-50</span> /tmp/drupal-setup.log
+
+<span class="c"># Check DDEV status</span>
+ddev describe
+</code></pre></div></div>
+
+<p>See also: <a href="/coder-ddev/user/getting-started.html">full getting-started guide</a> · <a href="https://docs.ddev.com/">DDEV docs</a> · <a href="https://www.drupal.org/contribute/development">Drupal core contribution guide</a> · <a href="https://github.com/amateescu/ddev-drupal-dev">ddev-drupal-dev add-on</a></p>
+
+  </main>
+</body>
+</html>
