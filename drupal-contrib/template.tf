@@ -704,18 +704,29 @@ COMPOSE_EOF
 
         # Run ddev poser: expands composer.json → composer.contrib.json (includes require-dev),
         # then runs composer install (installs Drupal + drush together), then removes composer.contrib.json
-        log_setup "Running ddev poser (installs Drupal as dev dependency)..."
-        update_status "⏳ ddev poser: In progress..."
-        _t=$SECONDS
-        if ddev poser >> "$SETUP_LOG" 2>&1; then
-          log_setup "✓ ddev poser complete ($((SECONDS - _t))s)"
-          update_status "✓ ddev poser: Success"
-          # Hide the drush require-dev line from git status without touching the
-          # file — git checkout would remove drush from composer.json and break
-          # ddev restart (which rebuilds vendor/ from the restored file).
-          git update-index --skip-worktree composer.json >> "$SETUP_LOG" 2>&1 || true
-        else
-          log_setup "✗ ddev poser failed ($((SECONDS - _t))s)"
+        # Retry up to 3 times to handle transient codeload.github.com 400s.
+        _poser_ok=false
+        for _attempt in 1 2 3; do
+          log_setup "Running ddev poser (attempt $_attempt/3)..."
+          update_status "⏳ ddev poser: Attempt $_attempt/3..."
+          _t=$SECONDS
+          if ddev poser >> "$SETUP_LOG" 2>&1; then
+            log_setup "✓ ddev poser complete ($((SECONDS - _t))s)"
+            update_status "✓ ddev poser: Success"
+            # Hide the drush require-dev line from git status without touching the
+            # file — git checkout would remove drush from composer.json and break
+            # ddev restart (which rebuilds vendor/ from the restored file).
+            git update-index --skip-worktree composer.json >> "$SETUP_LOG" 2>&1 || true
+            _poser_ok=true
+            break
+          fi
+          log_setup "✗ ddev poser attempt $_attempt failed ($((SECONDS - _t))s)"
+          if [ "$_attempt" -lt 3 ]; then
+            log_setup "Retrying in 15s..."
+            sleep 15
+          fi
+        done
+        if [ "$_poser_ok" = "false" ]; then
           update_status "✗ ddev poser: Failed"
           SETUP_FAILED=true
         fi
