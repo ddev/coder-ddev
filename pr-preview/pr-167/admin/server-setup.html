@@ -1,0 +1,1546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Server Setup Guide — DDEV Coder Workspaces</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/coder-ddev-start.css">
+</head>
+<body class="cds-body">
+  <!-- WCAG 2.4.1 Bypass Blocks (Level A): skip link lets keyboard users jump past the site nav -->
+  <a class="cds-skip-link" href="#main-content">Skip to main content</a>
+  <!-- aria-label distinguishes this nav landmark when multiple <nav> elements exist on a page.
+       WCAG 2.4.6 Headings and Labels (Level AA) -->
+  <nav class="cds-doc-nav" aria-label="Site">
+    <a class="cds-link" href="/">← DDEV Coder Workspaces</a>
+  </nav>
+  <!-- id="main-content" is the skip link target (WCAG 2.4.1) -->
+  <main id="main-content" class="cds-doc-main">
+    <h1 id="server-setup-guide">Server Setup Guide</h1>
+
+<p>This guide covers setting up a new Coder server with the DDEV template from scratch. It assumes a fresh Ubuntu 24.04 LTS or higher LTS server. If you need to provision one on Hetzner, follow Step 1 below; otherwise skip to Step 2.</p>
+
+<h2 id="overview">Overview</h2>
+
+<p>The full stack requires:</p>
+<ol>
+  <li>Provisioning the server (Hetzner) — if starting from bare metal; skip if you already have a fresh Ubuntu 24.04 LTS or higher LTS install</li>
+  <li>Docker (non-snap) — for running workspace containers</li>
+  <li>Registry mirror — pull-through cache to speed up workspace starts and avoid Docker Hub rate limits</li>
+  <li>Sysbox — for safe nested Docker inside workspaces</li>
+  <li>PostgreSQL — for Coder’s database (required for multi-server HA)</li>
+  <li>TLS certificate — via Let’s Encrypt DNS challenge</li>
+  <li>Terraform — required before installing Coder (workaround for a Coder install bug)</li>
+  <li>Coder server — the control plane</li>
+  <li>This template — deployed to Coder</li>
+</ol>
+
+<hr />
+
+<h2 id="step-1-provision-the-server-hetzner">Step 1: Provision the Server (Hetzner)</h2>
+
+<p>This section covers provisioning a fresh Ubuntu 24.04 LTS server on a Hetzner dedicated host. Skip it if you already have a clean Ubuntu 24.04 LTS or higher LTS install. The example matches the layout used for <code class="language-plaintext highlighter-rouge">staging-coder.ddev.com</code> (Intel i7-6700, 64 GB RAM, 2 × 512 GB NVMe), and scales unchanged to larger production hardware.</p>
+
+<p>The recommended layout uses LVM on the system disk and a plain ext4 partition on the second disk:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Mount</th>
+      <th>Source</th>
+      <th>Size (476 GiB disks)</th>
+      <th>Purpose</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">/boot</code></td>
+      <td><code class="language-plaintext highlighter-rouge">/dev/nvme0n1p1</code></td>
+      <td>1 G</td>
+      <td>kernel and bootloader</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">/</code></td>
+      <td><code class="language-plaintext highlighter-rouge">vg0/root</code></td>
+      <td>40 G</td>
+      <td>root filesystem</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">/var</code></td>
+      <td><code class="language-plaintext highlighter-rouge">vg0/var</code></td>
+      <td>30 G</td>
+      <td>logs and packages</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">/data</code></td>
+      <td><code class="language-plaintext highlighter-rouge">vg0/data</code></td>
+      <td>rest of disk 1 (~400 G)</td>
+      <td>Docker data root (Step 2)</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">/coder-workspaces</code></td>
+      <td><code class="language-plaintext highlighter-rouge">/dev/nvme1n1p1</code></td>
+      <td>all of disk 2 (~470 G)</td>
+      <td>workspace files</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>LVM means any of <code class="language-plaintext highlighter-rouge">root</code>, <code class="language-plaintext highlighter-rouge">var</code>, or <code class="language-plaintext highlighter-rouge">data</code> can be grown later with <code class="language-plaintext highlighter-rouge">lvextend -r</code>. Sizes above are deliberately generous for staging and scale up automatically on prod-sized disks because <code class="language-plaintext highlighter-rouge">data</code> claims the rest of the volume group.</p>
+
+<blockquote>
+  <p><strong>Software RAID:</strong> This guide uses <code class="language-plaintext highlighter-rouge">SWRAID 0</code> (no RAID) because the staging server has mismatched-purpose disks. For production with two matched disks, change to <code class="language-plaintext highlighter-rouge">SWRAID 1</code> with <code class="language-plaintext highlighter-rouge">SWRAIDLEVEL 1</code> and adjust the <code class="language-plaintext highlighter-rouge">PART</code> lines per Hetzner’s installimage docs. RAID-1 across the system disk is recommended for prod; the second disk holding workspace files can be left out of the array if you intend to grow it independently.</p>
+</blockquote>
+
+<blockquote>
+  <p><strong>Boot mode:</strong> Hetzner servers default to Legacy/BIOS boot, and Hetzner Robot does not expose a UEFI toggle when activating the rescue system. Switching to UEFI requires firmware-level access via vKVM or a support ticket. For most installs Legacy/BIOS is fine; this guide assumes it. If you do switch to UEFI, add <code class="language-plaintext highlighter-rouge">PART /boot/efi esp 256M</code> as the first partition.</p>
+</blockquote>
+
+<h3 id="activate-the-rescue-system">Activate the rescue system</h3>
+
+<p>In <a href="https://robot.hetzner.com">Hetzner Robot</a>, go to your server → <strong>Rescue</strong> tab. Select <strong>Linux</strong>, leave the public key empty (you’ll log in with the password Robot emails you), keyboard <code class="language-plaintext highlighter-rouge">us</code>, and click <strong>Activate rescue system</strong>. Then trigger a hardware reset from the <strong>Reset</strong> tab. After ~60 seconds, SSH in:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ssh root@YOUR_SERVER_IP
+</code></pre></div></div>
+
+<p>Confirm the rescue has come up by checking the banner — it should report your hardware and “Rescue System (via Legacy/CSM) up since…”.</p>
+
+<h3 id="prepare-the-second-disk-setup-script">Prepare the second-disk setup script</h3>
+
+<p>The Hetzner installer (<code class="language-plaintext highlighter-rouge">installimage</code>) only partitions the first drive when <code class="language-plaintext highlighter-rouge">SWRAID 0</code> is set. The second disk is set up after the first reboot. Stage the script in the rescue system now so it’s ready to copy after install:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cat</span> <span class="o">&gt;</span> /root/setup-disk2.sh <span class="o">&lt;&lt;</span><span class="sh">'</span><span class="no">EOF</span><span class="sh">'
+#!/bin/bash
+set -euo pipefail
+
+DEV=/dev/nvme1n1
+parted -s "</span><span class="nv">$DEV</span><span class="sh">" mklabel gpt mkpart primary ext4 1MiB 100%
+
+udevadm settle
+PART="</span><span class="k">${</span><span class="nv">DEV</span><span class="k">}</span><span class="sh">p1"
+
+mkfs.ext4 -L coder-workspaces "</span><span class="nv">$PART</span><span class="sh">"
+mkdir -p /coder-workspaces
+
+UUID=</span><span class="si">$(</span>blkid <span class="nt">-s</span> UUID <span class="nt">-o</span> value <span class="s2">"</span><span class="nv">$PART</span><span class="s2">"</span><span class="si">)</span><span class="sh">
+echo "UUID=</span><span class="nv">$UUID</span><span class="sh">  /coder-workspaces  ext4  defaults,nofail  0 2" &gt;&gt; /etc/fstab
+</span><span class="no">EOF
+</span><span class="nb">chmod</span> +x /root/setup-disk2.sh
+</code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">nofail</code> ensures a future flaky disk doesn’t drop the server into emergency mode on boot.</p>
+
+<h3 id="write-the-installimage-config-file">Write the installimage config file</h3>
+
+<p><code class="language-plaintext highlighter-rouge">installimage</code> has an interactive <code class="language-plaintext highlighter-rouge">mcedit</code>-based editor, but pasting through SSH into it mangles whitespace and silently breaks the config. Skip the editor and feed <code class="language-plaintext highlighter-rouge">installimage</code> a config file with <code class="language-plaintext highlighter-rouge">-a -c</code>. Write it as a heredoc:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cat</span> <span class="o">&gt;</span> /tmp/install.conf <span class="o">&lt;&lt;</span><span class="sh">'</span><span class="no">EOF</span><span class="sh">'
+DRIVE1 /dev/nvme0n1
+DRIVE2 /dev/nvme1n1
+SWRAID 0
+BOOTLOADER grub
+HOSTNAME staging-coder.ddev.com
+
+IMAGE /root/.oldroot/nfs/install/../images/Ubuntu-2404-noble-amd64-base.tar.gz
+
+PART /boot  ext4  1G
+PART lvm    vg0   all
+
+LV vg0 root  /      ext4   40G
+LV vg0 var   /var   ext4   30G
+LV vg0 data  /data  ext4   all
+
+SSHKEYS_URL https://github.com/YOUR_GITHUB_USERNAME.keys
+</span><span class="no">EOF
+</span></code></pre></div></div>
+
+<p>Replace <code class="language-plaintext highlighter-rouge">staging-coder.ddev.com</code> with your hostname and <code class="language-plaintext highlighter-rouge">YOUR_GITHUB_USERNAME</code> with the GitHub account whose public keys should be installed on the new server.</p>
+
+<blockquote>
+  <p><strong>Hostname note:</strong> The Coder server’s hostname must not collide with the wildcard subdomain reserved for workspace app routing. <code class="language-plaintext highlighter-rouge">*.coder.ddev.com</code> is used for workspaces, so the Coder server itself is <code class="language-plaintext highlighter-rouge">coder.ddev.com</code> and a parallel staging server lives at <code class="language-plaintext highlighter-rouge">staging-coder.ddev.com</code> (with <code class="language-plaintext highlighter-rouge">*.staging-coder.ddev.com</code> for its workspaces).</p>
+</blockquote>
+
+<p>Verify the IMAGE filename actually exists in the rescue, since it changes occasionally:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">ls</span> /root/.oldroot/nfs/install/../images/ | <span class="nb">grep</span> <span class="nt">-i</span> ubuntu-2404
+</code></pre></div></div>
+
+<p>If the filename in <code class="language-plaintext highlighter-rouge">/tmp/install.conf</code> doesn’t match, edit it before continuing.</p>
+
+<h3 id="run-installimage">Run installimage</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>installimage <span class="nt">-a</span> <span class="nt">-c</span> /tmp/install.conf
+</code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">-a</code> skips the interactive editor; <code class="language-plaintext highlighter-rouge">-c</code> reads the config from the given file. installimage runs a syntax check, asks once to confirm it will wipe both drives, then partitions, installs Ubuntu, configures grub, and applies your <code class="language-plaintext highlighter-rouge">SSHKEYS_URL</code>. The whole process takes 3–6 minutes.</p>
+
+<p>When it finishes, reboot:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>reboot
+</code></pre></div></div>
+
+<h3 id="first-login-and-second-disk-setup">First login and second-disk setup</h3>
+
+<p>Wait ~60 seconds for the new system to boot. The rescue’s SSH host key changes after install; clear the old entry and log in with your GitHub keys:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ssh-keygen <span class="nt">-R</span> YOUR_SERVER_IP
+ssh root@YOUR_SERVER_IP
+</code></pre></div></div>
+
+<p>The second disk is now bare. Some installimage versions advertise a <code class="language-plaintext highlighter-rouge">POST_INSTALL</code> hook that runs scripts inside the freshly installed system, but it fails silently and is unreliable — set up the second disk by hand. Re-create the same script we staged in rescue, or paste these commands directly:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>parted <span class="nt">-s</span> /dev/nvme1n1 mklabel gpt mkpart primary ext4 1MiB 100%
+<span class="nb">sudo </span>udevadm settle
+<span class="nb">sudo </span>mkfs.ext4 <span class="nt">-L</span> coder-workspaces /dev/nvme1n1p1
+<span class="nb">sudo mkdir</span> <span class="nt">-p</span> /coder-workspaces
+<span class="nv">UUID</span><span class="o">=</span><span class="si">$(</span><span class="nb">sudo </span>blkid <span class="nt">-s</span> UUID <span class="nt">-o</span> value /dev/nvme1n1p1<span class="si">)</span>
+<span class="nb">echo</span> <span class="s2">"UUID=</span><span class="nv">$UUID</span><span class="s2">  /coder-workspaces  ext4  defaults,nofail  0 2"</span> | <span class="nb">sudo tee</span> <span class="nt">-a</span> /etc/fstab
+<span class="nb">sudo </span>mount <span class="nt">-a</span>
+</code></pre></div></div>
+
+<h3 id="verify">Verify</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>hostnamectl
+<span class="nb">df</span> <span class="nt">-h</span>
+lsblk
+</code></pre></div></div>
+
+<p>You should see all five mounts (<code class="language-plaintext highlighter-rouge">/boot</code>, <code class="language-plaintext highlighter-rouge">/</code>, <code class="language-plaintext highlighter-rouge">/var</code>, <code class="language-plaintext highlighter-rouge">/data</code>, <code class="language-plaintext highlighter-rouge">/coder-workspaces</code>) sized as designed, and <code class="language-plaintext highlighter-rouge">lsblk</code> should show LVM logical volumes on <code class="language-plaintext highlighter-rouge">nvme0n1</code> plus a single ext4 partition on <code class="language-plaintext highlighter-rouge">nvme1n1</code>.</p>
+
+<p>The server is now a clean Ubuntu 24.04 LTS host ready for the rest of this guide. Proceed to Step 2 (Install Docker).</p>
+
+<hr />
+
+<h2 id="step-2-install-docker">Step 2: Install Docker</h2>
+
+<p>Docker must be installed from the official apt repository, <strong>not</strong> via snap (Sysbox requires the non-snap version).</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Install prerequisites</span>
+<span class="nb">sudo </span>apt-get update
+<span class="nb">sudo </span>apt-get <span class="nb">install</span> <span class="nt">-y</span> ca-certificates curl
+
+<span class="c"># Add Docker's GPG key and apt repo (DEB822 format)</span>
+<span class="nb">sudo install</span> <span class="nt">-m</span> 0755 <span class="nt">-d</span> /etc/apt/keyrings
+curl <span class="nt">-fsSL</span> https://download.docker.com/linux/ubuntu/gpg | <span class="se">\</span>
+  <span class="nb">sudo tee</span> /etc/apt/keyrings/docker.asc <span class="o">&gt;</span> /dev/null
+<span class="nb">sudo chmod </span>a+r /etc/apt/keyrings/docker.asc
+<span class="nb">printf</span> <span class="s2">"Types: deb</span><span class="se">\n</span><span class="s2">URIs: https://download.docker.com/linux/ubuntu</span><span class="se">\n</span><span class="s2">Suites: %s</span><span class="se">\n</span><span class="s2">Components: stable</span><span class="se">\n</span><span class="s2">Arch: %s</span><span class="se">\n</span><span class="s2">Signed-By: /etc/apt/keyrings/docker.asc</span><span class="se">\n</span><span class="s2">"</span> <span class="se">\</span>
+  <span class="s2">"</span><span class="si">$(</span><span class="nb">.</span> /etc/os-release <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">"</span><span class="nv">$VERSION_CODENAME</span><span class="s2">"</span><span class="si">)</span><span class="s2">"</span> <span class="se">\</span>
+  <span class="s2">"</span><span class="si">$(</span>dpkg <span class="nt">--print-architecture</span><span class="si">)</span><span class="s2">"</span> | <span class="se">\</span>
+  <span class="nb">sudo tee</span> /etc/apt/sources.list.d/docker.sources <span class="o">&gt;</span> /dev/null
+
+<span class="c"># Install Docker</span>
+<span class="nb">sudo </span>apt-get update
+<span class="nb">sudo </span>apt-get <span class="nb">install</span> <span class="nt">-y</span> docker-ce docker-ce-cli containerd.io
+
+<span class="c"># Configure Docker to use /data as its data root</span>
+<span class="nb">sudo tee</span> /etc/docker/daemon.json <span class="o">&gt;</span> /dev/null <span class="o">&lt;&lt;</span><span class="sh">'</span><span class="no">EOF</span><span class="sh">'
+{
+  "data-root": "/data/docker"
+}
+</span><span class="no">EOF
+
+</span><span class="c"># Configure containerd to use /data as well.</span>
+<span class="c"># containerd runs as a separate daemon from Docker and has its own data root</span>
+<span class="c"># (default: /var/lib/containerd). Without this, /var fills up with image snapshots.</span>
+<span class="nb">sudo mkdir</span> <span class="nt">-p</span> /etc/containerd
+containerd config default | <span class="nb">sudo tee</span> /etc/containerd/config.toml <span class="o">&gt;</span> /dev/null
+<span class="nb">sudo sed</span> <span class="nt">-i</span> <span class="s1">'s|^root = .*|root = "/data/containerd"|'</span> /etc/containerd/config.toml
+
+<span class="c"># Verify</span>
+docker <span class="nt">--version</span>
+<span class="nb">sudo </span>systemctl <span class="nb">enable</span> <span class="nt">--now</span> containerd
+<span class="nb">sudo </span>systemctl <span class="nb">enable</span> <span class="nt">--now</span> docker
+</code></pre></div></div>
+
+<h3 id="configure-the-firewall">Configure the firewall</h3>
+
+<p>Enable UFW and open the ports needed by Coder and the registry mirror. Port 5665 is for the Icinga2 monitoring agent and should be restricted to the monitoring server’s IP:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>ufw allow 22
+<span class="nb">sudo </span>ufw allow 80
+<span class="nb">sudo </span>ufw allow 443
+<span class="nb">sudo </span>ufw allow 5000
+<span class="nb">sudo </span>ufw allow from 45.79.99.253 to any port 5665/tcp
+<span class="nb">sudo </span>ufw <span class="nb">enable
+sudo </span>ufw status
+</code></pre></div></div>
+
+<p>Expected output:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Status: active
+
+To                         Action      From
+--                         ------      ----
+443                        ALLOW       Anywhere
+80                         ALLOW       Anywhere
+22                         ALLOW       Anywhere
+5000                       ALLOW       Anywhere
+5665/tcp                   ALLOW       45.79.99.253
+443 (v6)                   ALLOW       Anywhere (v6)
+80 (v6)                    ALLOW       Anywhere (v6)
+22 (v6)                    ALLOW       Anywhere (v6)
+5000 (v6)                  ALLOW       Anywhere (v6)
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="step-3-set-up-the-registry-mirror">Step 3: Set Up the Registry Mirror</h2>
+
+<p>A pull-through registry mirror caches Docker Hub images locally, so workspace startups pull images from the host rather than Docker Hub. This dramatically speeds up first-start time and avoids Docker Hub rate limits.</p>
+
+<p>The workspace image no longer hardcodes any mirror host. The startup script now uses this strategy:</p>
+
+<ol>
+  <li>If <code class="language-plaintext highlighter-rouge">docker_registry_mirror</code> is explicitly set, use it.</li>
+  <li>Otherwise, try <code class="language-plaintext highlighter-rouge">http://&lt;coder-host&gt;:5000</code> (derived from <code class="language-plaintext highlighter-rouge">CODER_AGENT_URL</code>) and use it only if <code class="language-plaintext highlighter-rouge">GET /v2/</code> is reachable.</li>
+  <li>If no reachable mirror is found, continue without a mirror.</li>
+</ol>
+
+<p>This means <code class="language-plaintext highlighter-rouge">staging-coder.ddev.com</code> and <code class="language-plaintext highlighter-rouge">coder.ddev.com</code> work automatically when their local registry mirror is running.</p>
+
+<p>Optional override (for nonstandard host/port, or to force a specific mirror) can still be set on the provisioner host:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo tee</span> /etc/systemd/system/coder-provisioner.service.d/10-registry-mirror.conf <span class="o">&gt;</span> /dev/null <span class="o">&lt;&lt;</span><span class="sh">'</span><span class="no">EOF</span><span class="sh">'
+[Service]
+Environment=TF_VAR_docker_registry_mirror=http://coder.ddev.com:5000
+</span><span class="no">EOF
+
+</span><span class="nb">sudo </span>systemctl daemon-reload
+<span class="nb">sudo </span>systemctl restart coder-provisioner
+</code></pre></div></div>
+
+<p>Replace <code class="language-plaintext highlighter-rouge">http://coder.ddev.com:5000</code> with your preferred mirror address when needed.
+If your install uses a different provisioner service name, apply the same <code class="language-plaintext highlighter-rouge">TF_VAR_docker_registry_mirror=...</code> environment variable to that service instead.</p>
+
+<h3 id="create-directories-and-config">Create directories and config</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo mkdir</span> <span class="nt">-p</span> /opt/registry/data
+
+<span class="nb">sudo tee</span> /opt/registry/config.yml <span class="o">&gt;</span> /dev/null <span class="o">&lt;&lt;</span><span class="sh">'</span><span class="no">EOF</span><span class="sh">'
+version: 0.1
+log:
+  level: info
+storage:
+  filesystem:
+    rootdirectory: /var/lib/registry
+http:
+  addr: :5000
+proxy:
+  remoteurl: https://registry-1.docker.io
+</span><span class="no">EOF
+</span></code></pre></div></div>
+
+<h3 id="open-the-firewall-port">Open the firewall port</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>ufw allow 5000/tcp
+</code></pre></div></div>
+
+<h3 id="create-a-systemd-unit">Create a systemd unit</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo tee</span> /etc/systemd/system/registry-mirror.service <span class="o">&gt;</span> /dev/null <span class="o">&lt;&lt;</span><span class="sh">'</span><span class="no">EOF</span><span class="sh">'
+[Unit]
+Description=Docker Registry Pull-Through Cache (registry:3)
+After=network-online.target docker.service
+Wants=network-online.target docker.service
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=5
+
+# Clean up any previous instance
+ExecStartPre=-/usr/bin/docker rm -f registry-mirror
+
+ExecStart=/usr/bin/docker run --rm </span><span class="se">\</span><span class="sh">
+  --name registry-mirror </span><span class="se">\</span><span class="sh">
+  -p 0.0.0.0:5000:5000 </span><span class="se">\</span><span class="sh">
+  -v /opt/registry/config.yml:/etc/distribution/config.yml:ro </span><span class="se">\</span><span class="sh">
+  -v /opt/registry/data:/var/lib/registry </span><span class="se">\</span><span class="sh">
+  registry:3
+
+ExecStop=/usr/bin/docker stop registry-mirror
+
+[Install]
+WantedBy=multi-user.target
+</span><span class="no">EOF
+</span></code></pre></div></div>
+
+<h3 id="enable-and-start">Enable and start</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>systemctl daemon-reload
+<span class="nb">sudo </span>systemctl <span class="nb">enable</span> <span class="nt">--now</span> registry-mirror
+<span class="nb">sudo </span>systemctl status registry-mirror
+</code></pre></div></div>
+
+<h3 id="verify-1">Verify</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Should return an empty repository list (not a connection error)</span>
+curl http://localhost:5000/v2/_catalog
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="step-4-install-sysbox">Step 4: Install Sysbox</h2>
+
+<p>Sysbox provides secure Docker-in-Docker without <code class="language-plaintext highlighter-rouge">--privileged</code>. It has no apt repository — install via <code class="language-plaintext highlighter-rouge">.deb</code> package.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Install prerequisite</span>
+<span class="nb">sudo </span>apt-get <span class="nb">install</span> <span class="nt">-y</span> jq
+
+<span class="c"># Download package (check https://github.com/nestybox/sysbox/releases for latest)</span>
+<span class="nv">SYSBOX_VERSION</span><span class="o">=</span>0.6.7
+wget https://downloads.nestybox.com/sysbox/releases/v<span class="k">${</span><span class="nv">SYSBOX_VERSION</span><span class="k">}</span>/sysbox-ce_<span class="k">${</span><span class="nv">SYSBOX_VERSION</span><span class="k">}</span><span class="nt">-0</span>.linux_amd64.deb
+
+<span class="c"># The Sysbox installer restarts Docker — stop any running containers first</span>
+<span class="nb">sudo </span>systemctl stop registry-mirror
+
+<span class="c"># Install (this will restart Docker)</span>
+<span class="nb">sudo </span>apt-get <span class="nb">install</span> <span class="nt">-y</span> ./sysbox-ce_<span class="k">${</span><span class="nv">SYSBOX_VERSION</span><span class="k">}</span><span class="nt">-0</span>.linux_amd64.deb
+
+<span class="c"># Restart the registry mirror</span>
+<span class="nb">sudo </span>systemctl start registry-mirror
+
+<span class="c"># Verify</span>
+sysbox-runc <span class="nt">--version</span>
+<span class="nb">sudo </span>systemctl status sysbox <span class="nt">-n20</span>
+</code></pre></div></div>
+
+<p>See <a href="https://github.com/nestybox/sysbox/blob/master/docs/user-guide/install-package.md">Sysbox install docs</a> for details.</p>
+
+<hr />
+
+<h2 id="step-5-install-postgresql">Step 5: Install PostgreSQL</h2>
+
+<p>Coder ships with a built-in SQLite database that works fine for a single server. PostgreSQL is needed if you ever want to run multiple Coder server replicas (for redundancy or handling larger user load) — and migrating later is painful, so it’s worth setting up now.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Install PostgreSQL (Ubuntu ships a current version in its default repos)</span>
+<span class="nb">sudo </span>apt-get <span class="nb">install</span> <span class="nt">-y</span> postgresql
+
+<span class="c"># Verify it's running</span>
+<span class="nb">sudo </span>systemctl <span class="nb">enable</span> <span class="nt">--now</span> postgresql
+<span class="nb">sudo </span>systemctl status postgresql
+</code></pre></div></div>
+
+<h3 id="create-the-coder-database-and-user">Create the Coder database and user</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo</span> <span class="nt">-u</span> postgres psql <span class="o">&lt;&lt;</span><span class="sh">'</span><span class="no">EOF</span><span class="sh">'
+CREATE USER coder WITH PASSWORD 'strongpasswordhere';
+CREATE DATABASE coder OWNER coder;
+</span><span class="no">EOF
+</span></code></pre></div></div>
+
+<p>Replace <code class="language-plaintext highlighter-rouge">strongpasswordhere</code> with a strong password and record it — you’ll need it in the Coder config.</p>
+
+<h3 id="verify-the-connection">Verify the connection</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>psql <span class="nt">-U</span> coder <span class="nt">-h</span> localhost <span class="nt">-d</span> coder <span class="nt">-c</span> <span class="s1">'\conninfo'</span>
+<span class="c"># Enter the password when prompted</span>
+</code></pre></div></div>
+
+<p>If this fails with a peer authentication error, confirm <code class="language-plaintext highlighter-rouge">/etc/postgresql/*/main/pg_hba.conf</code> has a <code class="language-plaintext highlighter-rouge">md5</code> or <code class="language-plaintext highlighter-rouge">scram-sha-256</code> entry for local TCP connections (the default Ubuntu config should allow this for <code class="language-plaintext highlighter-rouge">localhost</code>).</p>
+
+<hr />
+
+<h2 id="step-6-get-a-tls-certificate">Step 6: Get a TLS Certificate</h2>
+
+<p>Coder has no built-in Let’s Encrypt support — it reads certificate files directly. Obtain the certificate before configuring Coder. The DNS-01 challenge is the recommended approach because it works without opening port 80, supports wildcard certificates, and works even if your server isn’t yet reachable on its final DNS name.</p>
+
+<h3 id="install-certbot-and-a-dns-provider-plugin">Install certbot and a DNS provider plugin</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt-get <span class="nb">install</span> <span class="nt">-y</span> certbot
+</code></pre></div></div>
+
+<p>Then install the plugin for your DNS provider. Common providers:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Provider</th>
+      <th>Package</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Cloudflare</td>
+      <td><code class="language-plaintext highlighter-rouge">python3-certbot-dns-cloudflare</code></td>
+    </tr>
+    <tr>
+      <td>AWS Route 53</td>
+      <td><code class="language-plaintext highlighter-rouge">python3-certbot-dns-route53</code></td>
+    </tr>
+    <tr>
+      <td>DigitalOcean</td>
+      <td><code class="language-plaintext highlighter-rouge">python3-certbot-dns-digitalocean</code></td>
+    </tr>
+    <tr>
+      <td>Google Cloud DNS</td>
+      <td><code class="language-plaintext highlighter-rouge">python3-certbot-dns-google</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Example for Cloudflare:</span>
+<span class="nb">sudo </span>apt-get <span class="nb">install</span> <span class="nt">-y</span> python3-certbot-dns-cloudflare
+</code></pre></div></div>
+
+<p>See <a href="https://eff-certbot.readthedocs.io/en/stable/using.html#dns-plugins">certbot’s DNS plugin list</a> for all supported providers.</p>
+
+<h3 id="create-the-provider-credentials-file">Create the provider credentials file</h3>
+
+<p>Each plugin needs API credentials. Example for Cloudflare:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo mkdir</span> <span class="nt">-p</span> /etc/letsencrypt/secrets
+<span class="nb">sudo chmod </span>700 /etc/letsencrypt/secrets
+<span class="nb">sudo tee</span> /etc/letsencrypt/secrets/cloudflare.ini <span class="o">&gt;</span> /dev/null <span class="o">&lt;&lt;</span><span class="sh">'</span><span class="no">EOF</span><span class="sh">'
+dns_cloudflare_api_token = YOUR_CLOUDFLARE_API_TOKEN
+</span><span class="no">EOF
+</span><span class="nb">sudo chmod </span>600 /etc/letsencrypt/secrets/cloudflare.ini
+</code></pre></div></div>
+
+<p>Create a Cloudflare API token scoped to <strong>Zone / DNS / Edit</strong> for the specific zone only (not a Global API Key).</p>
+
+<h3 id="request-the-certificate">Request the certificate</h3>
+
+<p>The cert must cover both the base domain and the wildcard — the wildcard is required for workspace app subdomain routing (e.g. <code class="language-plaintext highlighter-rouge">ddev-web--myworkspace--rfay.coder.ddev.com</code>). DNS-01 is the only challenge type that supports wildcards.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>certbot certonly <span class="se">\</span>
+  <span class="nt">--dns-cloudflare</span> <span class="se">\</span>
+  <span class="nt">--dns-cloudflare-credentials</span> /etc/letsencrypt/secrets/cloudflare.ini <span class="se">\</span>
+  <span class="nt">-d</span> coder.ddev.com <span class="se">\</span>
+  <span class="nt">-d</span> <span class="s1">'*.coder.ddev.com'</span> <span class="se">\</span>
+  <span class="nt">--email</span> accounts@ddev.com <span class="se">\</span>
+  <span class="nt">--agree-tos</span> <span class="se">\</span>
+  <span class="nt">--non-interactive</span>
+</code></pre></div></div>
+
+<p>Replace <code class="language-plaintext highlighter-rouge">--dns-cloudflare</code> and <code class="language-plaintext highlighter-rouge">--dns-cloudflare-credentials</code> with the flag and credentials file for your provider. Replace <code class="language-plaintext highlighter-rouge">coder.ddev.com</code> with your actual hostname.</p>
+
+<p>Certbot stores certificates in <code class="language-plaintext highlighter-rouge">/etc/letsencrypt/live/coder.ddev.com/</code>.</p>
+
+<p><strong>If you already have a cert for just <code class="language-plaintext highlighter-rouge">coder.ddev.com</code></strong>, expand it in place with <code class="language-plaintext highlighter-rouge">--expand</code> (paths remain the same, no Coder config change needed):</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>certbot certonly <span class="se">\</span>
+  <span class="nt">--dns-cloudflare</span> <span class="se">\</span>
+  <span class="nt">--dns-cloudflare-credentials</span> /etc/letsencrypt/secrets/cloudflare.ini <span class="se">\</span>
+  <span class="nt">-d</span> coder.ddev.com <span class="se">\</span>
+  <span class="nt">-d</span> <span class="s1">'*.coder.ddev.com'</span> <span class="se">\</span>
+  <span class="nt">--email</span> accounts@ddev.com <span class="se">\</span>
+  <span class="nt">--agree-tos</span> <span class="se">\</span>
+  <span class="nt">--non-interactive</span> <span class="se">\</span>
+  <span class="nt">--expand</span>
+</code></pre></div></div>
+
+<h3 id="set-up-renewal-with-coder-restart">Set up renewal with Coder restart</h3>
+
+<p>Certbot installs a systemd timer for automatic renewal. Add a deploy hook that fixes certificate permissions and restarts Coder after each renewal.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo tee</span> /etc/letsencrypt/renewal-hooks/deploy/restart-coder.sh <span class="o">&gt;</span> /dev/null <span class="o">&lt;&lt;</span><span class="sh">'</span><span class="no">EOF</span><span class="sh">'
+#!/bin/bash
+# The live/ directory contains symlinks into archive/ — permissions must
+# be set on the archive files and all parent directories.
+chmod 0755 /etc/letsencrypt/live
+chmod 0755 /etc/letsencrypt/archive
+chmod 0755 /etc/letsencrypt/live/coder.ddev.com
+chmod 0755 /etc/letsencrypt/archive/coder.ddev.com
+# Public cert files: world-readable
+chmod 0644 /etc/letsencrypt/archive/coder.ddev.com/fullchain*.pem
+chmod 0644 /etc/letsencrypt/archive/coder.ddev.com/chain*.pem
+chmod 0644 /etc/letsencrypt/archive/coder.ddev.com/cert*.pem
+# Private key: readable by coder group only
+chmod 0640 /etc/letsencrypt/archive/coder.ddev.com/privkey*.pem
+chgrp coder /etc/letsencrypt/archive/coder.ddev.com/privkey*.pem
+# Restart Coder to pick up renewed cert
+systemctl restart coder
+</span><span class="no">EOF
+</span><span class="nb">sudo chmod</span> +x /etc/letsencrypt/renewal-hooks/deploy/restart-coder.sh
+</code></pre></div></div>
+
+<blockquote>
+  <p><strong>Note:</strong> The hook uses <code class="language-plaintext highlighter-rouge">chgrp coder</code>, which requires the <code class="language-plaintext highlighter-rouge">coder</code> system group to exist. That group is created when Coder is installed in Step 8. Run the hook and test renewal <strong>after</strong> completing Step 8 — see the “Fix cert permissions and test renewal” subsection there.</p>
+</blockquote>
+
+<h3 id="dns-note">DNS note</h3>
+
+<p>If you’re migrating an existing DNS name (e.g., <code class="language-plaintext highlighter-rouge">coder.ddev.com</code>) from another server, simply update the A record to point at the new server’s IP once it is ready. The DNS-01 challenge succeeds regardless of which IP the A record points to, so you can get the certificate before the cutover.</p>
+
+<hr />
+
+<h2 id="step-7-install-terraform">Step 7: Install Terraform</h2>
+
+<p>Coder attempts to install Terraform automatically on first boot, but this fails due to a bug (<a href="https://github.com/coder/coder/issues/24578">coder/coder#24578</a>). Install Terraform manually beforehand to work around it.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Install prerequisites</span>
+<span class="nb">sudo </span>apt-get update <span class="o">&amp;&amp;</span> <span class="nb">sudo </span>apt-get <span class="nb">install</span> <span class="nt">-y</span> gnupg software-properties-common
+
+<span class="c"># Add HashiCorp's GPG key</span>
+wget <span class="nt">-O-</span> https://apt.releases.hashicorp.com/gpg | <span class="se">\</span>
+  gpg <span class="nt">--dearmor</span> | <span class="se">\</span>
+  <span class="nb">sudo tee</span> /usr/share/keyrings/hashicorp-archive-keyring.gpg <span class="o">&gt;</span> /dev/null
+
+<span class="c"># Add the official HashiCorp apt repository</span>
+<span class="nb">echo</span> <span class="s2">"deb [arch=</span><span class="si">$(</span>dpkg <span class="nt">--print-architecture</span><span class="si">)</span><span class="s2"> signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] </span><span class="se">\</span><span class="s2">
+  https://apt.releases.hashicorp.com </span><span class="se">\</span><span class="s2">
+  </span><span class="si">$(</span><span class="nb">grep</span> <span class="nt">-oP</span> <span class="s1">'(?&lt;=UBUNTU_CODENAME=).*'</span> /etc/os-release <span class="o">||</span> lsb_release <span class="nt">-cs</span><span class="si">)</span><span class="s2"> main"</span> | <span class="se">\</span>
+  <span class="nb">sudo tee</span> /etc/apt/sources.list.d/hashicorp.list
+
+<span class="c"># Install Terraform</span>
+<span class="nb">sudo </span>apt-get update
+<span class="nb">sudo </span>apt-get <span class="nb">install</span> <span class="nt">-y</span> terraform
+
+<span class="c"># Verify</span>
+terraform <span class="nt">--version</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="step-8-install-coder">Step 8: Install Coder</h2>
+
+<h3 id="install-the-binary">Install the binary</h3>
+
+<p>Download and install the latest release directly from GitHub. The <code class="language-plaintext highlighter-rouge">install.sh</code> convenience script exists but has had version-resolution failures — the direct <code class="language-plaintext highlighter-rouge">.deb</code> approach is more reliable:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">CODER_VERSION</span><span class="o">=</span><span class="si">$(</span>curl <span class="nt">-fsSL</span> <span class="s2">"https://api.github.com/repos/coder/coder/releases/latest"</span> | <span class="se">\</span>
+  jq <span class="nt">-r</span> <span class="s1">'.tag_name'</span> | <span class="nb">tr</span> <span class="nt">-d</span> v<span class="si">)</span>
+curl <span class="nt">-fsSL</span> <span class="nt">-o</span> /tmp/coder.deb <span class="se">\</span>
+  <span class="s2">"https://github.com/coder/coder/releases/download/v</span><span class="k">${</span><span class="nv">CODER_VERSION</span><span class="k">}</span><span class="s2">/coder_</span><span class="k">${</span><span class="nv">CODER_VERSION</span><span class="k">}</span><span class="s2">_linux_amd64.deb"</span>
+<span class="nb">sudo </span>apt-get <span class="nb">install</span> <span class="nt">-y</span> /tmp/coder.deb
+</code></pre></div></div>
+
+<p>This installs the <code class="language-plaintext highlighter-rouge">coder</code> binary and a systemd service unit.</p>
+
+<h3 id="configure-the-service">Configure the service</h3>
+
+<p>Edit <code class="language-plaintext highlighter-rouge">/etc/coder.d/coder.env</code>:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>vim /etc/coder.d/coder.env
+</code></pre></div></div>
+
+<h4 id="listening-on-port-443-recommended-for-production">Listening on port 443 (recommended for production)</h4>
+
+<p>Coder terminates TLS itself — no reverse proxy needed. Replace <code class="language-plaintext highlighter-rouge">coder.example.com</code> with your actual hostname throughout:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Externally-reachable URL — replace with your hostname</span>
+<span class="nv">CODER_ACCESS_URL</span><span class="o">=</span>https://coder.example.com
+
+<span class="c"># Serve HTTPS directly on port 443</span>
+<span class="nv">CODER_TLS_ENABLE</span><span class="o">=</span><span class="nb">true
+</span><span class="nv">CODER_TLS_ADDRESS</span><span class="o">=</span>0.0.0.0:443
+<span class="nv">CODER_TLS_CERT_FILE</span><span class="o">=</span>/etc/letsencrypt/live/coder.example.com/fullchain.pem
+<span class="nv">CODER_TLS_KEY_FILE</span><span class="o">=</span>/etc/letsencrypt/live/coder.example.com/privkey.pem
+
+<span class="c"># Redirect HTTP on port 80 to HTTPS</span>
+<span class="nv">CODER_HTTP_ADDRESS</span><span class="o">=</span>0.0.0.0:80
+<span class="nv">CODER_REDIRECT_TO_ACCESS_URL</span><span class="o">=</span><span class="nb">true</span>
+
+<span class="c"># Wildcard domain for workspace app subdomain routing (requires *.coder.example.com DNS + cert)</span>
+<span class="nv">CODER_WILDCARD_ACCESS_URL</span><span class="o">=</span><span class="k">*</span>.coder.example.com
+
+<span class="c"># PostgreSQL connection (set up in Step 5) — replace the password</span>
+<span class="nv">CODER_PG_CONNECTION_URL</span><span class="o">=</span>postgresql://coder:strongpasswordhere@localhost/coder?sslmode<span class="o">=</span>disable
+
+<span class="c"># Telemetry — disable if you prefer not to send usage data to Coder</span>
+<span class="nv">CODER_TELEMETRY</span><span class="o">=</span><span class="nb">false</span>
+</code></pre></div></div>
+
+<h4 id="alternative-plain-http-or-non-standard-port">Alternative: plain HTTP or non-standard port</h4>
+
+<p>If you’re running behind a reverse proxy (nginx, Caddy) that handles TLS, or just testing on a LAN:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">CODER_ACCESS_URL</span><span class="o">=</span>http://coder.example.com:3000
+<span class="nv">CODER_HTTP_ADDRESS</span><span class="o">=</span>0.0.0.0:3000
+<span class="c"># No TLS variables needed; your proxy handles termination</span>
+</code></pre></div></div>
+
+<h3 id="start-and-enable-coder">Start and enable Coder</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>systemctl <span class="nb">enable</span> <span class="nt">--now</span> coder
+<span class="nb">sudo </span>systemctl status coder
+</code></pre></div></div>
+
+<p>View logs:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>journalctl <span class="nt">-u</span> coder <span class="nt">-f</span>
+</code></pre></div></div>
+
+<h3 id="allow-coder-to-delete-workspace-directories">Allow Coder to delete workspace directories</h3>
+
+<p>When a workspace is deleted, a Terraform destroy-time provisioner calls a wrapper script to remove the workspace’s host directory. The Coder service runs as the <code class="language-plaintext highlighter-rouge">coder</code> system user (UID 999) and needs root to delete entries from <code class="language-plaintext highlighter-rouge">/coder-workspaces/</code> (owned by root).</p>
+
+<p>The Coder systemd service sets <code class="language-plaintext highlighter-rouge">NoNewPrivileges</code>, which blocks sudo. Override that, install the wrapper, and configure sudoers:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Allow the coder service to use sudo (needed for workspace directory cleanup)</span>
+<span class="nb">sudo mkdir</span> <span class="nt">-p</span> /etc/systemd/system/coder.service.d/
+<span class="nb">printf</span> <span class="s1">'[Service]\nNoNewPrivileges=no\nCapabilityBoundingSet=CAP_SYSLOG CAP_IPC_LOCK CAP_NET_BIND_SERVICE CAP_SETUID CAP_SETGID CAP_AUDIT_WRITE CAP_DAC_OVERRIDE\n'</span> <span class="se">\</span>
+  | <span class="nb">sudo tee</span> /etc/systemd/system/coder.service.d/allow-privileges.conf
+<span class="nb">sudo </span>systemctl daemon-reload <span class="o">&amp;&amp;</span> <span class="nb">sudo </span>systemctl restart coder
+
+<span class="c"># Install the wrapper script</span>
+<span class="nb">sudo install</span> <span class="nt">-m</span> 755 scripts/coder-delete-workspace-dir.sh /usr/local/bin/coder-delete-workspace-dir
+
+<span class="c"># Grant coder user sudo access to only that script (runs as root)</span>
+<span class="nb">echo</span> <span class="s1">'coder ALL=(root) NOPASSWD: /usr/local/bin/coder-delete-workspace-dir'</span> <span class="se">\</span>
+  | <span class="nb">sudo tee</span> /etc/sudoers.d/coder-workspace-cleanup
+<span class="nb">sudo chmod </span>0440 /etc/sudoers.d/coder-workspace-cleanup
+<span class="nb">sudo </span>visudo <span class="nt">-c</span>
+</code></pre></div></div>
+
+<p>The wrapper validates that the argument matches exactly <code class="language-plaintext highlighter-rouge">/coder-workspaces/&lt;alphanumeric-name&gt;</code> before deleting, preventing path traversal even though the script runs as root.</p>
+
+<p>Without this setup, workspace deletion will log permission errors and leave the directory behind (recoverable with <code class="language-plaintext highlighter-rouge">scripts/cleanup-deleted-workspaces.sh</code>).</p>
+
+<h3 id="first-run-admin-setup">First-run admin setup</h3>
+
+<p>Navigate to <code class="language-plaintext highlighter-rouge">https://coder.example.com</code> (your hostname) and create the initial admin user.</p>
+
+<blockquote>
+  <p><strong>Important:</strong> Use your GitHub username as the Coder username (e.g. <code class="language-plaintext highlighter-rouge">rfay</code>). When you later log in via GitHub OAuth, Coder matches on username — if the name is already taken it creates a second account with a random suffix (e.g. <code class="language-plaintext highlighter-rouge">rfay-wanderingortiz8</code>) which will not have admin permissions. Getting the username right here avoids that entirely.</p>
+</blockquote>
+
+<h3 id="authenticate-the-cli">Authenticate the CLI</h3>
+
+<p>On the machine where you’ll manage templates (can be your local machine):</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>coder login https://coder.ddev.com
+</code></pre></div></div>
+
+<h3 id="configure-github-oauth-recommended">Configure GitHub OAuth (recommended)</h3>
+
+<p>The initial admin account must be created with username/password via the web UI (above). Once that’s done, configure GitHub OAuth so all subsequent logins — including <code class="language-plaintext highlighter-rouge">coder login</code> from the CLI — can use GitHub instead.</p>
+
+<blockquote>
+  <p><strong>If you already have a duplicate account</strong> (e.g. <code class="language-plaintext highlighter-rouge">rfay</code> password account and <code class="language-plaintext highlighter-rouge">rfay-wanderingortiz8</code> GitHub account): Coder does not support renaming users in the UI or reliably via the API. Fix it directly in PostgreSQL:</p>
+  <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo</span> <span class="nt">-u</span> postgres psql coder <span class="nt">-c</span> <span class="s2">"UPDATE users SET username='rfay' WHERE username='rfay-wanderingortiz8';"</span>
+<span class="nb">sudo </span>systemctl restart coder
+</code></pre></div>  </div>
+  <p>You will also need to delete the original password account (<code class="language-plaintext highlighter-rouge">rfay</code>) first if it still exists, or rename it out of the way the same way.</p>
+</blockquote>
+
+<p><strong>1. Create a GitHub OAuth App</strong></p>
+
+<p>Create the app under your <strong>GitHub organization</strong>, not your personal account — apps created under a personal account show “by &lt;username&gt;” on the authorization screen instead of “by &lt;org&gt;”. Go to <strong>github.com/organizations/ddev/settings/applications → New OAuth App</strong> and fill in:</p>
+
+<ul>
+  <li><strong>Application name</strong>: <code class="language-plaintext highlighter-rouge">Coder (coder.ddev.com)</code></li>
+  <li><strong>Homepage URL</strong>: <code class="language-plaintext highlighter-rouge">https://coder.ddev.com</code></li>
+  <li><strong>Authorization callback URL</strong>: <code class="language-plaintext highlighter-rouge">https://coder.ddev.com/api/v2/users/oauth2/github/callback</code></li>
+  <li><strong>Enable Device Flow</strong>: leave unchecked (see note below)</li>
+</ul>
+
+<p>After creating the app, generate a client secret. Note the <strong>Client ID</strong> and <strong>Client Secret</strong>.</p>
+
+<h4 id="two-oauth-apps-staging-and-production">Two OAuth Apps: staging and production</h4>
+
+<p>Register <strong>two separate OAuth Apps</strong> — one for staging, one for production. Separate apps isolate credentials between environments so that a staging secret compromise cannot affect production, and secret rotation on one environment does not require touching the other.</p>
+
+<p><strong>Staging app settings:</strong></p>
+
+<ul>
+  <li><strong>Application name</strong>: <code class="language-plaintext highlighter-rouge">Coder (staging-coder.ddev.com)</code></li>
+  <li><strong>Homepage URL</strong>: <code class="language-plaintext highlighter-rouge">https://staging-coder.ddev.com</code></li>
+  <li><strong>Authorization callback URL</strong>: <code class="language-plaintext highlighter-rouge">https://staging-coder.ddev.com/api/v2/users/oauth2/github/callback</code></li>
+  <li><strong>Enable Device Flow</strong>: leave unchecked</li>
+</ul>
+
+<p><strong>Production app settings</strong> (same as above):</p>
+
+<ul>
+  <li><strong>Application name</strong>: <code class="language-plaintext highlighter-rouge">Coder (coder.ddev.com)</code></li>
+  <li><strong>Homepage URL</strong>: <code class="language-plaintext highlighter-rouge">https://coder.ddev.com</code></li>
+  <li><strong>Authorization callback URL</strong>: <code class="language-plaintext highlighter-rouge">https://coder.ddev.com/api/v2/users/oauth2/github/callback</code></li>
+  <li><strong>Enable Device Flow</strong>: leave unchecked</li>
+</ul>
+
+<p>Use the staging app’s Client ID and Client Secret in <code class="language-plaintext highlighter-rouge">/etc/coder.d/coder.env</code> on staging-coder.ddev.com, and the production app’s credentials on coder.ddev.com.</p>
+
+<p><strong>2. Add to <code class="language-plaintext highlighter-rouge">/etc/coder.d/coder.env</code></strong></p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># GitHub OAuth</span>
+<span class="nv">CODER_OAUTH2_GITHUB_CLIENT_ID</span><span class="o">=</span>your-client-id
+<span class="nv">CODER_OAUTH2_GITHUB_CLIENT_SECRET</span><span class="o">=</span>your-client-secret
+
+<span class="c"># Allow sign-ups via GitHub (new users are created automatically on first login)</span>
+<span class="nv">CODER_OAUTH2_GITHUB_ALLOW_SIGNUPS</span><span class="o">=</span><span class="nb">true</span>
+
+<span class="c"># Access control: ddev org members, coder-ddev-com managed list, and $100+/month sponsor orgs</span>
+<span class="c"># Institute-for-Advanced-Studies is included but not yet verified — confirm the org identity before deploying</span>
+<span class="nv">CODER_OAUTH2_GITHUB_ALLOWED_ORGS</span><span class="o">=</span>ddev,coder-ddev-com,tag1consulting,upsun,platformsh,Institute-for-Advanced-Studies,CPS-IT,redfinsolutions,Lullabot,b13,pixelandtonic,Cambrico,centarro,8mylez,dkd,liip,i-gelb,FameHelsinki,Gizra,mobilistics,OPTASY,passbolt,vaersaagod,affinitybridge,AGILEDROP,NPO-Applications-GmbH,AtenDesignGroup
+
+<span class="c"># Or allow any GitHub user (not recommended for a shared server):</span>
+<span class="c"># CODER_OAUTH2_GITHUB_ALLOW_EVERYONE=true</span>
+</code></pre></div></div>
+
+<blockquote>
+  <p><strong>Device Flow:</strong> Do not set <code class="language-plaintext highlighter-rouge">CODER_OAUTH2_GITHUB_DEVICE_FLOW=true</code> when <code class="language-plaintext highlighter-rouge">CODER_OAUTH2_GITHUB_ALLOWED_ORGS</code> is set. Device flow routes all GitHub logins through a code-based flow that does not request <code class="language-plaintext highlighter-rouge">read:org</code> scope — org membership checks fail with a 403 and users cannot log in.</p>
+</blockquote>
+
+<p><strong>3. Restart Coder</strong></p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>systemctl restart coder
+</code></pre></div></div>
+
+<p>GitHub will now appear as a login option in the web UI and <code class="language-plaintext highlighter-rouge">coder login</code> will open a browser for GitHub authentication.</p>
+
+<p><strong>If you see “Signups are disabled”:</strong></p>
+
+<p>This means <code class="language-plaintext highlighter-rouge">CODER_OAUTH2_GITHUB_ALLOW_SIGNUPS</code> is not set or Coder wasn’t restarted after it was added. Verify the env var is present and restart:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">grep </span>ALLOW_SIGNUPS /etc/coder.d/coder.env
+<span class="nb">sudo </span>systemctl restart coder
+</code></pre></div></div>
+
+<p>There is also a toggle in the Coder admin UI at <strong>Admin → Security</strong> that can override the env var. Check that user sign-ups are not disabled there.</p>
+
+<h3 id="managing-individual-access-via-coder-ddev-com">Managing individual access via <code class="language-plaintext highlighter-rouge">coder-ddev-com</code></h3>
+
+<p>The <code class="language-plaintext highlighter-rouge">coder-ddev-com</code> GitHub organization is the managed access list for individuals who do not belong to the <code class="language-plaintext highlighter-rouge">ddev</code> org or one of the sponsor orgs. Adding someone to <code class="language-plaintext highlighter-rouge">coder-ddev-com</code> grants them signup access to coder.ddev.com without requiring a Coder server restart.</p>
+
+<p><strong>To grant access to an individual:</strong></p>
+
+<ol>
+  <li>Go to <strong>github.com/coder-ddev-com</strong> → <strong>People</strong> → <strong>Invite member</strong></li>
+  <li>Enter the person’s GitHub username and send the invitation</li>
+  <li>Once they accept, they can log in to coder.ddev.com via GitHub OAuth</li>
+</ol>
+
+<p><strong>Initial members</strong> (add these when creating the org):</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">dougvann</code> — individual $100/month GitHub Sponsor</li>
+  <li><code class="language-plaintext highlighter-rouge">claudiu-cristea</code> — Webikon sponsor (linked as individual on ddev.com)</li>
+  <li>Add LetsTalk, Amedick Sommer, and Pottkinder GmbH contacts when their GitHub usernames are confirmed</li>
+</ul>
+
+<p><strong>Note on private membership:</strong> Users do not need to make their <code class="language-plaintext highlighter-rouge">coder-ddev-com</code> membership public. Private membership is sufficient — the <code class="language-plaintext highlighter-rouge">read:org</code> OAuth scope allows Coder to verify membership regardless of visibility setting.</p>
+
+<h3 id="sponsor-org-access-policy">Sponsor org access policy</h3>
+
+<p>All $100+/month DDEV sponsors receive access as an org-level benefit: every member of a sponsor’s GitHub org can sign in to coder.ddev.com without individual enrollment in <code class="language-plaintext highlighter-rouge">coder-ddev-com</code>. MacStadium and JetBrains are excluded (in-kind, not cash sponsors).</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Company</th>
+      <th>GitHub org</th>
+      <th>Source</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Tag1</td>
+      <td><code class="language-plaintext highlighter-rouge">tag1consulting</code></td>
+      <td>invoiced</td>
+    </tr>
+    <tr>
+      <td>Upsun</td>
+      <td><code class="language-plaintext highlighter-rouge">upsun</code></td>
+      <td>invoiced</td>
+    </tr>
+    <tr>
+      <td>Platform.sh (Upsun predecessor)</td>
+      <td><code class="language-plaintext highlighter-rouge">platformsh</code></td>
+      <td>invoiced</td>
+    </tr>
+    <tr>
+      <td>Institute for Advanced Studies</td>
+      <td><code class="language-plaintext highlighter-rouge">Institute-for-Advanced-Studies</code> ⚠️</td>
+      <td>invoiced</td>
+    </tr>
+    <tr>
+      <td>CPS-IT</td>
+      <td><code class="language-plaintext highlighter-rouge">CPS-IT</code></td>
+      <td>invoiced</td>
+    </tr>
+    <tr>
+      <td>Redfin Solutions</td>
+      <td><code class="language-plaintext highlighter-rouge">redfinsolutions</code></td>
+      <td>invoiced + featured</td>
+    </tr>
+    <tr>
+      <td>Lullabot</td>
+      <td><code class="language-plaintext highlighter-rouge">Lullabot</code></td>
+      <td>invoiced</td>
+    </tr>
+    <tr>
+      <td>B13</td>
+      <td><code class="language-plaintext highlighter-rouge">b13</code></td>
+      <td>invoiced + featured</td>
+    </tr>
+    <tr>
+      <td>Pixel &amp; Tonic (Craft CMS)</td>
+      <td><code class="language-plaintext highlighter-rouge">pixelandtonic</code></td>
+      <td>invoiced + featured</td>
+    </tr>
+    <tr>
+      <td>Cambrico</td>
+      <td><code class="language-plaintext highlighter-rouge">Cambrico</code></td>
+      <td>invoiced + featured</td>
+    </tr>
+    <tr>
+      <td>Centarro</td>
+      <td><code class="language-plaintext highlighter-rouge">centarro</code></td>
+      <td>invoiced + featured</td>
+    </tr>
+    <tr>
+      <td>8mylez</td>
+      <td><code class="language-plaintext highlighter-rouge">8mylez</code></td>
+      <td>invoiced</td>
+    </tr>
+    <tr>
+      <td>dkd Internet Service GmbH</td>
+      <td><code class="language-plaintext highlighter-rouge">dkd</code></td>
+      <td>GitHub Sponsors</td>
+    </tr>
+    <tr>
+      <td>Liip</td>
+      <td><code class="language-plaintext highlighter-rouge">liip</code></td>
+      <td>GitHub Sponsors</td>
+    </tr>
+    <tr>
+      <td>i-gelb GmbH</td>
+      <td><code class="language-plaintext highlighter-rouge">i-gelb</code></td>
+      <td>featured</td>
+    </tr>
+    <tr>
+      <td>Fame Helsinki</td>
+      <td><code class="language-plaintext highlighter-rouge">FameHelsinki</code></td>
+      <td>featured</td>
+    </tr>
+    <tr>
+      <td>Gizra</td>
+      <td><code class="language-plaintext highlighter-rouge">Gizra</code></td>
+      <td>featured</td>
+    </tr>
+    <tr>
+      <td>mobilistics GmbH</td>
+      <td><code class="language-plaintext highlighter-rouge">mobilistics</code></td>
+      <td>featured</td>
+    </tr>
+    <tr>
+      <td>OPTASY</td>
+      <td><code class="language-plaintext highlighter-rouge">OPTASY</code></td>
+      <td>featured</td>
+    </tr>
+    <tr>
+      <td>Passbolt</td>
+      <td><code class="language-plaintext highlighter-rouge">passbolt</code></td>
+      <td>featured</td>
+    </tr>
+    <tr>
+      <td>Værsågod</td>
+      <td><code class="language-plaintext highlighter-rouge">vaersaagod</code></td>
+      <td>featured</td>
+    </tr>
+    <tr>
+      <td>Affinity Bridge</td>
+      <td><code class="language-plaintext highlighter-rouge">affinitybridge</code></td>
+      <td>featured</td>
+    </tr>
+    <tr>
+      <td>Agiledrop</td>
+      <td><code class="language-plaintext highlighter-rouge">AGILEDROP</code></td>
+      <td>featured</td>
+    </tr>
+    <tr>
+      <td>NPO Applications GmbH</td>
+      <td><code class="language-plaintext highlighter-rouge">NPO-Applications-GmbH</code></td>
+      <td>featured</td>
+    </tr>
+    <tr>
+      <td>Aten Design Group</td>
+      <td><code class="language-plaintext highlighter-rouge">AtenDesignGroup</code></td>
+      <td>featured</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>⚠️ <code class="language-plaintext highlighter-rouge">Institute-for-Advanced-Studies</code> — GitHub org exists but has no public name or description. Confirm with an operator that this is the correct org before deploying.</p>
+
+<p>Sponsors with no confirmed GitHub org (access via <code class="language-plaintext highlighter-rouge">coder-ddev-com</code> individual membership instead): LetsTalk, Amedick Sommer, Pottkinder GmbH.</p>
+
+<h4 id="adding-a-new-sponsor-org">Adding a new sponsor org</h4>
+
+<p>When a new organization reaches the $100+/month sponsorship level:</p>
+
+<ol>
+  <li>
+    <p><strong>Find their GitHub org slug</strong>: Check the sponsor’s GitHub profile or ask them directly. Verify with <code class="language-plaintext highlighter-rouge">gh api orgs/&lt;slug&gt; --jq '.login'</code> — if the command returns the slug, the org exists.</p>
+  </li>
+  <li>
+    <p><strong>Add the slug to <code class="language-plaintext highlighter-rouge">ALLOWED_ORGS</code></strong> on both staging and production:</p>
+
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># On the server, edit /etc/coder.d/coder.env</span>
+<span class="c"># Append the new slug to CODER_OAUTH2_GITHUB_ALLOWED_ORGS (comma-separated, no spaces)</span>
+<span class="nb">sudo </span>systemctl restart coder
+</code></pre></div>    </div>
+  </li>
+  <li>
+    <p><strong>Test on staging first</strong>: Ask someone from the org to attempt login on staging-coder.ddev.com before updating production.</p>
+  </li>
+  <li>
+    <p><strong>Update the table above</strong>: Add the org to the sponsor org table so the list stays accurate.</p>
+  </li>
+  <li>
+    <p><strong>Notify the sponsor</strong>: Send the sponsor notification (see <code class="language-plaintext highlighter-rouge">docs/admin/coder-ddev-com/sponsor-notification.md</code>) letting them know their org members now have access.</p>
+  </li>
+</ol>
+
+<p><strong>If the sponsor has no GitHub org</strong>: Add their individual GitHub username to the <code class="language-plaintext highlighter-rouge">coder-ddev-com</code> org instead (see “Managing individual access” above). No server restart needed.</p>
+
+<h3 id="fix-cert-permissions-and-test-renewal">Fix cert permissions and test renewal</h3>
+
+<p>Now that the <code class="language-plaintext highlighter-rouge">coder</code> system group exists, run the deploy hook you created in Step 6 to fix permissions on the certificate files:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo</span> /etc/letsencrypt/renewal-hooks/deploy/restart-coder.sh
+</code></pre></div></div>
+
+<p>Then confirm that automatic renewal will work end-to-end:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>certbot renew <span class="nt">--dry-run</span>
+</code></pre></div></div>
+
+<p>A “Congratulations, all simulated renewals succeeded” message means the hook, DNS credentials, and timer are all wired up correctly.</p>
+
+<hr />
+
+<h2 id="step-9-deploy-the-ddev-templates">Step 9: Deploy the DDEV Templates</h2>
+
+<p>With Coder running and the CLI authenticated, follow the <a href="/admin/operations-guide.html">Operations Guide</a> to build the Docker image and push the templates.</p>
+
+<p>Quick summary:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Clone this repository</span>
+git clone https://github.com/ddev/coder-ddev
+<span class="nb">cd </span>coder-ddev
+
+<span class="c"># Build the image, push it, and deploy all four templates</span>
+make deploy-user-defined-web
+make push-template-drupal-core
+make push-template-drupal-contrib
+make push-template-freeform
+</code></pre></div></div>
+
+<p>This deploys four templates:</p>
+<ul>
+  <li><strong>user-defined-web</strong> — general-purpose DDEV workspace; users configure their own project type</li>
+  <li><strong>drupal-core</strong> — automated Drupal core development environment; clones Drupal core, installs the site, and sets up the <a href="https://github.com/amateescu/ddev-drupal-dev">amateescu/ddev-drupal-dev</a> add-on (see Step 10 for the recommended seed cache setup)</li>
+  <li><strong>drupal-contrib</strong> — automated environment for developing Drupal contrib modules and themes; uses the <a href="https://github.com/ddev/ddev-drupal-contrib">ddev/ddev-drupal-contrib</a> add-on, which installs Drupal as a dev dependency and symlinks the module/theme into the web root</li>
+  <li><strong>freeform</strong> — multi-project workspace: keeps ddev-router running so multiple DDEV projects can coexist in one workspace, each reachable at its own hostname via Host-header routing</li>
+</ul>
+
+<hr />
+
+<h2 id="step-10-set-up-the-drupal-core-seed-cache-optional-highly-recommended">Step 10: Set Up the Drupal Core Seed Cache (optional, highly recommended)</h2>
+
+<p>The <code class="language-plaintext highlighter-rouge">drupal-core</code> template can provision workspaces faster using a <strong>seed cache</strong> on the host. The cache is a <strong>bare</strong> git clone of drupal/drupal. When a workspace starts, the startup script:</p>
+
+<ol>
+  <li>Creates a fresh git repo in the workspace directory</li>
+  <li>Adds the bare cache as a local remote and fetches from it (fast — reuses local objects, no network)</li>
+  <li>Removes the cache remote</li>
+  <li>Fetches from <code class="language-plaintext highlighter-rouge">git.drupalcode.org</code> for any commits newer than the cache</li>
+  <li>Checks out <code class="language-plaintext highlighter-rouge">main</code> (or the issue branch)</li>
+</ol>
+
+<p>This avoids downloading hundreds of MB per workspace and eliminates working-tree issues that a non-bare cache causes.</p>
+
+<h3 id="one-time-initial-setup">One-time initial setup</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git clone <span class="nt">--bare</span> https://git.drupalcode.org/project/drupal.git ~/cache/drupal-core-seed
+</code></pre></div></div>
+
+<p>The seed directory IS the bare clone root — no subdirectory nesting. No working tree, no DDEV, no vendor, no composer files.</p>
+
+<h3 id="install-the-hourly-update-timer">Install the hourly update timer</h3>
+
+<p>The update script runs <code class="language-plaintext highlighter-rouge">git fetch --all --prune</code> to keep the bare cache current. Because there is no working tree, no <code class="language-plaintext highlighter-rouge">git merge</code> is needed. Install it as an hourly systemd timer:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">REPO</span><span class="o">=</span>~/workspace/coder-ddev   <span class="c"># adjust if your repo is elsewhere</span>
+
+<span class="c"># Install the update script to a standard system path</span>
+<span class="nb">sudo install</span> <span class="nt">-m</span> 755 <span class="nv">$REPO</span>/drupal-core/scripts/update-drupal-cache <span class="se">\</span>
+  /usr/local/bin/update-drupal-cache
+
+<span class="c"># Install the systemd units</span>
+<span class="nb">sudo install</span> <span class="nt">-m</span> 644 <span class="nv">$REPO</span>/drupal-core/scripts/drupal-cache-updater.service <span class="se">\</span>
+  /etc/systemd/system/
+<span class="nb">sudo install</span> <span class="nt">-m</span> 644 <span class="nv">$REPO</span>/drupal-core/scripts/drupal-cache-updater.timer <span class="se">\</span>
+  /etc/systemd/system/
+
+<span class="c"># Edit the service to set the correct user (required — YOURUSER is a placeholder):</span>
+<span class="nb">sudo sed</span> <span class="nt">-i</span> <span class="s2">"s/User=YOURUSER/User=</span><span class="si">$(</span><span class="nb">whoami</span><span class="si">)</span><span class="s2">/"</span> /etc/systemd/system/drupal-cache-updater.service
+<span class="c"># If your seed directory differs from ~/cache/drupal-core-seed, also add --seed-dir:</span>
+<span class="c">#   sudo vim /etc/systemd/system/drupal-cache-updater.service</span>
+<span class="c"># and change ExecStart to: /usr/local/bin/update-drupal-cache --seed-dir /your/cache/path</span>
+
+<span class="nb">sudo </span>systemctl daemon-reload
+<span class="nb">sudo </span>systemctl <span class="nb">enable</span> <span class="nt">--now</span> drupal-cache-updater.timer
+
+<span class="c"># Verify the timer is scheduled</span>
+systemctl list-timers drupal-cache-updater.timer
+</code></pre></div></div>
+
+<h3 id="manual-refresh">Manual refresh</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>/usr/local/bin/update-drupal-cache
+
+<span class="c"># If your seed directory differs from the default:</span>
+/usr/local/bin/update-drupal-cache <span class="nt">--seed-dir</span> /your/cache/path
+
+<span class="c"># Or via systemd to capture output in journald:</span>
+<span class="nb">sudo </span>systemctl start drupal-cache-updater.service
+journalctl <span class="nt">-u</span> drupal-cache-updater.service <span class="nt">-f</span>
+</code></pre></div></div>
+
+<h3 id="migrating-from-the-old-joachim-n-cache-structure">Migrating from the old joachim-n cache structure</h3>
+
+<p>If your server has an existing seed cache built with <code class="language-plaintext highlighter-rouge">joachim-n/drupal-core-development-project</code>, the startup script now checks for <code class="language-plaintext highlighter-rouge">.git</code> at the seed root — not inside <code class="language-plaintext highlighter-rouge">repos/drupal/</code>. New workspaces will fall back to a direct clone (slower) until migration is complete.</p>
+
+<p>Run these steps on each server:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">SEED_DIR</span><span class="o">=</span>~/cache/drupal-core-seed
+<span class="nv">REPO</span><span class="o">=</span>~/workspace/coder-ddev
+
+<span class="c"># 1. Stop the old DDEV seed project (only needed if it was still running)</span>
+<span class="nb">cd</span> <span class="s2">"</span><span class="nv">$SEED_DIR</span><span class="s2">"</span> <span class="o">&amp;&amp;</span> ddev stop <span class="nt">--remove-data</span> 2&gt;/dev/null <span class="o">||</span> <span class="nb">true</span>
+
+<span class="c"># 2. Move the git clone to the seed root, remove everything else</span>
+<span class="nb">mv</span> <span class="s2">"</span><span class="nv">$SEED_DIR</span><span class="s2">/repos/drupal"</span> /tmp/drupal-git-tmp
+<span class="nb">rm</span> <span class="nt">-rf</span> <span class="s2">"</span><span class="nv">$SEED_DIR</span><span class="s2">"</span>
+<span class="nb">mv</span> /tmp/drupal-git-tmp <span class="s2">"</span><span class="nv">$SEED_DIR</span><span class="s2">"</span>
+
+<span class="c"># 3. Install the updated script, service, and timer</span>
+<span class="nb">sudo install</span> <span class="nt">-m</span> 755 <span class="nv">$REPO</span>/drupal-core/scripts/update-drupal-cache <span class="se">\</span>
+  /usr/local/bin/update-drupal-cache
+<span class="nb">sudo install</span> <span class="nt">-m</span> 644 <span class="nv">$REPO</span>/drupal-core/scripts/drupal-cache-updater.service <span class="se">\</span>
+  /etc/systemd/system/
+<span class="nb">sudo install</span> <span class="nt">-m</span> 644 <span class="nv">$REPO</span>/drupal-core/scripts/drupal-cache-updater.timer <span class="se">\</span>
+  /etc/systemd/system/
+
+<span class="c"># 4. Set the correct user in the service file (YOURUSER is a placeholder)</span>
+<span class="nb">sudo sed</span> <span class="nt">-i</span> <span class="s2">"s/User=YOURUSER/User=</span><span class="si">$(</span><span class="nb">whoami</span><span class="si">)</span><span class="s2">/"</span> /etc/systemd/system/drupal-cache-updater.service
+
+<span class="c"># 5. Enable and start the timer</span>
+<span class="nb">sudo </span>systemctl daemon-reload
+<span class="nb">sudo </span>systemctl <span class="nb">enable</span> <span class="nt">--now</span> drupal-cache-updater.timer
+
+<span class="c"># 6. Verify it works</span>
+<span class="nb">sudo </span>systemctl start drupal-cache-updater.service
+journalctl <span class="nt">-u</span> drupal-cache-updater.service <span class="nt">--no-pager</span> | <span class="nb">tail</span> <span class="nt">-10</span>
+</code></pre></div></div>
+
+<p>After migration, <code class="language-plaintext highlighter-rouge">~/cache/drupal-core-seed</code> is the git clone itself — <code class="language-plaintext highlighter-rouge">.git</code> is at the root.</p>
+
+<h3 id="template-variable">Template variable</h3>
+
+<p>The template uses a <code class="language-plaintext highlighter-rouge">cache_path</code> variable for the host-side seed directory. The <code class="language-plaintext highlighter-rouge">Makefile</code> defaults <code class="language-plaintext highlighter-rouge">DRUPAL_CACHE_PATH</code> to <code class="language-plaintext highlighter-rouge">~/cache/drupal-core-seed</code> (resolved to the home directory of whoever runs <code class="language-plaintext highlighter-rouge">make</code>), so <code class="language-plaintext highlighter-rouge">make push-template-drupal-core</code> works without any override as long as your seed directory is at that path.</p>
+
+<p>If your seed directory is elsewhere, override at deploy time:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>make push-template-drupal-core <span class="nv">DRUPAL_CACHE_PATH</span><span class="o">=</span>/your/cache/path
+</code></pre></div></div>
+
+<h3 id="how-new-workspaces-use-the-cache">How new workspaces use the cache</h3>
+
+<p>When a workspace starts for the first time:</p>
+
+<ol>
+  <li>The startup script detects a bare repo at <code class="language-plaintext highlighter-rouge">/home/coder-cache-seed</code> (the read-only bind mount of <code class="language-plaintext highlighter-rouge">cache_path</code>)</li>
+  <li><strong>Bare cache hit:</strong> <code class="language-plaintext highlighter-rouge">git init</code> + <code class="language-plaintext highlighter-rouge">git fetch drupalcache</code> (fast local copy of all objects) + <code class="language-plaintext highlighter-rouge">git fetch origin</code> (only the delta) + checkout</li>
+  <li><strong>Legacy non-bare cache:</strong> <code class="language-plaintext highlighter-rouge">git clone --reference</code> (old behaviour, still supported)</li>
+  <li><strong>Cache miss</strong> (path absent or not a git repo): <code class="language-plaintext highlighter-rouge">git clone</code> runs without any cache — slower but always works</li>
+</ol>
+
+<p>Check workspace startup logs in the Coder dashboard or at <code class="language-plaintext highlighter-rouge">/tmp/drupal-setup.log</code> inside the workspace to confirm which path was taken. Look for “bare cache” or “reference from cache seed” in the log.</p>
+
+<h3 id="migrating-from-a-non-bare-legacy-cache">Migrating from a non-bare (legacy) cache</h3>
+
+<p>If you have an existing non-bare clone at <code class="language-plaintext highlighter-rouge">~/cache/drupal-core-seed</code>, replace it with a bare clone:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">mv</span> ~/cache/drupal-core-seed ~/cache/drupal-core-seed.bak
+git clone <span class="nt">--bare</span> https://git.drupalcode.org/project/drupal.git ~/cache/drupal-core-seed
+<span class="c"># Once confirmed working:</span>
+<span class="nb">rm</span> <span class="nt">-rf</span> ~/cache/drupal-core-seed.bak
+</code></pre></div></div>
+
+<p>The <code class="language-plaintext highlighter-rouge">update-drupal-cache</code> script handles both bare and non-bare repos automatically.</p>
+
+<h3 id="troubleshooting">Troubleshooting</h3>
+
+<p><strong>Cache not being used:</strong></p>
+
+<ul>
+  <li>Verify the seed directory is a bare git repo: <code class="language-plaintext highlighter-rouge">git -C ~/cache/drupal-core-seed rev-parse --is-bare-repository</code> (should print <code class="language-plaintext highlighter-rouge">true</code>)</li>
+  <li>Confirm <code class="language-plaintext highlighter-rouge">cache_path</code> in the deployed template matches your actual seed directory</li>
+  <li>Look for “bare cache” or “reference from cache seed” in <code class="language-plaintext highlighter-rouge">/tmp/drupal-setup.log</code>; absence means the path was missing or not a valid git repo</li>
+</ul>
+
+<p><strong>Update script fails:</strong></p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git <span class="nt">-C</span> ~/cache/drupal-core-seed fetch <span class="nt">--all</span> <span class="nt">--prune</span>
+<span class="c"># If this fails, check network connectivity or re-clone:</span>
+<span class="nb">rm</span> <span class="nt">-rf</span> ~/cache/drupal-core-seed
+git clone https://git.drupalcode.org/project/drupal.git ~/cache/drupal-core-seed
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="step-11-set-up-discord-notifications">Step 11: Set Up Discord Notifications</h2>
+
+<p>Coder can send webhook notifications to Discord for events like new user signups, workspace creation/deletion, and workspace health alerts. This uses a small relay service that translates Coder’s webhook format to Discord’s.</p>
+
+<h3 id="create-a-discord-webhook">Create a Discord webhook</h3>
+
+<p>In Discord, go to the target channel → <strong>Edit Channel</strong> → <strong>Integrations</strong> → <strong>Webhooks</strong> → <strong>New Webhook</strong>. Copy the webhook URL and keep it secret — treat it like a password.</p>
+
+<h3 id="install-the-relay-service">Install the relay service</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">REPO</span><span class="o">=</span>~/workspace/coder-ddev   <span class="c"># adjust if your repo is elsewhere</span>
+
+<span class="c"># Install the relay script</span>
+<span class="nb">sudo install</span> <span class="nt">-m</span> 755 <span class="nv">$REPO</span>/scripts/coder-discord-relay /usr/local/bin/
+
+<span class="c"># Create the env file with your Discord webhook URL</span>
+<span class="nb">sudo tee</span> /etc/coder-discord-relay.env <span class="o">&gt;</span> /dev/null <span class="o">&lt;&lt;</span><span class="sh">'</span><span class="no">EOF</span><span class="sh">'
+DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/YOUR_WEBHOOK_URL_HERE
+LISTEN_PORT=9876
+</span><span class="no">EOF
+</span><span class="nb">sudo chmod </span>600 /etc/coder-discord-relay.env
+
+<span class="c"># Install and start the systemd service</span>
+<span class="nb">sudo install</span> <span class="nt">-m</span> 644 <span class="nv">$REPO</span>/scripts/coder-discord-relay.service /etc/systemd/system/
+<span class="nb">sudo </span>systemctl daemon-reload
+<span class="nb">sudo </span>systemctl <span class="nb">enable</span> <span class="nt">--now</span> coder-discord-relay
+
+<span class="c"># Verify it's running</span>
+curl <span class="nt">-s</span> http://localhost:9876/
+</code></pre></div></div>
+
+<h3 id="configure-coder-to-send-webhooks">Configure Coder to send webhooks</h3>
+
+<p>Add to <code class="language-plaintext highlighter-rouge">/etc/coder.d/coder.env</code>:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">CODER_NOTIFICATIONS_METHOD</span><span class="o">=</span>webhook
+<span class="nv">CODER_NOTIFICATIONS_WEBHOOK_ENDPOINT</span><span class="o">=</span>http://localhost:9876/
+</code></pre></div></div>
+
+<p>Then restart Coder:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>systemctl restart coder
+</code></pre></div></div>
+
+<h3 id="configure-which-events-to-receive">Configure which events to receive</h3>
+
+<p><strong>Deployment-level method</strong> (admin): Go to <code class="language-plaintext highlighter-rouge">https://coder.ddev.com/deployment/notifications?tab=events</code> and set desired events to use the webhook method.</p>
+
+<p><strong>User preferences</strong> (per-user opt-in): Go to <code class="language-plaintext highlighter-rouge">https://coder.ddev.com/settings/notifications</code> and enable specific events. Some events (e.g. “Workspace Created”) are disabled by default and must be explicitly enabled here — the deployment events page only sets the delivery method, not whether the event fires for you.</p>
+
+<p>Recommended events to enable:</p>
+<ul>
+  <li><strong>User account created</strong> — fires when any user signs up (admin-facing, enabled by default)</li>
+  <li><strong>Workspace Created</strong> — fires when you or another user creates a workspace (must opt in at <code class="language-plaintext highlighter-rouge">/settings/notifications</code>)</li>
+  <li><strong>Workspace Deleted</strong> — workspace removed</li>
+  <li><strong>Workspace Autobuild Failed</strong>, <strong>Workspace Marked as Dormant</strong> — operational alerts</li>
+</ul>
+
+<h3 id="test-it">Test it</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl <span class="nt">-X</span> POST http://localhost:9876/ <span class="se">\</span>
+  <span class="nt">-H</span> <span class="s2">"Content-Type: application/json"</span> <span class="se">\</span>
+  <span class="nt">-d</span> <span class="s1">'{"title":"Test","body":"Relay is working"}'</span>
+</code></pre></div></div>
+
+<p>This should post a message to your Discord channel.</p>
+
+<h3 id="notes">Notes</h3>
+
+<ul>
+  <li>The relay listens on <code class="language-plaintext highlighter-rouge">127.0.0.1</code> only — it is not exposed externally</li>
+  <li>Logs: <code class="language-plaintext highlighter-rouge">sudo journalctl -u coder-discord-relay -q -f</code></li>
+  <li>The relay formats workspace and user events compactly; all other events fall back to Coder’s pre-formatted title</li>
+  <li>If you regenerate the Discord webhook URL, update <code class="language-plaintext highlighter-rouge">/etc/coder-discord-relay.env</code> and restart the relay</li>
+</ul>
+
+<hr />
+
+<h2 id="step-12-set-up-icinga2-monitoring">Step 12: Set Up Icinga2 Monitoring</h2>
+
+<p>New Coder servers should be monitored by <code class="language-plaintext highlighter-rouge">monitor.ddev.com</code> using icinga2. This connects the server as an icinga2 agent to the central monitoring master.</p>
+
+<p>See also: <a href="https://docs.ddev.com/en/stable/developers/buildkite-testmachine-setup/">DDEV testmachine setup docs</a> and <a href="https://github.com/ddev/maintainer-info/blob/main/topics/monitoring.md">maintainer-info monitoring</a> (private repo) for broader context on the monitoring infrastructure.</p>
+
+<h3 id="install-icinga2-and-monitoring-plugins">Install icinga2 and monitoring plugins</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt-get <span class="nb">install</span> <span class="nt">-y</span> icinga2 icinga2-bin icinga2-common icinga2-doc <span class="se">\</span>
+  monitoring-plugins monitoring-plugins-basic monitoring-plugins-common <span class="se">\</span>
+  monitoring-plugins-contrib monitoring-plugins-standard <span class="se">\</span>
+  libmonitoring-plugin-perl nmon
+</code></pre></div></div>
+
+<h3 id="generate-a-ticket-on-monitorddevcom">Generate a ticket on monitor.ddev.com</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>icinga2 pki ticket <span class="nt">--cn</span> &lt;new-server-hostname&gt;
+</code></pre></div></div>
+
+<p>Copy the hex ticket string — you’ll need it in the next step.</p>
+
+<h3 id="run-the-node-wizard-on-the-new-server">Run the node wizard on the new server</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>icinga2 node wizard
+</code></pre></div></div>
+
+<p>Answer the prompts as follows:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Prompt</th>
+      <th>Answer</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Agent/satellite setup?</td>
+      <td><code class="language-plaintext highlighter-rouge">Y</code> (default)</td>
+    </tr>
+    <tr>
+      <td>Common name (CN)</td>
+      <td><code class="language-plaintext highlighter-rouge">&lt;new-server-hostname&gt;</code> (e.g. <code class="language-plaintext highlighter-rouge">staging-coder.ddev.com</code>)</td>
+    </tr>
+    <tr>
+      <td>Parent endpoint CN</td>
+      <td><code class="language-plaintext highlighter-rouge">monitor.ddev.com</code></td>
+    </tr>
+    <tr>
+      <td>Establish connection to parent?</td>
+      <td><code class="language-plaintext highlighter-rouge">Y</code> (default)</td>
+    </tr>
+    <tr>
+      <td>Parent endpoint host</td>
+      <td><code class="language-plaintext highlighter-rouge">monitor.ddev.com</code></td>
+    </tr>
+    <tr>
+      <td>Parent endpoint port</td>
+      <td>(enter, default 5665)</td>
+    </tr>
+    <tr>
+      <td>Add more endpoints?</td>
+      <td><code class="language-plaintext highlighter-rouge">N</code> (default)</td>
+    </tr>
+    <tr>
+      <td>Parent zone name</td>
+      <td><code class="language-plaintext highlighter-rouge">master</code> (default)</td>
+    </tr>
+    <tr>
+      <td>Request ticket</td>
+      <td>paste the ticket from above</td>
+    </tr>
+    <tr>
+      <td>Accept config from parent?</td>
+      <td><code class="language-plaintext highlighter-rouge">y</code></td>
+    </tr>
+    <tr>
+      <td>Accept commands from parent?</td>
+      <td><code class="language-plaintext highlighter-rouge">y</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Then restart icinga2:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>systemctl restart icinga2
+</code></pre></div></div>
+
+<h3 id="configure-the-host-in-icinga-director">Configure the host in Icinga Director</h3>
+
+<p>In the Icinga Director web UI at <a href="https://monitor.ddev.com/icingaweb2">monitor.ddev.com/icingaweb2</a>:</p>
+
+<ol>
+  <li>Clone the <code class="language-plaintext highlighter-rouge">coder.ddev.com</code> host entry</li>
+  <li>Set the name and address to the new server hostname</li>
+  <li>Deploy the configuration</li>
+</ol>
+
+<p>The new host will appear in the monitoring dashboard once the agent connects and the deploy completes.</p>
+
+<hr />
+
+<h2 id="adding-capacity-additional-provisioner-nodes">Adding Capacity: Additional Provisioner Nodes</h2>
+
+<p>Coder separates the <strong>control plane</strong> (the Coder server) from <strong>provisioners</strong> (the processes that run Terraform to create workspaces). By default, the Coder server includes a built-in provisioner. For additional capacity or to run workspaces on separate machines, you can run <strong>external provisioner daemons</strong>.</p>
+
+<p>Each provisioner handles one concurrent workspace build. Running N provisioners allows N simultaneous workspace starts.</p>
+
+<blockquote>
+  <p><strong>Note:</strong> This section is a placeholder. Multi-node provisioner setup for this DDEV/Sysbox template has not yet been documented or tested. The notes below reflect the general Coder external provisioner model — verify against your setup before relying on them.</p>
+</blockquote>
+
+<h3 id="how-it-works">How it works</h3>
+
+<ul>
+  <li>External provisioners connect to the Coder server over HTTP/S</li>
+  <li>They need network access to the Coder server and to the Docker socket on their host</li>
+  <li>Each provisioner host needs Docker + Sysbox installed (same as the primary server)</li>
+  <li>Provisioners can be tagged to route specific templates to specific hosts</li>
+</ul>
+
+<h3 id="general-steps">General steps</h3>
+
+<p><strong>On the Coder server:</strong></p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Create a provisioner key (scoped to your organization)</span>
+coder provisioner keys create my-provisioner-key <span class="nt">--org</span> default
+<span class="c"># Save the output key — you'll need it on the provisioner node</span>
+</code></pre></div></div>
+
+<p><strong>On each additional provisioner node:</strong></p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Install Docker and Sysbox (same as Steps 2 and 4 above)</span>
+
+<span class="c"># Install the Coder binary (provisioner daemon only — no server needed)</span>
+<span class="nv">CODER_VERSION</span><span class="o">=</span><span class="si">$(</span>curl <span class="nt">-fsSL</span> <span class="s2">"https://api.github.com/repos/coder/coder/releases/latest"</span> | <span class="se">\</span>
+  jq <span class="nt">-r</span> <span class="s1">'.tag_name'</span> | <span class="nb">tr</span> <span class="nt">-d</span> v<span class="si">)</span>
+curl <span class="nt">-fsSL</span> <span class="nt">-o</span> /tmp/coder.deb <span class="se">\</span>
+  <span class="s2">"https://github.com/coder/coder/releases/download/v</span><span class="k">${</span><span class="nv">CODER_VERSION</span><span class="k">}</span><span class="s2">/coder_</span><span class="k">${</span><span class="nv">CODER_VERSION</span><span class="k">}</span><span class="s2">_linux_amd64.deb"</span>
+<span class="nb">sudo </span>apt-get <span class="nb">install</span> <span class="nt">-y</span> /tmp/coder.deb
+
+<span class="c"># Set credentials</span>
+<span class="nb">export </span><span class="nv">CODER_URL</span><span class="o">=</span>https://coder.ddev.com
+<span class="nb">export </span><span class="nv">CODER_PROVISIONER_DAEMON_KEY</span><span class="o">=</span>&lt;key-from-above&gt;
+
+<span class="c"># Start the provisioner daemon</span>
+coder provisioner start
+</code></pre></div></div>
+
+<p>For persistent operation, wrap this in a systemd service.</p>
+
+<p>See <a href="https://coder.com/docs/admin/provisioners">Coder external provisioner docs</a> for full details including Kubernetes and Docker deployment options.</p>
+
+<hr />
+
+<h2 id="step-13-configure-github-actions-ci">Step 13: Configure GitHub Actions CI</h2>
+
+<p>The repository runs integration tests against <code class="language-plaintext highlighter-rouge">staging-coder.ddev.com</code> on every push to <code class="language-plaintext highlighter-rouge">main</code> and nightly. Three workflows are involved: <code class="language-plaintext highlighter-rouge">validate.yml</code> (static HCL checks, no credentials needed), <code class="language-plaintext highlighter-rouge">staging-push.yml</code> (pushes templates with <code class="language-plaintext highlighter-rouge">--activate=false</code>), and <code class="language-plaintext highlighter-rouge">integration-test.yml</code> / <code class="language-plaintext highlighter-rouge">drupal-integration-test.yml</code> (create and verify real workspaces on the self-hosted runner).</p>
+
+<h3 id="one-time-setup-on-staging-coderddevcom">One-time setup on staging-coder.ddev.com</h3>
+
+<h4 id="1-register-the-self-hosted-github-actions-runner">1. Register the self-hosted GitHub Actions runner</h4>
+
+<p>The integration tests run on a self-hosted runner tagged <code class="language-plaintext highlighter-rouge">sysbox</code> so they have access to the Sysbox-capable Docker daemon. Register one runner instance per concurrent matrix job (currently 2 for <code class="language-plaintext highlighter-rouge">integration-test.yml</code> and 3 for <code class="language-plaintext highlighter-rouge">drupal-integration-test.yml</code>):</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt-get <span class="nb">install</span> <span class="nt">-y</span> unzip
+<span class="nb">sudo </span>useradd <span class="nt">-m</span> <span class="nt">-s</span> /bin/bash github-runner
+
+<span class="k">for </span>N <span class="k">in </span>1 2 3 4 5<span class="p">;</span> <span class="k">do
+  </span><span class="nb">sudo</span> <span class="nt">-u</span> github-runner <span class="nb">mkdir</span> <span class="nt">-p</span> /home/github-runner/actions-runner-<span class="k">${</span><span class="nv">N</span><span class="k">}</span>
+  <span class="c"># Download runner binaries from GitHub Settings → Actions → Runners → New self-hosted runner</span>
+  <span class="c"># Copy binaries to each directory, then:</span>
+  <span class="nb">sudo</span> <span class="nt">-u</span> github-runner /home/github-runner/actions-runner-<span class="k">${</span><span class="nv">N</span><span class="k">}</span>/config.sh <span class="se">\</span>
+    <span class="nt">--url</span> https://github.com/ddev/coder-ddev <span class="se">\</span>
+    <span class="nt">--token</span> &lt;token-from-github&gt; <span class="se">\</span>
+    <span class="nt">--name</span> staging-coder-<span class="k">${</span><span class="nv">N</span><span class="k">}</span> <span class="se">\</span>
+    <span class="nt">--labels</span> sysbox <span class="se">\</span>
+    <span class="nt">--unattended</span>
+  <span class="nb">sudo</span> /home/github-runner/actions-runner-<span class="k">${</span><span class="nv">N</span><span class="k">}</span>/svc.sh <span class="nb">install </span>github-runner
+  <span class="nb">sudo</span> /home/github-runner/actions-runner-<span class="k">${</span><span class="nv">N</span><span class="k">}</span>/svc.sh start
+<span class="k">done</span>
+</code></pre></div></div>
+
+<p>Get a fresh registration token for each batch from <strong>GitHub → Settings → Actions → Runners → New self-hosted runner</strong>.</p>
+
+<h4 id="2-create-the-ci-bot-user-on-staging">2. Create the CI bot user on staging</h4>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>coder <span class="nb">users </span>create <span class="nt">--email</span> ci@staging-coder.ddev.com <span class="nt">--username</span> ci-bot <span class="nt">--login-type</span> none
+coder <span class="nb">users </span>edit-roles ci-bot <span class="nt">--roles</span> template-admin <span class="nt">--yes</span>
+coder tokens create <span class="nt">--user</span> ci-bot <span class="nt">--lifetime</span> 8760h
+</code></pre></div></div>
+
+<p>Store the token in 1Password at <code class="language-plaintext highlighter-rouge">op://test-secrets/TEST_CODER_SESSION_TOKEN/credential</code>.</p>
+
+<h3 id="github-repository-configuration">GitHub repository configuration</h3>
+
+<p>Go to <strong>GitHub → Settings → Secrets and variables → Actions</strong> and add:</p>
+
+<p><strong>Secrets:</strong></p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">OP_SERVICE_ACCOUNT_TOKEN</code></td>
+      <td>1Password service account token with read access to the <code class="language-plaintext highlighter-rouge">test-secrets</code> vault</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>Variables:</strong></p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">TEST_CODER_URL</code></td>
+      <td><code class="language-plaintext highlighter-rouge">https://staging-coder.ddev.com</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">DRUPAL_TEST_ISSUE_FORK</code></td>
+      <td>A drupal.org issue number (see below)</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="choosing-a-test-issue-for-drupal_test_issue_fork">Choosing a test issue for <code class="language-plaintext highlighter-rouge">DRUPAL_TEST_ISSUE_FORK</code></h3>
+
+<p>The <code class="language-plaintext highlighter-rouge">drupal-integration-test.yml</code> workflow creates a workspace from a real drupal.org issue fork and verifies the site comes up correctly. The issue number is the only thing you need to configure — the branch name and Drupal version are resolved automatically from the drupal.org and GitLab APIs.</p>
+
+<p>Pick an issue that:</p>
+
+<ul>
+  <li>Is <strong>Needs review</strong> status (not Needs work or Closed)</li>
+  <li>Targets <strong>main</strong> (12.x) — search at <code class="language-plaintext highlighter-rouge">drupal.org/project/issues/drupal?status=8&amp;version=12.x-dev</code></li>
+  <li>Has an <strong>issue fork</strong> on <code class="language-plaintext highlighter-rouge">git.drupalcode.org/issue/drupal-{number}</code></li>
+  <li>Is a modest change (under ~10 files) with no database schema changes</li>
+</ul>
+
+<p>Set the bare issue number (e.g. <code class="language-plaintext highlighter-rouge">3585397</code>) or the prefixed form (<code class="language-plaintext highlighter-rouge">drupal-3585397</code>) — both work.</p>
+
+<p>Update this variable whenever the issue is closed or merged. The current default (<code class="language-plaintext highlighter-rouge">3585397</code>) is a PHP 8.4 compatibility fix targeting Drupal 12.x main.</p>
+
+<hr />
+
+<h2 id="troubleshooting-1">Troubleshooting</h2>
+
+<p><strong>Coder service won’t start:</strong></p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>journalctl <span class="nt">-u</span> coder <span class="nt">-n50</span>
+<span class="c"># Check CODER_ACCESS_URL is set and reachable</span>
+<span class="c"># Check PostgreSQL is running if using external DB</span>
+</code></pre></div></div>
+
+<p><strong>Sysbox containers fail to start:</strong></p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sysbox-runc <span class="nt">--version</span>          <span class="c"># Verify sysbox is installed</span>
+<span class="nb">sudo </span>systemctl status sysbox   <span class="c"># Check sysbox services are running</span>
+docker info | <span class="nb">grep</span> <span class="nt">-i</span> runtime  <span class="c"># Verify sysbox-runc appears as a runtime</span>
+</code></pre></div></div>
+
+<p><strong>Workspaces can’t reach Docker:</strong></p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Inside a workspace</span>
+docker ps   <span class="c"># Should work if Sysbox is functioning</span>
+<span class="nb">cat</span> /tmp/dockerd.log
+</code></pre></div></div>
+
+<p>See <a href="/admin/troubleshooting.html">Troubleshooting Guide</a> for more.</p>
+
+  </main>
+</body>
+</html>
