@@ -391,14 +391,10 @@ jobs:
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.owner.login == github.repository_owner }}
     runs-on: ubuntu-latest
     strategy:
+      # PRs run a single module (smoke); push-to-main and nightly run the full
+      # set. Cuts per-PR workspace load on staging. See ci-reap.yml.
       matrix:
-        include:
-          - project: token
-            drupal_version: "11"
-          - project: pathauto
-            drupal_version: "11"
-          - project: skipto
-            drupal_version: "12"
+        include: ${{ github.event_name == 'pull_request' && fromJSON('[{"project":"token","drupal_version":"11"}]') || fromJSON('[{"project":"token","drupal_version":"11"},{"project":"pathauto","drupal_version":"11"},{"project":"skipto","drupal_version":"12"}]') }}
       fail-fast: false
     defaults:
       run:
@@ -437,6 +433,9 @@ jobs:
             --yes \
             --variable workspace_image_registry=index.docker.io/ddev/coder-ddev \
             --variable github_token=${{ secrets.GITHUB_TOKEN }}
+
+      - name: Reap predecessor workspaces (cancelled prior runs of this cell)
+        run: ./scripts/ci-reap-family.sh "gc-${{ matrix.project }}-d${{ matrix.drupal_version }}-" "${{ env.WORKSPACE_NAME }}"
 
       - name: Create workspace
         run: |
@@ -589,6 +588,9 @@ jobs:
             --yes \
             --variable workspace_image_registry=index.docker.io/ddev/coder-ddev \
             --variable github_token=${{ secrets.GITHUB_TOKEN }}
+
+      - name: Reap predecessor workspaces (cancelled prior runs of this cell)
+        run: ./scripts/ci-reap-family.sh "gc-fork-" "${{ env.WORKSPACE_NAME }}"
 
       - name: Create workspace
         run: |

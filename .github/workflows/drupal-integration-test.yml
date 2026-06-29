@@ -201,8 +201,10 @@ jobs:
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.owner.login == github.repository_owner }}
     runs-on: ubuntu-latest
     strategy:
+      # PRs run a single Drupal version (smoke); push-to-main and nightly run the
+      # full matrix. Cuts per-PR workspace load on staging. See ci-reap.yml.
       matrix:
-        drupal_version: ["12", "11"]
+        drupal_version: ${{ github.event_name == 'pull_request' && fromJSON('["12"]') || fromJSON('["12", "11"]') }}
       fail-fast: false
     defaults:
       run:
@@ -242,6 +244,9 @@ jobs:
             --variable workspace_image_registry=index.docker.io/ddev/coder-ddev \
             --variable cache_path=/home/rfay/cache/drupal-core-seed \
             --variable github_token=${{ secrets.GITHUB_TOKEN }}
+
+      - name: Reap predecessor workspaces (cancelled prior runs of this cell)
+        run: ./scripts/ci-reap-family.sh "gd-${{ matrix.drupal_version }}-" "${{ env.WORKSPACE_NAME }}"
 
       - name: Create workspace
         run: |
@@ -494,6 +499,9 @@ jobs:
             --variable workspace_image_registry=index.docker.io/ddev/coder-ddev \
             --variable cache_path=/home/rfay/cache/drupal-core-seed \
             --variable github_token=${{ secrets.GITHUB_TOKEN }}
+
+      - name: Reap predecessor workspaces (cancelled prior runs of this cell)
+        run: ./scripts/ci-reap-family.sh "gd-fork-" "${{ env.WORKSPACE_NAME }}"
 
       - name: Create workspace
         run: |

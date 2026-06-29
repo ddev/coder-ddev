@@ -1,0 +1,70 @@
+name: Reap stale CI workspaces
+
+# Decoupled janitor for staging-coder.ddev.com.
+#
+# Integration-test runs push template versions and create workspaces (owned by
+# ci-bot) on staging. Their per-run cleanup runs in `if: always()` steps inside
+# the test job, which never reach the server when a run is cancelled
+# (cancel-in-progress on a new push), force killed, or its workspace lands in
+# Failed. This workflow reaps by owner + state + age independently of any test
+# run, so an orphan never outlives one janitor interval, and merged / closed /
+# abandoned PRs get cleaned up even though no replacement run ever comes.
+#
+# Requires (same as the integration-test workflows):
+#   Repository variable: TEST_CODER_URL           - https://staging-coder.ddev.com
+#   Repository secret:   OP_SERVICE_ACCOUNT_TOKEN - 1Password service account
+#   1Password item:      op://test-secrets/TEST_CODER_SESSION_TOKEN/credential
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+# Never run two janitors at once; let an in-flight one finish rather than
+# cancelling it mid-delete.
+concurrency:
+  group: ci-reap
+  cancel-in-progress: false
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+    inputs:
+      age_minutes:
+        description: 'Reap running ci-bot workspaces older than this many minutes'
+        type: string
+        required: false
+        default: '20'
+      dry_run:
+        description: 'Dry run (list only, delete nothing)'
+        type: boolean
+        required: false
+        default: false
+
+jobs:
+  reap:
+    name: Reap stale CI workspaces and versions
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -euo pipefail {0}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Load 1Password secrets
+        uses: 1password/load-secrets-action@v4
+        with:
+          export-env: true
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          TEST_CODER_SESSION_TOKEN: "op://test-secrets/TEST_CODER_SESSION_TOKEN/credential"
+
+      - uses: coder/setup-action@v1
+        with:
+          access_url: ${{ vars.TEST_CODER_URL }}
+          coder_session_token: ${{ env.TEST_CODER_SESSION_TOKEN }}
+
+      - name: Reap stale CI workspaces and template versions
+        env:
+          AGE_MINUTES: ${{ github.event.inputs.age_minutes || '20' }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+        run: ./scripts/ci-reap-staging.sh $([[ "$DRY_RUN" == "true" ]] || echo --force)

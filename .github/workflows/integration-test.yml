@@ -352,6 +352,9 @@ jobs:
             --variable workspace_image_registry=index.docker.io/ddev/coder-ddev \
             ${{ matrix.extra_vars }}
 
+      - name: Reap predecessor workspaces (cancelled prior runs of this cell)
+        run: ./scripts/ci-reap-family.sh "gh-${{ matrix.ws_name }}-" "${{ env.WORKSPACE_NAME }}"
+
       - name: Create workspace
         if: ${{ matrix.template != 'freeform' }}
         run: |
