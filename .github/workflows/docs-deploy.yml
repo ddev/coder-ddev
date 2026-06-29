@@ -1,0 +1,37 @@
+name: Deploy Docs to GitHub Pages
+
+# Builds and deploys /docs to the root of the gh-pages branch on every push
+# to main that touches the docs directory. PR previews (in /pr-preview/) are
+# preserved across production deployments.
+#
+# GitHub Pages must be configured to serve from:
+#   Branch: gh-pages  /  (root)
+
+on:
+  push:
+    branches: [main]
+    paths: ['docs/**']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Jekyll site
+        uses: actions/jekyll-build-pages@v1
+        with:
+          source: ./docs
+          destination: ./_site
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./_site
+          publish_branch: gh-pages
+          keep_files: true

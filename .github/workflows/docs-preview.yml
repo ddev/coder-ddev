@@ -1,0 +1,45 @@
+name: Docs PR Preview
+
+# Deploys a preview of the /docs site to gh-pages at /pr-preview/pr-N/
+# and posts a comment with the URL on each PR.
+# On PR close, removes the preview automatically.
+#
+# After merging this workflow, change the GitHub Pages source to:
+#   Branch: gh-pages  /  (root)
+# Then trigger docs-deploy.yml once (workflow_dispatch) to populate gh-pages.
+#
+# Preview URLs: https://start.coder.ddev.com/pr-preview/pr-<N>/
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: pr-preview-${{ github.event.number }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Jekyll site
+        uses: actions/jekyll-build-pages@v1
+        if: github.event.action != 'closed'
+        with:
+          source: ./docs
+          destination: ./_site
+
+      - name: Deploy PR preview
+        uses: rossjrw/pr-preview-action@v1
+        with:
+          source-dir: ./_site
+          preview-branch: gh-pages
+          umbrella-dir: pr-preview
+          token: ${{ secrets.GITHUB_TOKEN }}
+          action: auto
