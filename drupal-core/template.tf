@@ -71,7 +71,7 @@ variable "cache_path" {
 }
 
 variable "github_token" {
-  description = "GitHub token passed to Composer as GitHub OAuth to avoid codeload.github.com rate limits (optional)"
+  description = "GitHub token passed to Composer as GitHub OAuth to avoid codeload.github.com rate limits (optional; ordinary users get a token via coder external-auth)"
   type        = string
   default     = ""
   sensitive   = true
@@ -879,12 +879,20 @@ WELCOME_STATIC
         log_setup "Restarting DDEV to activate add-on..."
         ddev restart >> "$SETUP_LOG" 2>&1 || true
 
-        # If a GitHub token is available, configure Composer OAuth so downloads use
-        # the authenticated GitHub API rather than anonymous codeload.github.com,
-        # which is prone to transient 400s and rate limits.
-        if [ -n "$${GITHUB_TOKEN:-}" ]; then
-          log_setup "Configuring Composer GitHub OAuth from GITHUB_TOKEN..."
-          ddev exec composer config --global github-oauth.github.com "$${GITHUB_TOKEN}" >> "$SETUP_LOG" 2>&1 || true
+        # Obtain a GitHub token for Composer OAuth — routes downloads through the
+        # authenticated GitHub API instead of anonymous codeload.github.com
+        # (which is prone to transient HTTP/2 400s and rate limits).
+        # Priority: GITHUB_TOKEN env var (CI/Terraform) → coder external-auth (user's linked account)
+        _COMPOSER_GITHUB_TOKEN="$${GITHUB_TOKEN:-}"
+        if [ -z "$${_COMPOSER_GITHUB_TOKEN}" ]; then
+          _CODER_BIN=$(find /tmp -name "coder" -path "*/coder.*/*" -type f -executable 2>/dev/null | head -1)
+          if [ -n "$${_CODER_BIN}" ]; then
+            _COMPOSER_GITHUB_TOKEN=$("$${_CODER_BIN}" external-auth access-token github 2>/dev/null || true)
+          fi
+        fi
+        if [ -n "$${_COMPOSER_GITHUB_TOKEN}" ]; then
+          log_setup "Configuring Composer GitHub OAuth..."
+          ddev exec composer config --global github-oauth.github.com "$${_COMPOSER_GITHUB_TOKEN}" >> "$SETUP_LOG" 2>&1 || true
         fi
 
         # Retry up to 3 times to handle transient codeload.github.com 400s.
