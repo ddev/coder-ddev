@@ -44,6 +44,13 @@ variable "registry_password" {
   sensitive   = true
 }
 
+variable "github_token" {
+  description = "GitHub token passed to Composer as COMPOSER_AUTH to avoid codeload.github.com rate limits (optional)"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
 variable "image_version" {
   description = "The version of the Docker image to use"
   type        = string
@@ -702,20 +709,39 @@ COMPOSE_EOF
         # symfony/runtime) that aren't pre-listed in allow-plugins.
         jq 'if .config == null then .config = {} else . end | .config["allow-plugins"] = true' composer.json > composer.json.tmp && mv composer.json.tmp composer.json
 
+        # If a GitHub token is available, configure Composer OAuth so downloads use
+        # the authenticated GitHub API rather than anonymous codeload.github.com,
+        # which is prone to transient 400s and rate limits.
+        if [ -n "$${GITHUB_TOKEN:-}" ]; then
+          log_setup "Configuring Composer GitHub OAuth from GITHUB_TOKEN..."
+          ddev exec composer config --global github-oauth.github.com "$${GITHUB_TOKEN}" >> "$SETUP_LOG" 2>&1 || true
+        fi
+
         # Run ddev poser: expands composer.json → composer.contrib.json (includes require-dev),
         # then runs composer install (installs Drupal + drush together), then removes composer.contrib.json
-        log_setup "Running ddev poser (installs Drupal as dev dependency)..."
-        update_status "⏳ ddev poser: In progress..."
-        _t=$SECONDS
-        if ddev poser >> "$SETUP_LOG" 2>&1; then
-          log_setup "✓ ddev poser complete ($((SECONDS - _t))s)"
-          update_status "✓ ddev poser: Success"
-          # Hide the drush require-dev line from git status without touching the
-          # file — git checkout would remove drush from composer.json and break
-          # ddev restart (which rebuilds vendor/ from the restored file).
-          git update-index --skip-worktree composer.json >> "$SETUP_LOG" 2>&1 || true
-        else
-          log_setup "✗ ddev poser failed ($((SECONDS - _t))s)"
+        # Retry up to 3 times to handle transient codeload.github.com 400s.
+        _poser_ok=false
+        for _attempt in 1 2 3; do
+          log_setup "Running ddev poser (attempt $_attempt/3)..."
+          update_status "⏳ ddev poser: Attempt $_attempt/3..."
+          _t=$SECONDS
+          if ddev poser >> "$SETUP_LOG" 2>&1; then
+            log_setup "✓ ddev poser complete ($((SECONDS - _t))s)"
+            update_status "✓ ddev poser: Success"
+            # Hide the drush require-dev line from git status without touching the
+            # file — git checkout would remove drush from composer.json and break
+            # ddev restart (which rebuilds vendor/ from the restored file).
+            git update-index --skip-worktree composer.json >> "$SETUP_LOG" 2>&1 || true
+            _poser_ok=true
+            break
+          fi
+          log_setup "✗ ddev poser attempt $_attempt failed ($((SECONDS - _t))s)"
+          if [ "$_attempt" -lt 3 ]; then
+            log_setup "Retrying in 15s..."
+            sleep 15
+          fi
+        done
+        if [ "$_poser_ok" = "false" ]; then
           update_status "✗ ddev poser: Failed"
           SETUP_FAILED=true
         fi
@@ -1138,6 +1164,7 @@ resource "docker_container" "workspace" {
     "CODER_WORKSPACE_NAME=${data.coder_workspace.me.name}",
     "ELECTRON_DISABLE_SANDBOX=1",
     "ELECTRON_NO_SANDBOX=1",
+    "GITHUB_TOKEN=${var.github_token}",
   ]
 
   command = ["sh", "-c", coder_agent.main.init_script]
