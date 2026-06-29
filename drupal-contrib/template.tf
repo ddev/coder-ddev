@@ -44,6 +44,13 @@ variable "registry_password" {
   sensitive   = true
 }
 
+variable "github_token" {
+  description = "GitHub token passed to Composer as COMPOSER_AUTH to avoid codeload.github.com rate limits (optional)"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
 variable "image_version" {
   description = "The version of the Docker image to use"
   type        = string
@@ -702,6 +709,14 @@ COMPOSE_EOF
         # symfony/runtime) that aren't pre-listed in allow-plugins.
         jq 'if .config == null then .config = {} else . end | .config["allow-plugins"] = true' composer.json > composer.json.tmp && mv composer.json.tmp composer.json
 
+        # If a GitHub token is available, configure Composer OAuth so downloads use
+        # the authenticated GitHub API rather than anonymous codeload.github.com,
+        # which is prone to transient 400s and rate limits.
+        if [ -n "$${GITHUB_TOKEN:-}" ]; then
+          log_setup "Configuring Composer GitHub OAuth from GITHUB_TOKEN..."
+          ddev exec composer config --global github-oauth.github.com "$${GITHUB_TOKEN}" >> "$SETUP_LOG" 2>&1 || true
+        fi
+
         # Run ddev poser: expands composer.json → composer.contrib.json (includes require-dev),
         # then runs composer install (installs Drupal + drush together), then removes composer.contrib.json
         # Retry up to 3 times to handle transient codeload.github.com 400s.
@@ -1149,6 +1164,7 @@ resource "docker_container" "workspace" {
     "CODER_WORKSPACE_NAME=${data.coder_workspace.me.name}",
     "ELECTRON_DISABLE_SANDBOX=1",
     "ELECTRON_NO_SANDBOX=1",
+    "GITHUB_TOKEN=${var.github_token}",
   ]
 
   command = ["sh", "-c", coder_agent.main.init_script]

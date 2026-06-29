@@ -435,7 +435,8 @@ jobs:
             --activate=false \
             --name ${{ env.WORKSPACE_NAME }} \
             --yes \
-            --variable workspace_image_registry=index.docker.io/ddev/coder-ddev
+            --variable workspace_image_registry=index.docker.io/ddev/coder-ddev \
+            --variable github_token=${{ secrets.GITHUB_TOKEN }}
 
       - name: Create workspace
         run: |
@@ -586,7 +587,8 @@ jobs:
             --activate=false \
             --name gc-${{ github.run_number }}-${{ github.run_attempt }} \
             --yes \
-            --variable workspace_image_registry=index.docker.io/ddev/coder-ddev
+            --variable workspace_image_registry=index.docker.io/ddev/coder-ddev \
+            --variable github_token=${{ secrets.GITHUB_TOKEN }}
 
       - name: Create workspace
         run: |
