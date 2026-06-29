@@ -36,6 +36,7 @@ jobs:
 
       - name: Point preview at staging-coder.ddev.com
         if: github.event.action != 'closed'
+        run: |
           cp -r ./_site ./_site_preview
           find ./_site_preview -name "*.html" -exec sed -i 's|https://coder\.ddev\.com|https://staging-coder.ddev.com|g' {} +
 
