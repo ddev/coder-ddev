@@ -102,7 +102,8 @@ jobs:
             --name ${{ env.WORKSPACE_NAME }} \
             --yes \
             --variable workspace_image_registry=index.docker.io/ddev/coder-ddev \
-            --variable cache_path=/home/rfay/cache/drupal-core-seed
+            --variable cache_path=/home/rfay/cache/drupal-core-seed \
+            --variable github_token=${{ secrets.GITHUB_TOKEN }}
 
       - name: Create workspace
         run: |
@@ -239,7 +240,8 @@ jobs:
             --name ${{ env.WORKSPACE_NAME }} \
             --yes \
             --variable workspace_image_registry=index.docker.io/ddev/coder-ddev \
-            --variable cache_path=/home/rfay/cache/drupal-core-seed
+            --variable cache_path=/home/rfay/cache/drupal-core-seed \
+            --variable github_token=${{ secrets.GITHUB_TOKEN }}
 
       - name: Create workspace
         run: |
@@ -341,7 +343,8 @@ jobs:
             --name cd-${{ github.run_number }}-${{ github.run_attempt }} \
             --yes \
             --variable workspace_image_registry=index.docker.io/ddev/coder-ddev \
-            --variable cache_path=/home/rfay/cache/drupal-core-seed
+            --variable cache_path=/home/rfay/cache/drupal-core-seed \
+            --variable github_token=${{ secrets.GITHUB_TOKEN }}
 
       - name: Create workspace
         run: |
@@ -489,7 +492,8 @@ jobs:
             --name gd-${{ github.run_number }}-${{ github.run_attempt }} \
             --yes \
             --variable workspace_image_registry=index.docker.io/ddev/coder-ddev \
-            --variable cache_path=/home/rfay/cache/drupal-core-seed
+            --variable cache_path=/home/rfay/cache/drupal-core-seed \
+            --variable github_token=${{ secrets.GITHUB_TOKEN }}
 
       - name: Create workspace
         run: |

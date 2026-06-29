@@ -70,6 +70,13 @@ variable "cache_path" {
   default     = ""
 }
 
+variable "github_token" {
+  description = "GitHub token passed to Composer as GitHub OAuth to avoid codeload.github.com rate limits (optional)"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
 # Per-workspace user parameters (shown in workspace creation UI, pre-fillable via ?param.name=value URL)
 data "coder_parameter" "issue_fork" {
   name         = "issue_fork"
@@ -872,16 +879,33 @@ WELCOME_STATIC
         log_setup "Restarting DDEV to activate add-on..."
         ddev restart >> "$SETUP_LOG" 2>&1 || true
 
-        log_setup "Running composer install..."
-        update_status "⏳ Composer install: In progress..."
-        _t=$SECONDS
-        ddev composer install 2>&1 | tee -a "$SETUP_LOG"
-        _composer_exit=$${PIPESTATUS[0]}
-        if [ "$_composer_exit" = "0" ]; then
-          log_setup "✓ Composer install complete ($((SECONDS - _t))s)"
-          update_status "✓ Composer install: Success"
-        else
-          log_setup "✗ Composer install failed (exit $_composer_exit, $((SECONDS - _t))s)"
+        # If a GitHub token is available, configure Composer OAuth so downloads use
+        # the authenticated GitHub API rather than anonymous codeload.github.com,
+        # which is prone to transient 400s and rate limits.
+        if [ -n "$${GITHUB_TOKEN:-}" ]; then
+          log_setup "Configuring Composer GitHub OAuth from GITHUB_TOKEN..."
+          ddev exec composer config --global github-oauth.github.com "$${GITHUB_TOKEN}" >> "$SETUP_LOG" 2>&1 || true
+        fi
+
+        # Retry up to 3 times to handle transient codeload.github.com 400s.
+        _composer_ok=false
+        for _attempt in 1 2 3; do
+          log_setup "Running composer install (attempt $_attempt/3)..."
+          update_status "⏳ Composer install: Attempt $_attempt/3..."
+          _t=$SECONDS
+          if ddev composer install >> "$SETUP_LOG" 2>&1; then
+            log_setup "✓ Composer install complete ($((SECONDS - _t))s)"
+            update_status "✓ Composer install: Success"
+            _composer_ok=true
+            break
+          fi
+          log_setup "✗ Composer install attempt $_attempt failed ($((SECONDS - _t))s)"
+          if [ "$_attempt" -lt 3 ]; then
+            log_setup "Retrying in 15s..."
+            sleep 15
+          fi
+        done
+        if [ "$_composer_ok" = "false" ]; then
           update_status "✗ Composer install: Failed"
           SETUP_FAILED=true
         fi
@@ -1470,11 +1494,12 @@ resource "docker_container" "workspace" {
   env = [
     "CODER_AGENT_TOKEN=${coder_agent.main.token}",
     # DOCKER_HOST not needed as we use local socket
-    # "DOCKER_HOST=${var.docker_host}", 
+    # "DOCKER_HOST=${var.docker_host}",
     "CODER_WORKSPACE_NAME=${data.coder_workspace.me.name}",
 
     "ELECTRON_DISABLE_SANDBOX=1",
     "ELECTRON_NO_SANDBOX=1",
+    "GITHUB_TOKEN=${var.github_token}",
   ]
 
   # Command to keep container running
