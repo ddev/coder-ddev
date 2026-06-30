@@ -4,143 +4,19 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>User Management Guide — DDEV Coder Workspaces</title>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #0e0e10;
-      color: #e0e0e0;
-      line-height: 1.7;
-    }
-
-    nav {
-      padding: 1rem 2rem;
-      border-bottom: 1px solid #1c1c1e;
-    }
-
-    nav a {
-      color: #a78bfa;
-      text-decoration: none;
-      font-size: 0.9rem;
-    }
-
-    nav a:hover { text-decoration: underline; }
-
-    main {
-      max-width: 720px;
-      margin: 0 auto;
-      padding: 3rem 2rem 6rem;
-    }
-
-    h1 { font-size: 2rem; font-weight: 700; margin-bottom: 1rem; letter-spacing: -0.02em; }
-    h2 { font-size: 1.35rem; font-weight: 600; margin: 2.5rem 0 0.75rem; color: #e8e8e8; }
-    h3 { font-size: 1.1rem; font-weight: 600; margin: 1.75rem 0 0.5rem; color: #ddd; }
-
-    p { margin-bottom: 1rem; color: #ccc; }
-
-    a { color: #a78bfa; text-decoration: none; }
-    a:hover { text-decoration: underline; }
-
-    ul, ol { margin: 0 0 1rem 1.5rem; color: #ccc; }
-    li { margin-bottom: 0.35rem; }
-
-    code {
-      background: #1a1a1f;
-      border: 1px solid #2a2a30;
-      padding: 0.15em 0.45em;
-      border-radius: 4px;
-      font-family: 'SF Mono', Consolas, 'Courier New', monospace;
-      font-size: 0.87em;
-      color: #c4b5fd;
-    }
-
-    pre {
-      background: #111115;
-      border: 1px solid #2a2a30;
-      border-radius: 8px;
-      padding: 1.25rem 1.5rem;
-      overflow-x: auto;
-      margin-bottom: 1.25rem;
-    }
-
-    pre code {
-      background: none;
-      border: none;
-      padding: 0;
-      font-size: 0.9rem;
-      color: #c9d1d9;
-    }
-
-    hr {
-      border: none;
-      border-top: 1px solid #1c1c1e;
-      margin: 2rem 0;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 1.25rem;
-      font-size: 0.95rem;
-    }
-
-    th {
-      text-align: left;
-      padding: 0.6rem 0.75rem;
-      border-bottom: 2px solid #2a2a30;
-      color: #999;
-      font-weight: 600;
-      font-size: 0.85rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    td {
-      padding: 0.6rem 0.75rem;
-      border-bottom: 1px solid #1c1c1e;
-      color: #ccc;
-    }
-
-    strong { color: #e8e8e8; }
-
-    blockquote {
-      border-left: 3px solid #3b2f6e;
-      padding-left: 1rem;
-      color: #999;
-      margin-bottom: 1rem;
-    }
-
-    img { max-width: 100%; }
-
-    /* Skip link — visually hidden until focused; lets keyboard users bypass the site nav.
-       WCAG 2.4.1 Bypass Blocks (Level A) */
-    .skip-link {
-      position: absolute;
-      top: -100%;
-      left: 1rem;
-      background: #7c5af0;
-      color: #fff;
-      padding: 0.5rem 1rem;
-      border-radius: 0 0 6px 6px;
-      font-size: 0.9rem;
-      font-weight: 600;
-      text-decoration: none;
-      z-index: 999;
-    }
-    .skip-link:focus { top: 0; }
-  </style>
+  <link rel="icon" type="image/svg+xml" href="/coder-ddev/favicon.svg">
+  <link rel="stylesheet" href="/coder-ddev/coder-ddev-start.css">
 </head>
-<body>
+<body class="cds-body">
   <!-- WCAG 2.4.1 Bypass Blocks (Level A): skip link lets keyboard users jump past the site nav -->
-  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <a class="cds-skip-link" href="#main-content">Skip to main content</a>
   <!-- aria-label distinguishes this nav landmark when multiple <nav> elements exist on a page.
        WCAG 2.4.6 Headings and Labels (Level AA) -->
-  <nav aria-label="Site">
-    <a href="/">← DDEV Coder Workspaces</a>
+  <nav class="cds-doc-nav" aria-label="Site">
+    <a class="cds-link" href="/coder-ddev/">← DDEV Coder Workspaces</a>
   </nav>
   <!-- id="main-content" is the skip link target (WCAG 2.4.1) -->
-  <main id="main-content">
+  <main id="main-content" class="cds-doc-main">
     <h1 id="user-management-guide">User Management Guide</h1>
 
 <p>This guide covers user account management, permissions, and access control for the DDEV Coder template.</p>
