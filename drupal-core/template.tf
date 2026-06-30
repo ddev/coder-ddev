@@ -124,21 +124,21 @@ data "coder_parameter" "drupal_version" {
 data "coder_parameter" "install_profile" {
   name         = "install_profile"
   display_name = "Install Profile"
-  description  = "Drupal install profile. demo_umami uses a pre-built database snapshot (12.x only); other profiles and non-12.x versions always run a full site install."
+  description  = "Drupal install profile. Demo Umami on Drupal 12 can use a pre-built snapshot for quicker first boot; Standard, Minimal and Drupal 11.x and 10.x always run a full site install."
   type         = "string"
   default      = "demo_umami"
   mutable      = true
   order        = 3
   option {
-    name  = "demo_umami"
+    name  = "Demo Umami"
     value = "demo_umami"
   }
   option {
-    name  = "minimal"
+    name  = "Minimal"
     value = "minimal"
   }
   option {
-    name  = "standard"
+    name  = "Standard"
     value = "standard"
   }
 }

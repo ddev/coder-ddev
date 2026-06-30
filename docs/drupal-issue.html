@@ -4,579 +4,617 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Drupal Issue Picker — DDEV Coder Workspaces</title>
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #0e0e10;
-      color: #e8e8e8;
-      line-height: 1.6;
-      min-height: 100vh;
-    }
-
-    header {
-      padding: 1.25rem 2rem;
-      border-bottom: 1px solid #1c1c1e;
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-    }
-
-    header a {
-      color: #a78bfa;
-      text-decoration: none;
-      font-size: 0.9rem;
-    }
-
-    header a:hover { text-decoration: underline; }
-
-    /* Separator is aria-hidden (decorative), but still needs visible contrast for sighted users.
-       #666 on #0e0e10 gives ~3.6:1, meeting WCAG 1.4.3 (Level AA) for UI text.
-       Previous #444 yielded ~2.3:1 and failed. */
-    header .sep { color: #666; }
-
-    header .title { color: #e8e8e8; font-weight: 600; font-size: 0.9rem; }
-
-    .page {
-      max-width: 640px;
-      margin: 0 auto;
-      padding: 3rem 2rem 5rem;
-    }
-
-    h1 {
-      font-size: 1.75rem;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      margin-bottom: 0.5rem;
-    }
-
-    .subtitle {
-      color: #777;
-      font-size: 1rem;
-      margin-bottom: 2.5rem;
-    }
-
-    /* ── Input section ───────────────────────────────── */
-    .input-row {
-      display: flex;
-      gap: 0.75rem;
-      margin-bottom: 2rem;
-    }
-
-    .input-row input {
-      flex: 1;
-      background: #161619;
-      /* #636377 on #161619 gives ~3.5:1, meeting WCAG 1.4.11 Non-text Contrast (Level AA) minimum 3:1.
-         Previous #2a2a32 yielded ~1.3:1 and failed. */
-      border: 1px solid #636377;
-      border-radius: 8px;
-      padding: 0.7rem 1rem;
-      color: #e8e8e8;
-      font-size: 0.95rem;
-      outline: none;
-      transition: border-color 0.15s;
-    }
-
-    /* #888 on #161619 gives ~5.9:1 contrast, meeting WCAG 1.4.3 (Level AA) minimum 4.5:1.
-       Previous #555 yielded ~2.4:1 and failed. */
-    .input-row input::placeholder { color: #888; }
-    /* Combined border+outline focus indicator meets WCAG 2.4.11 Focus Appearance (Level AA).
-       outline: none was an anti-pattern; replaced with a visible 2px offset outline. */
-    .input-row input:focus {
-      border-color: #7c5af0;
-      outline: 2px solid #7c5af0;
-      outline-offset: 2px;
-    }
-
-    .btn-load {
-      background: #7c5af0;
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      padding: 0.7rem 1.25rem;
-      font-size: 0.95rem;
-      font-weight: 600;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: background 0.15s;
-    }
-
-    .btn-load:hover { background: #6d4de0; }
-    .btn-load:disabled { background: #3a3050; color: #777; cursor: not-allowed; }
-    /* WCAG 2.4.11 Focus Appearance (Level AA): explicit focus outline prevents relying on the
-       dim browser default (#21397f) which fails contrast requirements. */
-    .btn-load:focus-visible {
-      outline: 2px solid #c4b5fd;
-      outline-offset: 2px;
-    }
-
-    /* ── Status / error ──────────────────────────────── */
-    .status {
-      font-size: 0.9rem;
-      padding: 0.75rem 1rem;
-      border-radius: 8px;
-      margin-bottom: 1.5rem;
-      display: none;
-    }
-
-    .status.loading {
-      display: block;
-      background: #161619;
-      /* #636377 on #161619 gives ~3.5:1, meeting WCAG 1.4.11 Non-text Contrast (Level AA) minimum 3:1.
-         Previous #2a2a32 yielded ~1.3:1 and failed. */
-      border: 1px solid #636377;
-      color: #999;
-    }
-
-    .status.error {
-      display: block;
-      background: #1f0f0f;
-      border: 1px solid #5a1a1a;
-      color: #f87171;
-    }
-
-    .status.info {
-      display: block;
-      background: #0f1a1f;
-      border: 1px solid #1a4a5a;
-      color: #7dd3fc;
-    }
-
-    /* ── Result form ─────────────────────────────────── */
-    #result-form { display: none; }
-    #plain-dev-form { display: none; }
-
-    .issue-title {
-      font-size: 1.05rem;
-      font-weight: 600;
-      color: #c4b5fd;
-      margin-bottom: 1.75rem;
-      padding: 0.75rem 1rem;
-      background: #13101f;
-      border: 1px solid #2a2040;
-      border-radius: 8px;
-    }
-
-    .issue-title span {
-      display: block;
-      font-size: 0.75rem;
-      font-weight: 400;
-      /* #888 on #13101f gives ~4.9:1, meeting WCAG 1.4.3 (Level AA) minimum 4.5:1 for normal text.
-         Previous #666 yielded ~3.4:1 and failed. */
-      color: #888;
-      margin-bottom: 0.2rem;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-    }
-
-    .template-badge {
-      display: inline-block;
-      font-size: 0.7rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      padding: 0.15rem 0.5rem;
-      border-radius: 4px;
-      margin-top: 0.4rem;
-    }
-
-    .template-badge.core {
-      background: #1a2a1a;
-      color: #86efac;
-      border: 1px solid #166534;
-    }
-
-    .template-badge.contrib {
-      background: #1a1a2a;
-      color: #a78bfa;
-      border: 1px solid #3730a3;
-    }
-
-    .fields {
-      display: flex;
-      flex-direction: column;
-      gap: 1.25rem;
-      margin-bottom: 2rem;
-    }
-
-    .field label {
-      display: block;
-      font-size: 0.8rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.07em;
-      color: #777;
-      margin-bottom: 0.4rem;
-    }
-
-    .field select,
-    .field input[type="text"] {
-      width: 100%;
-      background: #161619;
-      /* #636377 on #161619 gives ~3.5:1 — WCAG 1.4.11 Non-text Contrast (Level AA) requires 3:1.
-         Previous #2a2a32 yielded ~1.3:1 and failed. */
-      border: 1px solid #636377;
-      border-radius: 8px;
-      padding: 0.65rem 1rem;
-      color: #e8e8e8;
-      font-size: 0.95rem;
-      outline: none;
-      transition: border-color 0.15s;
-      appearance: none;
-    }
-
-    .field select {
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23777' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 1rem center;
-      padding-right: 2.5rem;
-    }
-
-    .field input[type="text"][readonly] {
-      color: #aaa;
-      cursor: default;
-    }
-
-    /* WCAG 2.4.11 Focus Appearance (Level AA): visible focus indicator with 3:1 contrast.
-       Combined border + outline replaces the single border-color change that was easy to miss. */
-    .field select:focus,
-    .field input[type="text"]:focus {
-      border-color: #7c5af0;
-      outline: 2px solid #7c5af0;
-      outline-offset: 2px;
-    }
-
-    .field .hint {
-      font-size: 0.8rem;
-      /* #888 on #161619 gives ~5.9:1, meeting WCAG 1.4.3 (Level AA) minimum 4.5:1.
-         Previous #555 yielded ~2.5:1 and failed. */
-      color: #888;
-      margin-top: 0.3rem;
-    }
-
-    .btn-open {
-      width: 100%;
-      background: #7c5af0;
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      padding: 0.85rem 1.5rem;
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.15s;
-    }
-
-    .btn-open:hover { background: #6d4de0; }
-    /* WCAG 2.4.11 Focus Appearance (Level AA) */
-    .btn-open:focus-visible {
-      outline: 2px solid #c4b5fd;
-      outline-offset: 2px;
-    }
-
-    /* ── Manual fallback ─────────────────────────────── */
-    #manual-form { display: none; }
-
-    .manual-notice {
-      font-size: 0.85rem;
-      color: #888;
-      margin-bottom: 1.25rem;
-      padding: 0.65rem 0.9rem;
-      background: #111114;
-      border: 1px solid #222228;
-      border-radius: 6px;
-    }
-
-    /* ── Notes ───────────────────────────────────────── */
-    .notes {
-      margin-top: 2.5rem;
-      border-top: 1px solid #1c1c1e;
-      padding-top: 2rem;
-    }
-
-    .notes h2 {
-      font-size: 0.8rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      /* #888 on #0e0e10 gives ~5.9:1, meeting WCAG 1.4.3 (Level AA) minimum 4.5:1 for normal text.
-         Previous #555 yielded ~2.6:1 and failed. */
-      color: #888;
-      margin-bottom: 0.9rem;
-    }
-
-    .notes ul {
-      list-style: none;
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-
-    .notes li {
-      font-size: 0.88rem;
-      /* #888 on #0e0e10 gives ~5.9:1 contrast ratio, meeting WCAG 2.2 §1.4.3 (Level AA) minimum 4.5:1 for normal text.
-         Previous value #666 yielded ~3.6:1 and failed. */
-      color: #888;
-      padding-left: 1rem;
-      position: relative;
-    }
-
-    .notes li::before {
-      content: '·';
-      position: absolute;
-      left: 0;
-      color: #444;
-    }
-
-    code {
-      background: #1a1a1f;
-      border: 1px solid #2a2a30;
-      padding: 0.1em 0.35em;
-      border-radius: 4px;
-      font-family: 'SF Mono', Consolas, monospace;
-      font-size: 0.85em;
-      color: #c4b5fd;
-    }
-
-    /* Visually hidden but available to assistive technology.
-       Use for labels that would be redundant visually but are required for AT.
-       WCAG 1.3.1 Info and Relationships (Level A) */
-    .sr-only {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0, 0, 0, 0);
-      white-space: nowrap;
-      border: 0;
-    }
-
-    /* Skip link — visually hidden until focused; lets keyboard users bypass the header nav.
-       WCAG 2.4.1 Bypass Blocks (Level A) */
-    .skip-link {
-      position: absolute;
-      top: -100%;
-      left: 1rem;
-      background: #7c5af0;
-      color: #fff;
-      padding: 0.5rem 1rem;
-      border-radius: 0 0 6px 6px;
-      font-size: 0.9rem;
-      font-weight: 600;
-      text-decoration: none;
-      z-index: 999;
-    }
-    .skip-link:focus { top: 0; }
-  </style>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="coder-ddev-start.css">
 </head>
-<body>
+<body class="cds-body">
   <!-- WCAG 2.4.1 Bypass Blocks (Level A): skip link lets keyboard users jump past the site header -->
-  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <a class="cds-skip-link" href="#main-content">Skip to main content</a>
 
-  <header>
-    <a href="/">DDEV Coder Workspaces</a>
+  <header class="cds-page-header">
+    <a class="cds-link" href=".">DDEV Coder Workspaces</a>
     <!-- Decorative separator — hidden from AT to avoid noise; WCAG 1.3.1 Info and Relationships (Level A) -->
-    <span class="sep" aria-hidden="true">/</span>
-    <span class="title">Drupal Issue Picker</span>
+    <span class="cds-page-header__sep" aria-hidden="true">/</span>
+    <span class="cds-page-header__title">Drupal Issue Picker</span>
   </header>
 
   <!-- id="main-content" is the skip link target (WCAG 2.4.1) -->
-  <div class="page" id="main-content">
+  <div class="cds-page" id="main-content">
     <h1>Drupal Issue Picker</h1>
-    <p class="subtitle">Enter a Drupal issue URL or number to launch a workspace. Also accepts a project URL or machine name for plain contrib development (no specific issue).</p>
+    <p class="cds-page__subtitle">Paste a drupal.org core or contrib issue URL or number, or a contrib project URL or machine name. We load issue metadata and fork branches when applicable.</p>
 
-    <div class="input-row">
+    <div class="cds-note cds-note--intro">
+      To create a clean Drupal core environment without contrib modules or issue forks, try the <a class="cds-link" href="drupal-core">Guided Drupal core</a> form.
+    </div>
+
+    <div class="cds-input-row">
       <!-- Explicit <label> associates the field name with the input for screen readers.
            Visually hidden because the heading and subtitle already describe the field.
            WCAG 1.3.1 Info and Relationships / 3.3.2 Labels or Instructions (Level A) -->
-      <label for="issue-input" class="sr-only">Issue number, URL, or project name</label>
+      <label for="issue-input" class="cds-sr-only">Issue number, URL, or project name</label>
       <input type="text" id="issue-input"
         placeholder="e.g. 3568144 · drupal.org/project/drupal/issues/3568144 · drupal.org/project/token"
         autofocus>
-      <button class="btn-load" id="load-btn" onclick="loadInput()">Load</button>
+      <button class="cds-btn-load" id="load-btn" onclick="loadInput()">Load</button>
     </div>
 
     <!-- role="status" announces dynamic updates to screen readers without interrupting current speech.
          WCAG 4.1.3 Status Messages (Level AA) -->
-    <div class="status" id="status" role="status" aria-live="polite"></div>
+    <div class="cds-status" id="status" role="status" aria-live="polite"></div>
 
     <!-- Auto-populated form (issues: both core and contrib) -->
-    <div id="result-form">
-      <div class="issue-title">
-        <span id="result-label">Issue</span>
+    <div id="result-form" class="cds-issue-panel" hidden>
+      <div class="cds-issue-title">
+        <span id="result-label" class="cds-issue-title__label">Issue</span>
         <span id="issue-title-text"></span>
-        <span id="template-badge" class="template-badge"></span>
+        <span id="template-badge" class="cds-template-badge"></span>
       </div>
 
-      <div class="fields">
+      <div class="cds-fields">
         <!-- Branch selector (issues only) -->
-        <div class="field">
+        <div class="cds-field">
           <label for="branch-select">Branch</label>
           <select id="branch-select"></select>
         </div>
 
-        <div class="field">
-          <label for="profile-select">Install Profile</label>
-          <select id="profile-select">
-            <option value="demo_umami">demo_umami</option>
-            <option value="minimal">minimal</option>
-            <option value="standard">standard</option>
-          </select>
-          <div class="hint" id="profile-hint">demo_umami uses a pre-built database snapshot. Issue fork workspaces always run a full site install regardless of profile.</div>
+        <div>
+          <span class="cds-field__label" id="label-result-version">Drupal version</span>
+          <p class="cds-hint" id="result-version-hint">Auto-detected from the issue. Sets the DDEV project type (drupal10/11/12). Changing manually may prevent the workspace from starting.</p>
+          <div class="cds-radio-row" role="radiogroup" aria-labelledby="label-result-version">
+            <label class="cds-pick-card">
+              <input class="cds-pick-card__input cds-sr-only" type="radio" name="result_drupal_version" value="12">
+              <span class="cds-pick-card__check" aria-hidden="true">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 12.5L10.5 17 18 8"/></svg>
+              </span>
+              <span class="cds-pick-card__text">
+                <span class="cds-pick-card__title">12.x</span>
+                <span class="cds-pick-card__sub">Main branch</span>
+              </span>
+            </label>
+            <label class="cds-pick-card">
+              <input class="cds-pick-card__input cds-sr-only" type="radio" name="result_drupal_version" value="11" checked>
+              <span class="cds-pick-card__check" aria-hidden="true">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 12.5L10.5 17 18 8"/></svg>
+              </span>
+              <span class="cds-pick-card__text">
+                <span class="cds-pick-card__title">11.x</span>
+                <span class="cds-pick-card__sub">Current stable</span>
+              </span>
+            </label>
+            <label class="cds-pick-card">
+              <input class="cds-pick-card__input cds-sr-only" type="radio" name="result_drupal_version" value="10">
+              <span class="cds-pick-card__check" aria-hidden="true">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 12.5L10.5 17 18 8"/></svg>
+              </span>
+              <span class="cds-pick-card__text">
+                <span class="cds-pick-card__title">10.x</span>
+                <span class="cds-pick-card__sub">Previous stable</span>
+              </span>
+            </label>
+          </div>
         </div>
 
-        <div class="field">
-          <label for="drupal-version-select">Drupal Version</label>
-          <select id="drupal-version-select">
-            <option value="12">12.x (HEAD / upcoming)</option>
-            <option value="11">11.x (stable)</option>
-            <option value="10">10.x (stable)</option>
-          </select>
-          <div class="hint">Auto-detected from the issue. Sets the DDEV project type (drupal10/11/12).</div>
+        <div>
+          <span class="cds-field__label" id="label-result-profile">Install profile</span>
+          <p class="cds-hint" id="profile-hint">Issue fork workspaces always run a full <code>ddev drush si</code>; profile still controls the install choice.</p>
+          <div class="cds-radio-row" role="radiogroup" aria-labelledby="label-result-profile">
+            <label class="cds-pick-card">
+              <input class="cds-pick-card__input cds-sr-only" type="radio" name="result_install_profile" value="demo_umami" checked>
+              <span class="cds-pick-card__check" aria-hidden="true">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 12.5L10.5 17 18 8"/></svg>
+              </span>
+              <span class="cds-pick-card__text">
+                <span class="cds-pick-card__title">Demo Umami</span>
+                <span class="cds-pick-card__sub">Full install</span>
+              </span>
+            </label>
+            <label class="cds-pick-card">
+              <input class="cds-pick-card__input cds-sr-only" type="radio" name="result_install_profile" value="minimal">
+              <span class="cds-pick-card__check" aria-hidden="true">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 12.5L10.5 17 18 8"/></svg>
+              </span>
+              <span class="cds-pick-card__text">
+                <span class="cds-pick-card__title">Minimal</span>
+                <span class="cds-pick-card__sub">Lean install</span>
+              </span>
+            </label>
+            <label class="cds-pick-card">
+              <input class="cds-pick-card__input cds-sr-only" type="radio" name="result_install_profile" value="standard">
+              <span class="cds-pick-card__check" aria-hidden="true">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 12.5L10.5 17 18 8"/></svg>
+              </span>
+              <span class="cds-pick-card__text">
+                <span class="cds-pick-card__title">Standard</span>
+                <span class="cds-pick-card__sub">Default extras</span>
+              </span>
+            </label>
+          </div>
         </div>
 
-        <div class="field">
+        <div>
+          <span class="cds-field__label" id="label-result-site-visibility">Site visibility</span>
+          <p class="cds-share-intro">Who can open the Drupal site URL. Switch to <strong>Public</strong> in Coder later if you need a shareable link.</p>
+          <div class="cds-radio-row" role="radiogroup" aria-labelledby="label-result-site-visibility">
+            <label class="cds-pick-card">
+              <input class="cds-pick-card__input cds-sr-only" type="radio" name="result_share_drupal_site" value="owner" checked>
+              <span class="cds-pick-card__check" aria-hidden="true">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 12.5L10.5 17 18 8"/></svg>
+              </span>
+              <span class="cds-pick-card__text">
+                <span class="cds-pick-card__title">Private</span>
+                <span class="cds-pick-card__sub">Owner only</span>
+              </span>
+            </label>
+            <label class="cds-pick-card">
+              <input class="cds-pick-card__input cds-sr-only" type="radio" name="result_share_drupal_site" value="authenticated">
+              <span class="cds-pick-card__check" aria-hidden="true">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 12.5L10.5 17 18 8"/></svg>
+              </span>
+              <span class="cds-pick-card__text">
+                <span class="cds-pick-card__title">Authenticated</span>
+                <span class="cds-pick-card__sub">Any Coder user</span>
+              </span>
+            </label>
+            <label class="cds-pick-card">
+              <input class="cds-pick-card__input cds-sr-only" type="radio" name="result_share_drupal_site" value="public">
+              <span class="cds-pick-card__check" aria-hidden="true">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 12.5L10.5 17 18 8"/></svg>
+              </span>
+              <span class="cds-pick-card__text">
+                <span class="cds-pick-card__title">Public</span>
+                <span class="cds-pick-card__sub">Anyone with the link</span>
+              </span>
+            </label>
+          </div>
+        </div>
+
+        <div class="cds-field">
           <label for="workspace-name">Workspace Name</label>
-          <input type="text" id="workspace-name" placeholder="issue-3568144">
-          <div class="hint">Must be lowercase letters, numbers, and hyphens only.</div>
+          <input type="text" id="workspace-name" placeholder="12x-umami-3568144" maxlength="128" autocomplete="off" spellcheck="false" aria-describedby="issue-result-workspace-name-hint workspace-name-error">
+          <div class="cds-hint" id="issue-result-workspace-name-hint">Used to generate the URL. Must be lowercase letters, numbers, and hyphens only.</div>
+          <div class="cds-field-error" id="workspace-name-error" role="alert" hidden></div>
+          <div class="hint cds-hint--url">E.g. <code>https://ddev-web--<span id="issue-result-workspace-url-slug"></span>--username.coder.ddev.com/</code></div>
         </div>
       </div>
 
-      <button class="btn-open" onclick="openWorkspace()">Open Dev Environment</button>
+      <div class="cds-launch-row">
+        <button type="button" class="cds-btn-open" onclick="openWorkspace()" aria-describedby="launch-tab-hint-issue">Launch DDEV Coder environment</button>
+        <p class="cds-launch-note" id="launch-tab-hint-issue">Opens Coder in a new tab — confirm creation when prompted.</p>
+      </div>
     </div>
 
     <!-- Plain contrib dev form (project URL or machine name, no issue) -->
-    <div id="plain-dev-form">
-      <div class="issue-title">
-        <span>Contrib Project</span>
+    <div id="plain-dev-form" class="cds-issue-panel" hidden>
+      <div class="cds-issue-title">
+        <span class="cds-issue-title__label">Contrib Project</span>
         <span id="plain-project-display"></span>
-        <span class="template-badge contrib">drupal-contrib template</span>
+        <span class="cds-template-badge cds-template-badge--contrib">drupal-contrib template</span>
       </div>
 
-      <div class="fields">
-        <div class="field">
-          <label for="plain-drupal-version">Drupal Version</label>
-          <select id="plain-drupal-version">
-            <option value="11">11.x (stable)</option>
-            <option value="12">12.x (HEAD / upcoming)</option>
-            <option value="10">10.x (stable)</option>
-          </select>
-          <div class="hint">Sets the Drupal version installed as a dev dependency.</div>
+      <div class="cds-fields">
+        <div>
+          <span class="cds-field__label" id="label-plain-version">Drupal version</span>
+          <p class="cds-hint">Sets the Drupal version installed as a dev dependency.</p>
+          <div class="cds-radio-row" role="radiogroup" aria-labelledby="label-plain-version">
+            <label class="cds-pick-card">
+              <input class="cds-pick-card__input cds-sr-only" type="radio" name="plain_drupal_version" value="12">
+              <span class="cds-pick-card__check" aria-hidden="true">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 12.5L10.5 17 18 8"/></svg>
+              </span>
+              <span class="cds-pick-card__text">
+                <span class="cds-pick-card__title">12.x</span>
+                <span class="cds-pick-card__sub">Main branch</span>
+              </span>
+            </label>
+            <label class="cds-pick-card">
+              <input class="cds-pick-card__input cds-sr-only" type="radio" name="plain_drupal_version" value="11" checked>
+              <span class="cds-pick-card__check" aria-hidden="true">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 12.5L10.5 17 18 8"/></svg>
+              </span>
+              <span class="cds-pick-card__text">
+                <span class="cds-pick-card__title">11.x</span>
+                <span class="cds-pick-card__sub">Current stable</span>
+              </span>
+            </label>
+            <label class="cds-pick-card">
+              <input class="cds-pick-card__input cds-sr-only" type="radio" name="plain_drupal_version" value="10">
+              <span class="cds-pick-card__check" aria-hidden="true">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 12.5L10.5 17 18 8"/></svg>
+              </span>
+              <span class="cds-pick-card__text">
+                <span class="cds-pick-card__title">10.x</span>
+                <span class="cds-pick-card__sub">Previous stable</span>
+              </span>
+            </label>
+          </div>
         </div>
 
-        <div class="field">
-          <label for="plain-profile">Install Profile</label>
-          <select id="plain-profile">
-            <option value="minimal">minimal</option>
-            <option value="standard">standard</option>
-            <option value="demo_umami">demo_umami</option>
-          </select>
-          <div class="hint">minimal is recommended for contrib development.</div>
+        <div>
+          <span class="cds-field__label" id="label-plain-profile">Install profile</span>
+          <p class="cds-hint">Minimal is recommended for contrib development.</p>
+          <div class="cds-radio-row" role="radiogroup" aria-labelledby="label-plain-profile">
+            <label class="cds-pick-card">
+              <input class="cds-pick-card__input cds-sr-only" type="radio" name="plain_install_profile" value="demo_umami">
+              <span class="cds-pick-card__check" aria-hidden="true">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 12.5L10.5 17 18 8"/></svg>
+              </span>
+              <span class="cds-pick-card__text">
+                <span class="cds-pick-card__title">Demo Umami</span>
+                <span class="cds-pick-card__sub">Full install</span>
+              </span>
+            </label>
+            <label class="cds-pick-card">
+              <input class="cds-pick-card__input cds-sr-only" type="radio" name="plain_install_profile" value="minimal" checked>
+              <span class="cds-pick-card__check" aria-hidden="true">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 12.5L10.5 17 18 8"/></svg>
+              </span>
+              <span class="cds-pick-card__text">
+                <span class="cds-pick-card__title">Minimal</span>
+                <span class="cds-pick-card__sub">Lean install</span>
+              </span>
+            </label>
+            <label class="cds-pick-card">
+              <input class="cds-pick-card__input cds-sr-only" type="radio" name="plain_install_profile" value="standard">
+              <span class="cds-pick-card__check" aria-hidden="true">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 12.5L10.5 17 18 8"/></svg>
+              </span>
+              <span class="cds-pick-card__text">
+                <span class="cds-pick-card__title">Standard</span>
+                <span class="cds-pick-card__sub">Default extras</span>
+              </span>
+            </label>
+          </div>
         </div>
 
-        <div class="field">
+        <div>
+          <span class="cds-field__label" id="label-plain-site-visibility">Site visibility</span>
+          <p class="cds-share-intro">Who can open the Drupal site URL. Switch to <strong>Public</strong> in Coder later if you need a shareable link.</p>
+          <div class="cds-radio-row" role="radiogroup" aria-labelledby="label-plain-site-visibility">
+            <label class="cds-pick-card">
+              <input class="cds-pick-card__input cds-sr-only" type="radio" name="plain_share_drupal_site" value="owner" checked>
+              <span class="cds-pick-card__check" aria-hidden="true">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 12.5L10.5 17 18 8"/></svg>
+              </span>
+              <span class="cds-pick-card__text">
+                <span class="cds-pick-card__title">Private</span>
+                <span class="cds-pick-card__sub">Owner only</span>
+              </span>
+            </label>
+            <label class="cds-pick-card">
+              <input class="cds-pick-card__input cds-sr-only" type="radio" name="plain_share_drupal_site" value="authenticated">
+              <span class="cds-pick-card__check" aria-hidden="true">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 12.5L10.5 17 18 8"/></svg>
+              </span>
+              <span class="cds-pick-card__text">
+                <span class="cds-pick-card__title">Authenticated</span>
+                <span class="cds-pick-card__sub">Any Coder user</span>
+              </span>
+            </label>
+            <label class="cds-pick-card">
+              <input class="cds-pick-card__input cds-sr-only" type="radio" name="plain_share_drupal_site" value="public">
+              <span class="cds-pick-card__check" aria-hidden="true">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 12.5L10.5 17 18 8"/></svg>
+              </span>
+              <span class="cds-pick-card__text">
+                <span class="cds-pick-card__title">Public</span>
+                <span class="cds-pick-card__sub">Anyone with the link</span>
+              </span>
+            </label>
+          </div>
+        </div>
+
+        <div class="cds-field">
           <label for="plain-workspace-name">Workspace Name</label>
-          <input type="text" id="plain-workspace-name" placeholder="my-token-dev">
-          <div class="hint">Must be lowercase letters, numbers, and hyphens only.</div>
+          <input type="text" id="plain-workspace-name" placeholder="11x-minimal-token" maxlength="128" autocomplete="off" spellcheck="false" aria-describedby="issue-plain-workspace-name-hint plain-workspace-name-error">
+          <div class="cds-hint" id="issue-plain-workspace-name-hint">Used to generate the URL. Must be lowercase letters, numbers, and hyphens only.</div>
+          <div class="cds-field-error" id="plain-workspace-name-error" role="alert" hidden></div>
+          <div class="hint cds-hint--url">E.g. <code>https://ddev-web--<span id="issue-plain-workspace-url-slug"></span>--username.coder.ddev.com/</code></div>
         </div>
       </div>
 
-      <button class="btn-open" onclick="openPlainDevWorkspace()">Open Dev Environment</button>
+      <div class="cds-launch-row">
+        <button type="button" class="cds-btn-open" onclick="openPlainDevWorkspace()" aria-describedby="launch-tab-hint-plain">Launch DDEV Coder environment</button>
+        <p class="cds-launch-note" id="launch-tab-hint-plain">Opens Coder in a new tab — confirm creation when prompted.</p>
+      </div>
     </div>
 
     <!-- Manual fallback form (shown on API error) -->
-    <div id="manual-form">
-      <div class="manual-notice">
+    <div id="manual-form" class="cds-issue-panel" hidden>
+      <div class="cds-manual-notice">
         Could not fetch issue data automatically. Enter values manually below.
       </div>
 
-      <div class="fields">
-        <div class="field">
+      <div class="cds-fields">
+        <div class="cds-field">
           <label for="manual-fork">Issue Fork Name</label>
           <input type="text" id="manual-fork" placeholder="drupal-3568144">
-          <div class="hint">For core: drupal-{issue}. For contrib: {module}-{issue}</div>
+          <div class="cds-hint">For core: drupal-{issue}. For contrib: {module}-{issue}</div>
         </div>
 
-        <div class="field">
+        <div class="cds-field">
           <label for="manual-branch">Issue Branch</label>
           <input type="text" id="manual-branch" placeholder="3568144-editorfilterxss-11.x">
         </div>
 
-        <div class="field">
-          <label for="manual-profile">Install Profile</label>
-          <select id="manual-profile">
-            <option value="demo_umami">demo_umami</option>
-            <option value="minimal">minimal</option>
-            <option value="standard">standard</option>
-          </select>
+        <div>
+          <span class="cds-field__label" id="label-manual-version">Drupal version</span>
+          <div class="cds-radio-row" role="radiogroup" aria-labelledby="label-manual-version">
+            <label class="cds-pick-card">
+              <input class="cds-pick-card__input cds-sr-only" type="radio" name="manual_drupal_version" value="12" checked>
+              <span class="cds-pick-card__check" aria-hidden="true">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 12.5L10.5 17 18 8"/></svg>
+              </span>
+              <span class="cds-pick-card__text">
+                <span class="cds-pick-card__title">12.x</span>
+                <span class="cds-pick-card__sub">Main branch</span>
+              </span>
+            </label>
+            <label class="cds-pick-card">
+              <input class="cds-pick-card__input cds-sr-only" type="radio" name="manual_drupal_version" value="11">
+              <span class="cds-pick-card__check" aria-hidden="true">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 12.5L10.5 17 18 8"/></svg>
+              </span>
+              <span class="cds-pick-card__text">
+                <span class="cds-pick-card__title">11.x</span>
+                <span class="cds-pick-card__sub">Current stable</span>
+              </span>
+            </label>
+            <label class="cds-pick-card">
+              <input class="cds-pick-card__input cds-sr-only" type="radio" name="manual_drupal_version" value="10">
+              <span class="cds-pick-card__check" aria-hidden="true">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 12.5L10.5 17 18 8"/></svg>
+              </span>
+              <span class="cds-pick-card__text">
+                <span class="cds-pick-card__title">10.x</span>
+                <span class="cds-pick-card__sub">Previous stable</span>
+              </span>
+            </label>
+          </div>
         </div>
 
-        <div class="field">
-          <label for="manual-drupal-version">Drupal Version</label>
-          <select id="manual-drupal-version">
-            <option value="12">12.x (HEAD / upcoming)</option>
-            <option value="11">11.x (stable)</option>
-            <option value="10">10.x (stable)</option>
-          </select>
+        <div>
+          <span class="cds-field__label" id="label-manual-profile">Install profile</span>
+          <div class="cds-radio-row" role="radiogroup" aria-labelledby="label-manual-profile">
+            <label class="cds-pick-card">
+              <input class="cds-pick-card__input cds-sr-only" type="radio" name="manual_install_profile" value="demo_umami" checked>
+              <span class="cds-pick-card__check" aria-hidden="true">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 12.5L10.5 17 18 8"/></svg>
+              </span>
+              <span class="cds-pick-card__text">
+                <span class="cds-pick-card__title">Demo Umami</span>
+                <span class="cds-pick-card__sub">Full install</span>
+              </span>
+            </label>
+            <label class="cds-pick-card">
+              <input class="cds-pick-card__input cds-sr-only" type="radio" name="manual_install_profile" value="minimal">
+              <span class="cds-pick-card__check" aria-hidden="true">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 12.5L10.5 17 18 8"/></svg>
+              </span>
+              <span class="cds-pick-card__text">
+                <span class="cds-pick-card__title">Minimal</span>
+                <span class="cds-pick-card__sub">Lean install</span>
+              </span>
+            </label>
+            <label class="cds-pick-card">
+              <input class="cds-pick-card__input cds-sr-only" type="radio" name="manual_install_profile" value="standard">
+              <span class="cds-pick-card__check" aria-hidden="true">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 12.5L10.5 17 18 8"/></svg>
+              </span>
+              <span class="cds-pick-card__text">
+                <span class="cds-pick-card__title">Standard</span>
+                <span class="cds-pick-card__sub">Default extras</span>
+              </span>
+            </label>
+          </div>
         </div>
 
-        <div class="field">
+        <div>
+          <span class="cds-field__label" id="label-manual-site-visibility">Site visibility</span>
+          <p class="cds-share-intro">Who can open the Drupal site URL. Switch to <strong>Public</strong> in Coder later if you need a shareable link.</p>
+          <div class="cds-radio-row" role="radiogroup" aria-labelledby="label-manual-site-visibility">
+            <label class="cds-pick-card">
+              <input class="cds-pick-card__input cds-sr-only" type="radio" name="manual_share_drupal_site" value="owner" checked>
+              <span class="cds-pick-card__check" aria-hidden="true">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 12.5L10.5 17 18 8"/></svg>
+              </span>
+              <span class="cds-pick-card__text">
+                <span class="cds-pick-card__title">Private</span>
+                <span class="cds-pick-card__sub">Owner only</span>
+              </span>
+            </label>
+            <label class="cds-pick-card">
+              <input class="cds-pick-card__input cds-sr-only" type="radio" name="manual_share_drupal_site" value="authenticated">
+              <span class="cds-pick-card__check" aria-hidden="true">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 12.5L10.5 17 18 8"/></svg>
+              </span>
+              <span class="cds-pick-card__text">
+                <span class="cds-pick-card__title">Authenticated</span>
+                <span class="cds-pick-card__sub">Any Coder user</span>
+              </span>
+            </label>
+            <label class="cds-pick-card">
+              <input class="cds-pick-card__input cds-sr-only" type="radio" name="manual_share_drupal_site" value="public">
+              <span class="cds-pick-card__check" aria-hidden="true">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 12.5L10.5 17 18 8"/></svg>
+              </span>
+              <span class="cds-pick-card__text">
+                <span class="cds-pick-card__title">Public</span>
+                <span class="cds-pick-card__sub">Anyone with the link</span>
+              </span>
+            </label>
+          </div>
+        </div>
+
+        <div class="cds-field">
           <label for="manual-workspace-name">Workspace Name</label>
-          <input type="text" id="manual-workspace-name" placeholder="issue-3568144">
+          <input type="text" id="manual-workspace-name" placeholder="12x-umami-3568144" maxlength="128" autocomplete="off" spellcheck="false" aria-describedby="issue-manual-workspace-name-hint manual-workspace-name-error">
+          <div class="cds-hint" id="issue-manual-workspace-name-hint">Used to generate the URL. Must be lowercase letters, numbers, and hyphens only.</div>
+          <div class="cds-field-error" id="manual-workspace-name-error" role="alert" hidden></div>
+          <div class="hint cds-hint--url">E.g. <code>https://ddev-web--<span id="issue-manual-workspace-url-slug"></span>--username.coder.ddev.com/</code></div>
         </div>
       </div>
 
-      <button class="btn-open" onclick="openManualWorkspace()">Open Dev Environment</button>
+      <div class="cds-launch-row">
+        <button type="button" class="cds-btn-open" onclick="openManualWorkspace()" aria-describedby="launch-tab-hint-manual">Launch DDEV Coder environment</button>
+        <p class="cds-launch-note" id="launch-tab-hint-manual">Opens Coder in a new tab — confirm creation when prompted.</p>
+      </div>
     </div>
 
-    <div class="notes">
-      <h2>Notes</h2>
-      <ul>
-        <li>Requires a GitHub account — <a href="https://coder.ddev.com/login" style="color:#a78bfa">sign in at coder.ddev.com</a> first</li>
-        <li>Core issues use the <strong>drupal-core</strong> template; contrib issues use the <strong>drupal-contrib</strong> template — detected automatically</li>
-        <li>Issue fork workspaces always run a full <code>ddev drush si</code> (branch code may differ from the cached database)</li>
-        <li>The <code>demo_umami</code> fast path (about a minute) is only used for standard Drupal core without an issue fork</li>
-        <li>Issue fork must exist on <a href="https://git.drupalcode.org" style="color:#a78bfa">git.drupalcode.org</a> — click "Get push access" on the issue page to create one</li>
-        <li>Contrib dev without an issue: enter a project URL like <code>drupal.org/project/token</code> or just the machine name <code>token</code></li>
-      </ul>
-    </div>
+    <hr class="cds-divider">
 
-    <div class="notes" style="margin-top:1.5rem;">
-      <h2>Feedback &amp; Community</h2>
-      <p style="color:#999;font-size:0.95rem;line-height:1.7;">Any problems or friction? Create an issue at <a href="https://github.com/ddev/coder-ddev/issues" style="color:#a78bfa;">ddev/coder-ddev</a> or join us for conversation on Drupal Slack <strong>#ddev</strong> or <a href="https://ddev.com/s/discord" style="color:#a78bfa;">DDEV Discord</a>.</p>
-    </div>
+    <section class="cds-notes" aria-labelledby="access">
+      <h2 id="access">Access</h2>
+      <p>Requires a GitHub account — <a class="cds-link" href="https://coder.ddev.com/login">sign in at coder.ddev.com</a> first.</p>
+
+      <h2 id="install-profiles">Install profiles</h2>
+      <p><strong>Demo Umami on Drupal 12</strong> can use a pre-built snapshot for a quicker first boot. <strong>Minimal</strong>, <strong>Standard</strong>, and Drupal 11.x and 10.x always run a full site install.</p>
+
+      <h2 id="templates">Coder Workspace Templates</h2>
+      <p>Core issues use the <strong>drupal-core</strong> template; contrib issues and project-only dev use <strong>drupal-contrib</strong>. The picker chooses automatically from the issue or project you load.</p>
+
+      <h2 id="workspace-names">Workspace name</h2>
+      <p>A suggested workspace name is auto-generated from the parameters above. It may be changed before clicking launch.</p>
+
+      <h2 id="issue-forks">Issue forks</h2>
+      <p>An issue fork must already exist on <a class="cds-link" href="https://git.drupalcode.org">git.drupalcode.org</a> — use <strong>Get push access</strong> on the drupal.org issue to create one, then reload here.</p>
+      <p>Issue fork workspaces always run a full <code>ddev drush si</code> so the checked-out branch matches the running site (not a stale snapshot).</p>
+    </section>
+
+    <hr class="cds-divider">
+
+    <section class="cds-notes" aria-labelledby="feedback">
+      <h2 id="feedback">Feedback &amp; Community</h2>
+      <p class="cds-feedback">Problems or ideas? <a class="cds-link" href="https://github.com/ddev/coder-ddev/issues">ddev/coder-ddev issues</a> · Drupal Slack <strong>#ddev</strong> · <a class="cds-link" href="https://ddev.com/s/discord">DDEV Discord</a>.</p>
+    </section>
   </div>
 
+  <script src="coder-workspace-name.js"></script>
   <script>
     const CODER_BASE = 'https://coder.ddev.com';
     const CODER_TEMPLATE_CORE   = 'coder/drupal-core';
     const CODER_TEMPLATE_CONTRIB = 'coder/drupal-contrib';
+    const { sanitizeWorkspaceName, workspaceNameFromCoreChoices, suggestedIssueForkWorkspaceName, applyWorkspaceNameFieldValidation, bindWorkspaceNameFieldValidation, CORE_DISABLE_PARAMS } = window.CoderWorkspace;
+
+    function updateWorkspaceUrlSlug(inputId, spanId) {
+      const input = document.getElementById(inputId);
+      const span = document.getElementById(spanId);
+      if (!input || !span) return;
+      const v = input.value.trim();
+      span.textContent = v ? sanitizeWorkspaceName(v) : '\u2026';
+    }
+
+    function bindWorkspaceUrlSlugLive(inputId, spanId, errorId) {
+      const input = document.getElementById(inputId);
+      if (!input) return;
+      const go = function () {
+        updateWorkspaceUrlSlug(inputId, spanId);
+        if (errorId) {
+          applyWorkspaceNameFieldValidation(inputId, errorId);
+        }
+      };
+      input.addEventListener('input', go);
+      input.addEventListener('change', go);
+      go();
+    }
 
     // State for the current loaded result
     let currentIssueFork = '';   // fork name: 'drupal-NID' for core, '{module}-NID' for contrib
     let currentNid = '';
     let currentProjectName = ''; // 'drupal' for core, module machine name for contrib
     let currentIsContrib = false;
+    let currentProjectType = 'module'; // 'module' or 'theme' for drupal-contrib template
+
+    function normalizeProjectType(rawType) {
+      const t = String(rawType || '').toLowerCase();
+      if (t === 'theme' || t === 'project_theme' || t.indexOf('theme') !== -1) {
+        return 'theme';
+      }
+      return 'module';
+    }
+
+    async function fetchDrupalOrgProjectType(projectName) {
+      try {
+        const resp = await fetch(
+          'https://www.drupal.org/api-d7/node.json?field_project_machine_name='
+            + encodeURIComponent(projectName)
+        );
+        if (!resp.ok) return null;
+        const data = await resp.json();
+        const project = data.list && data.list[0];
+        if (!project) return null;
+        // field_project_type is "full" for both modules and themes; node type is reliable.
+        return normalizeProjectType(project.type);
+      } catch (_) {
+        return null;
+      }
+    }
+
+    function getResultBranchOptionCount() {
+      const sel = document.getElementById('branch-select');
+      return sel && sel.options ? sel.options.length : 0;
+    }
+
+    function getCheckedRadioValue(name) {
+      const el = document.querySelector('input[name="' + name + '"]:checked');
+      return el ? el.value : '';
+    }
+
+    function setCheckedRadioValue(name, value) {
+      const el = document.querySelector('input[name="' + name + '"][value="' + value + '"]');
+      if (el) el.checked = true;
+    }
+
+    function syncResultWorkspaceName() {
+      if (!currentNid) return;
+      const dv = getCheckedRadioValue('result_drupal_version');
+      const profile = getCheckedRadioValue('result_install_profile');
+      const branch = document.getElementById('branch-select').value;
+      const n = getResultBranchOptionCount();
+      document.getElementById('workspace-name').value = suggestedIssueForkWorkspaceName(
+        dv, profile, currentNid, branch, n
+      );
+      updateWorkspaceUrlSlug('workspace-name', 'issue-result-workspace-url-slug');
+      applyWorkspaceNameFieldValidation('workspace-name', 'workspace-name-error');
+    }
+
+    function syncPlainWorkspaceName() {
+      if (!currentProjectName) return;
+      const dv = getCheckedRadioValue('plain_drupal_version');
+      const profile = getCheckedRadioValue('plain_install_profile');
+      document.getElementById('plain-workspace-name').value = sanitizeWorkspaceName(
+        workspaceNameFromCoreChoices(dv, profile) + '-' + currentProjectName
+      );
+      updateWorkspaceUrlSlug('plain-workspace-name', 'issue-plain-workspace-url-slug');
+      applyWorkspaceNameFieldValidation('plain-workspace-name', 'plain-workspace-name-error');
+    }
+
+    function syncManualWorkspaceName() {
+      if (!currentNid) return;
+      const dv = getCheckedRadioValue('manual_drupal_version');
+      const prof = getCheckedRadioValue('manual_install_profile');
+      document.getElementById('manual-workspace-name').value = sanitizeWorkspaceName(
+        workspaceNameFromCoreChoices(dv, prof) + '-' + currentNid
+      );
+      updateWorkspaceUrlSlug('manual-workspace-name', 'issue-manual-workspace-url-slug');
+      applyWorkspaceNameFieldValidation('manual-workspace-name', 'manual-workspace-name-error');
+    }
 
     function setStatus(msg, type) {
       const el = document.getElementById('status');
       el.textContent = msg;
-      el.className = 'status ' + type;
+      el.className = 'cds-status cds-status--' + type;
     }
 
     function clearStatus() {
       const el = document.getElementById('status');
-      el.className = 'status';
+      el.className = 'cds-status';
     }
 
     function hideAllForms() {
-      document.getElementById('result-form').style.display = 'none';
-      document.getElementById('plain-dev-form').style.display = 'none';
-      document.getElementById('manual-form').style.display = 'none';
+      document.getElementById('result-form').hidden = true;
+      document.getElementById('plain-dev-form').hidden = true;
+      document.getElementById('manual-form').hidden = true;
+      currentProjectType = 'module';
     }
 
     // Returns { type: 'issue'|'project', nid, project } or null
@@ -598,10 +636,6 @@
       if (/^[a-z][a-z0-9_]*$/.test(s)) return { type: 'project', nid: null, project: s };
 
       return null;
-    }
-
-    function sanitizeWorkspaceName(name) {
-      return name.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
     }
 
     async function loadInput() {
@@ -646,9 +680,14 @@
 
       clearStatus();
       document.getElementById('plain-project-display').textContent = projectName;
-      document.getElementById('plain-workspace-name').value = sanitizeWorkspaceName(projectName + '-dev');
       currentProjectName = projectName;
-      document.getElementById('plain-dev-form').style.display = 'block';
+      const fetchedPlainType = await fetchDrupalOrgProjectType(projectName);
+      if (fetchedPlainType === null) {
+        setStatus('Could not detect project type for ' + projectName + ' - defaulting to module. If this is a theme, adjust the template parameter after launch.', 'info');
+      }
+      currentProjectType = fetchedPlainType || 'module';
+      syncPlainWorkspaceName();
+      document.getElementById('plain-dev-form').hidden = false;
     }
 
     async function loadIssue(nid, hintedProject) {
@@ -661,7 +700,6 @@
         let projectName = hintedProject;
         let title = 'Issue #' + nid;
         let drupalMajor = '11';
-        let projectType = 'module'; // used later for contrib template hint
 
         try {
           const issueResp = await fetch('https://www.drupal.org/api-d7/node/' + nid + '.json');
@@ -671,10 +709,6 @@
             // Resolve project name from API (overrides URL-hinted project)
             const apiProject = issue.field_project && issue.field_project.machine_name;
             if (apiProject) projectName = apiProject;
-            // Detect project type (module vs theme)
-            if (issue.field_project && issue.field_project.field_project_type) {
-              projectType = issue.field_project.field_project_type;
-            }
             // Detect Drupal major version from field_issue_version — core issues only.
             // For contrib, field_issue_version is the MODULE version (e.g. "8.x-1.x"
             // means module 1.x, not Drupal 8), so we leave drupalMajor at its default.
@@ -692,8 +726,17 @@
 
         currentProjectName = projectName;
         currentIsContrib = (projectName !== 'drupal');
+        if (currentIsContrib) {
+          const fetchedType = await fetchDrupalOrgProjectType(projectName);
+          if (fetchedType === null) {
+            console.warn('Could not detect project type for', projectName, '- defaulting to module');
+          }
+          currentProjectType = fetchedType || 'module';
+        } else {
+          currentProjectType = 'module';
+        }
 
-        // Issue fork name: 'drupal-{nid}' for core, '{module}-{nid}' for contrib
+        // Issue fork name: 'drupal-{nid}' for core, '{module}-NID' for contrib
         const issueFork = currentIsContrib ? (projectName + '-' + nid) : ('drupal-' + nid);
         currentIssueFork = issueFork;
 
@@ -770,132 +813,183 @@
         issueLink.href = issuePageUrl;
         issueLink.target = '_blank';
         issueLink.textContent = '#' + nid + ': ' + title;
-        issueLink.style.cssText = 'color: inherit; text-decoration: underline;';
+        issueLink.className = 'cds-issue-title__link';
         titleEl.appendChild(issueLink);
 
         // Template badge and form customization
         const badge = document.getElementById('template-badge');
         const resultLabel = document.getElementById('result-label');
         const profileHint = document.getElementById('profile-hint');
-        const profileSelect = document.getElementById('profile-select');
 
         if (currentIsContrib) {
-          badge.textContent = 'drupal-contrib template · ' + projectName;
-          badge.className = 'template-badge contrib';
+          const typeLabel = currentProjectType === 'theme' ? 'theme' : 'module';
+          badge.textContent = 'drupal-contrib template · ' + projectName + ' (' + typeLabel + ')';
+          badge.className = 'cds-template-badge cds-template-badge--contrib';
           resultLabel.textContent = 'Contrib Issue (' + projectName + ')';
-          // Default to minimal for contrib
-          profileSelect.value = 'minimal';
-          profileHint.textContent = 'minimal is recommended for contrib development.';
+          setCheckedRadioValue('result_install_profile', 'minimal');
+          profileHint.textContent = 'Minimal is recommended for contrib; all profiles run a full install here.';
         } else {
           badge.textContent = 'drupal-core template';
-          badge.className = 'template-badge core';
+          badge.className = 'cds-template-badge cds-template-badge--core';
           resultLabel.textContent = 'Issue';
-          profileSelect.value = 'demo_umami';
-          profileHint.textContent = 'demo_umami uses a pre-built database snapshot. Issue fork workspaces always run a full site install regardless of profile.';
+          setCheckedRadioValue('result_install_profile', 'demo_umami');
+          profileHint.textContent = 'Issue fork workspaces always run a full ddev drush si; profile still controls the install choice.';
         }
 
-        document.getElementById('drupal-version-select').value = drupalMajor;
-        document.getElementById('workspace-name').value = 'issue-' + nid;
+        setCheckedRadioValue('result_drupal_version', drupalMajor);
+        syncResultWorkspaceName();
 
         clearStatus();
-        document.getElementById('result-form').style.display = 'block';
+        document.getElementById('result-form').hidden = false;
 
       } catch (err) {
         console.error(err);
         setStatus('Could not load issue data automatically (' + err.message + '). Enter values below.', 'error');
-        document.getElementById('manual-workspace-name').value = 'issue-' + nid;
+        syncManualWorkspaceName();
         document.getElementById('manual-fork').value = (currentIsContrib && currentProjectName)
           ? (currentProjectName + '-' + nid) : ('drupal-' + nid);
-        document.getElementById('manual-form').style.display = 'block';
+        document.getElementById('manual-form').hidden = false;
       }
     }
 
-    function buildCoreUrl(issueFork, issueBranch, installProfile, drupalVersion, workspaceName) {
+    const CONTRIB_DISABLE_PARAMS = 'project_name,project_type,issue_fork,issue_branch,drupal_version,install_profile,share_drupal_site';
+
+    function getShareDrupalSite(fieldName) {
+      const raw = document.querySelector('input[name="' + fieldName + '"]:checked');
+      const shareVal = raw ? raw.value : '';
+      return ['owner', 'authenticated', 'public'].includes(shareVal) ? shareVal : 'owner';
+    }
+
+    function buildCoreUrl(issueFork, issueBranch, installProfile, drupalVersion, workspaceName, shareDrupalSite) {
       const base = CODER_BASE + '/templates/' + CODER_TEMPLATE_CORE + '/workspace';
       const params = new URLSearchParams({
-        mode: 'manual',
+        mode: 'auto',
         name: sanitizeWorkspaceName(workspaceName),
+        disable_params: CORE_DISABLE_PARAMS,
         'param.issue_fork': issueFork,
         'param.issue_branch': issueBranch,
         'param.install_profile': installProfile,
         'param.drupal_version': drupalVersion,
+        'param.share_drupal_site': shareDrupalSite,
       });
       return base + '?' + params.toString();
     }
 
-    function buildContribIssueUrl(projectName, issueNumber, issueBranch, installProfile, drupalVersion, workspaceName) {
+    function buildContribIssueUrl(projectName, issueFork, issueBranch, installProfile, drupalVersion, workspaceName, shareDrupalSite, projectType) {
       const base = CODER_BASE + '/templates/' + CODER_TEMPLATE_CONTRIB + '/workspace';
       const params = new URLSearchParams({
-        mode: 'manual',
+        mode: 'auto',
         name: sanitizeWorkspaceName(workspaceName),
+        disable_params: CONTRIB_DISABLE_PARAMS,
         'param.project_name': projectName,
-        'param.project_type': 'module', // will be overridden manually for themes
-        'param.issue_fork': issueNumber,
+        'param.project_type': projectType || 'module',
+        'param.issue_fork': issueFork,
         'param.issue_branch': issueBranch,
         'param.install_profile': installProfile,
         'param.drupal_version': drupalVersion,
+        'param.share_drupal_site': shareDrupalSite,
       });
       return base + '?' + params.toString();
     }
 
-    function buildContribPlainUrl(projectName, drupalVersion, installProfile, workspaceName) {
+    function buildContribPlainUrl(projectName, drupalVersion, installProfile, workspaceName, shareDrupalSite, projectType) {
       const base = CODER_BASE + '/templates/' + CODER_TEMPLATE_CONTRIB + '/workspace';
       const params = new URLSearchParams({
-        mode: 'manual',
+        mode: 'auto',
         name: sanitizeWorkspaceName(workspaceName),
+        disable_params: CONTRIB_DISABLE_PARAMS,
         'param.project_name': projectName,
-        'param.project_type': 'module',
+        'param.project_type': projectType || 'module',
         'param.issue_fork': '',
         'param.issue_branch': '',
         'param.install_profile': installProfile,
         'param.drupal_version': drupalVersion,
+        'param.share_drupal_site': shareDrupalSite,
       });
       return base + '?' + params.toString();
     }
 
     function openWorkspace() {
       const branch = document.getElementById('branch-select').value;
-      const profile = document.getElementById('profile-select').value;
-      const drupalVersion = document.getElementById('drupal-version-select').value;
-      const wsName = document.getElementById('workspace-name').value || ('issue-' + currentNid);
+      const profile = getCheckedRadioValue('result_install_profile');
+      const drupalVersion = getCheckedRadioValue('result_drupal_version');
+      const shareDrupalSite = getShareDrupalSite('result_share_drupal_site');
+      const wsField = document.getElementById('workspace-name').value.trim();
+      const wsName = wsField
+        ? sanitizeWorkspaceName(wsField)
+        : suggestedIssueForkWorkspaceName(drupalVersion, profile, currentNid, branch, getResultBranchOptionCount());
 
       if (!currentIssueFork || !branch) {
         setStatus('Please load an issue first.', 'error');
         return;
       }
 
+      const validation = applyWorkspaceNameFieldValidation('workspace-name', 'workspace-name-error');
+      if (validation && !validation.valid) {
+        clearStatus();
+        return;
+      }
+
       let url;
       if (currentIsContrib) {
-        url = buildContribIssueUrl(currentProjectName, currentNid, branch, profile, drupalVersion, wsName);
+        url = buildContribIssueUrl(
+          currentProjectName, currentIssueFork, branch, profile, drupalVersion, wsName, shareDrupalSite, currentProjectType
+        );
       } else {
-        url = buildCoreUrl(currentIssueFork, branch, profile, drupalVersion, wsName);
+        url = buildCoreUrl(currentIssueFork, branch, profile, drupalVersion, wsName, shareDrupalSite);
       }
       window.open(url, '_blank');
     }
 
     function openPlainDevWorkspace() {
-      const drupalVersion = document.getElementById('plain-drupal-version').value;
-      const profile = document.getElementById('plain-profile').value;
-      const wsName = document.getElementById('plain-workspace-name').value || (currentProjectName + '-dev');
+      const drupalVersion = getCheckedRadioValue('plain_drupal_version');
+      const profile = getCheckedRadioValue('plain_install_profile');
+      const shareDrupalSite = getShareDrupalSite('plain_share_drupal_site');
+      const wsField = document.getElementById('plain-workspace-name').value.trim();
+      const wsName = wsField
+        ? sanitizeWorkspaceName(wsField)
+        : sanitizeWorkspaceName(
+            workspaceNameFromCoreChoices(drupalVersion, profile) + '-' + currentProjectName
+          );
 
       if (!currentProjectName) {
         setStatus('No project loaded. Enter a project URL or machine name first.', 'error');
         return;
       }
 
-      const url = buildContribPlainUrl(currentProjectName, drupalVersion, profile, wsName);
+      const validation = applyWorkspaceNameFieldValidation('plain-workspace-name', 'plain-workspace-name-error');
+      if (validation && !validation.valid) {
+        clearStatus();
+        return;
+      }
+
+      const url = buildContribPlainUrl(
+        currentProjectName, drupalVersion, profile, wsName, shareDrupalSite, currentProjectType
+      );
       window.open(url, '_blank');
     }
 
-    function openManualWorkspace() {
+    async function openManualWorkspace() {
       const fork = document.getElementById('manual-fork').value.trim();
       const branch = document.getElementById('manual-branch').value.trim();
-      const profile = document.getElementById('manual-profile').value;
-      const drupalVersion = document.getElementById('manual-drupal-version').value;
-      const wsName = document.getElementById('manual-workspace-name').value || ('issue-' + currentNid);
+      const profile = getCheckedRadioValue('manual_install_profile');
+      const drupalVersion = getCheckedRadioValue('manual_drupal_version');
+      const shareDrupalSite = getShareDrupalSite('manual_share_drupal_site');
+      const wsField = document.getElementById('manual-workspace-name').value.trim();
+      const wsName = wsField
+        ? sanitizeWorkspaceName(wsField)
+        : sanitizeWorkspaceName(
+            workspaceNameFromCoreChoices(drupalVersion, profile) + '-' + currentNid
+          );
 
       if (!fork || !branch) {
         setStatus('Issue fork name and branch are required.', 'error');
+        return;
+      }
+
+      const validation = applyWorkspaceNameFieldValidation('manual-workspace-name', 'manual-workspace-name-error');
+      if (validation && !validation.valid) {
+        clearStatus();
         return;
       }
 
@@ -903,13 +997,21 @@
       const isCoreManual = fork.startsWith('drupal-');
       let url;
       if (isCoreManual) {
-        url = buildCoreUrl(fork, branch, profile, drupalVersion, wsName);
+        url = buildCoreUrl(fork, branch, profile, drupalVersion, wsName, shareDrupalSite);
       } else {
         // Extract project name from fork name (MODULE-NID → MODULE)
         const forkParts = fork.match(/^([a-z][a-z0-9_]*)-(\d+)$/);
         const project = forkParts ? forkParts[1] : 'unknown';
         const nidFromFork = forkParts ? forkParts[2] : currentNid;
-        url = buildContribIssueUrl(project, nidFromFork, branch, profile, drupalVersion, wsName);
+        const projectType = (currentProjectName === project && currentProjectType)
+          ? currentProjectType
+          : await fetchDrupalOrgProjectType(project);
+        if (!projectType) {
+          setStatus('Could not detect project type; assuming module. If this is a theme, the workspace may need manual configuration after launch.', 'info');
+        }
+        url = buildContribIssueUrl(
+          project, fork, branch, profile, drupalVersion, wsName, shareDrupalSite, projectType
+        );
       }
       window.open(url, '_blank');
     }
@@ -918,6 +1020,21 @@
     document.getElementById('issue-input').addEventListener('keydown', function(e) {
       if (e.key === 'Enter') loadInput();
     });
+
+    document.getElementById('branch-select').addEventListener('change', syncResultWorkspaceName);
+    document.querySelectorAll('input[name="result_drupal_version"], input[name="result_install_profile"]').forEach(function (radio) {
+      radio.addEventListener('change', syncResultWorkspaceName);
+    });
+    document.querySelectorAll('input[name="plain_drupal_version"], input[name="plain_install_profile"]').forEach(function (radio) {
+      radio.addEventListener('change', syncPlainWorkspaceName);
+    });
+    document.querySelectorAll('input[name="manual_drupal_version"], input[name="manual_install_profile"]').forEach(function (radio) {
+      radio.addEventListener('change', syncManualWorkspaceName);
+    });
+
+    bindWorkspaceUrlSlugLive('workspace-name', 'issue-result-workspace-url-slug', 'workspace-name-error');
+    bindWorkspaceUrlSlugLive('plain-workspace-name', 'issue-plain-workspace-url-slug', 'plain-workspace-name-error');
+    bindWorkspaceUrlSlugLive('manual-workspace-name', 'issue-manual-workspace-url-slug', 'manual-workspace-name-error');
   </script>
 
 </body>
