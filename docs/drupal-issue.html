@@ -21,7 +21,7 @@
   <!-- id="main-content" is the skip link target (WCAG 2.4.1) -->
   <div class="cds-page" id="main-content">
     <h1>Drupal Issue Picker</h1>
-    <p class="cds-page__subtitle">Paste a drupal.org core or contrib issue URL or number, or a contrib project URL or machine name. We load issue metadata and fork branches when applicable.</p>
+    <p class="cds-page__subtitle">Paste a drupal.org or GitLab core/contrib issue URL, or a contrib project URL or machine name. We load issue metadata and fork branches when applicable.</p>
 
     <div class="cds-note cds-note--intro">
       To create a clean Drupal core environment without contrib modules or issue forks, try the <a class="cds-link" href="drupal-core">Guided Drupal core</a> form.
@@ -31,9 +31,9 @@
       <!-- Explicit <label> associates the field name with the input for screen readers.
            Visually hidden because the heading and subtitle already describe the field.
            WCAG 1.3.1 Info and Relationships / 3.3.2 Labels or Instructions (Level A) -->
-      <label for="issue-input" class="cds-sr-only">Issue number, URL, or project name</label>
+      <label for="issue-input" class="cds-sr-only">Issue URL or project name</label>
       <input type="text" id="issue-input"
-        placeholder="e.g. 3568144 · drupal.org/project/drupal/issues/3568144 · drupal.org/project/token"
+        placeholder="e.g. drupal.org/project/drupal/issues/3568144 · git.drupalcode.org/project/token/-/issues/3591879 · drupal.org/project/token"
         autofocus>
       <button class="cds-btn-load" id="load-btn" onclick="loadInput()">Load</button>
     </div>
@@ -617,16 +617,27 @@
       currentProjectType = 'module';
     }
 
-    // Returns { type: 'issue'|'project', nid, project } or null
+    // Returns { type: 'issue', nid, project, source: 'gitlab'|'drupalorg'|'shorthand' }
+    // or { type: 'project', nid: null, project } or null.
+    //
+    // Issue numbers are not globally unique now that Drupal.org issue queues are
+    // migrating to GitLab per-project (see github.com/ddev/coder-ddev/issues/163) —
+    // a bare number can no longer be resolved unambiguously, so every issue match
+    // here must carry an explicit project name.
     function parseInput(raw) {
       const s = raw.trim();
 
-      // Plain issue number
-      if (/^\d+$/.test(s)) return { type: 'issue', nid: s, project: null };
+      // GitLab issue URL: git.drupalcode.org/project/PROJECT/-/issues/IID or -/work_items/IID
+      const gitlabIssueM = s.match(/git\.drupalcode\.org\/project\/([a-z][a-z0-9_]*)\/-\/(?:issues|work_items)\/(\d+)/);
+      if (gitlabIssueM) return { type: 'issue', nid: gitlabIssueM[2], project: gitlabIssueM[1], source: 'gitlab' };
 
-      // Full issue URL: .../project/PROJECT/issues/NID
+      // Full drupal.org issue URL: .../project/PROJECT/issues/NID
       const issueUrlM = s.match(/\/project\/([a-z][a-z0-9_]*)\/issues\/(\d+)/);
-      if (issueUrlM) return { type: 'issue', nid: issueUrlM[2], project: issueUrlM[1] };
+      if (issueUrlM) return { type: 'issue', nid: issueUrlM[2], project: issueUrlM[1], source: 'drupalorg' };
+
+      // Issue fork shorthand: PROJECT-NID (e.g. drupal-3568144, token-3568144)
+      const shorthandM = s.match(/^([a-z][a-z0-9_]*)-(\d+)$/);
+      if (shorthandM) return { type: 'issue', nid: shorthandM[2], project: shorthandM[1], source: 'shorthand' };
 
       // Project URL: .../project/PROJECT (no issue segment)
       const projUrlM = s.match(/\/project\/([a-z][a-z0-9_]*)(?:\/|$)/);
@@ -643,7 +654,7 @@
       const parsed = parseInput(raw);
 
       if (!parsed) {
-        setStatus('Could not parse input. Enter an issue number, a drupal.org issue or project URL, or a module machine name.', 'error');
+        setStatus('Could not parse input. Enter a drupal.org or GitLab issue URL, a drupal.org project URL, or a module machine name.', 'error');
         return;
       }
 
@@ -653,7 +664,7 @@
       if (parsed.type === 'project') {
         await loadPlainProject(parsed.project);
       } else {
-        await loadIssue(parsed.nid, parsed.project);
+        await loadIssue(parsed.nid, parsed.project, parsed.source);
       }
 
       document.getElementById('load-btn').disabled = false;
@@ -690,39 +701,69 @@
       document.getElementById('plain-dev-form').hidden = false;
     }
 
-    async function loadIssue(nid, hintedProject) {
+    // Fetches an issue title from the GitLab API for projects whose issue
+    // queue has migrated off drupal.org. Returns null on any failure.
+    async function fetchGitlabIssueTitle(projectName, nid) {
+      try {
+        const resp = await fetch(
+          'https://git.drupalcode.org/api/v4/projects/' + encodeURIComponent('project/' + projectName) + '/issues/' + nid
+        );
+        if (!resp.ok) return null;
+        const data = await resp.json();
+        return (data && data.title) ? data.title : null;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    async function loadIssue(nid, hintedProject, source) {
       currentNid = nid;
-      setStatus('Loading issue ' + nid + '...', 'loading');
+      const projectName = hintedProject;
+      setStatus('Loading issue ' + projectName + '-' + nid + '...', 'loading');
 
       try {
-        // Step 1: fetch issue data from Drupal.org to determine project
-        setStatus('Fetching issue data from drupal.org...', 'loading');
-        let projectName = hintedProject;
-        let title = 'Issue #' + nid;
+        let title = null;
         let drupalMajor = '11';
+        let issueIsOnGitlab = (source === 'gitlab');
 
-        try {
-          const issueResp = await fetch('https://www.drupal.org/api-d7/node/' + nid + '.json');
-          if (issueResp.ok) {
-            const issue = await issueResp.json();
-            if (issue.title) title = issue.title;
-            // Resolve project name from API (overrides URL-hinted project)
-            const apiProject = issue.field_project && issue.field_project.machine_name;
-            if (apiProject) projectName = apiProject;
-            // Detect Drupal major version from field_issue_version — core issues only.
-            // For contrib, field_issue_version is the MODULE version (e.g. "8.x-1.x"
-            // means module 1.x, not Drupal 8), so we leave drupalMajor at its default.
-            if (!apiProject || apiProject === 'drupal') {
-              const ver = issue.field_issue_version || '';
-              const verM = ver.match(/^(\d+)\./);
-              if (verM) drupalMajor = verM[1];
-              else if (ver === 'main' || ver.startsWith('12')) drupalMajor = '12';
+        if (issueIsOnGitlab) {
+          setStatus('Fetching issue data from git.drupalcode.org...', 'loading');
+          title = await fetchGitlabIssueTitle(projectName, nid);
+        } else {
+          // drupal.org URL or PROJECT-NID shorthand: try the classic API first.
+          setStatus('Fetching issue data from drupal.org...', 'loading');
+          try {
+            const issueResp = await fetch('https://www.drupal.org/api-d7/node/' + nid + '.json');
+            if (issueResp.ok) {
+              const issue = await issueResp.json();
+              if (issue.title) {
+                title = issue.title;
+                // Detect Drupal major version from field_issue_version — core issues only.
+                // For contrib, field_issue_version is the MODULE version (e.g. "8.x-1.x"
+                // means module 1.x, not Drupal 8), so we leave drupalMajor at its default.
+                const apiProject = issue.field_project && issue.field_project.machine_name;
+                if (!apiProject || apiProject === 'drupal') {
+                  const ver = issue.field_issue_version || '';
+                  const verM = ver.match(/^(\d+)\./);
+                  if (verM) drupalMajor = verM[1];
+                  else if (ver === 'main' || ver.startsWith('12')) drupalMajor = '12';
+                }
+              }
             }
-          }
-        } catch (_) { /* title/version stay as fallback */ }
+          } catch (_) { /* fall through to the GitLab lookup below */ }
 
-        // If we still don't know the project, assume it from hinted URL or default to 'drupal'
-        if (!projectName) projectName = 'drupal';
+          if (!title) {
+            // Not found in the classic system — this project's issue queue has
+            // likely migrated to GitLab. Issue IDs are not preserved across the
+            // migration (see github.com/ddev/coder-ddev/issues/163), so we can
+            // only re-resolve it using the project name carried in the input.
+            setStatus('Not found on drupal.org — checking GitLab issues for ' + projectName + '...', 'loading');
+            title = await fetchGitlabIssueTitle(projectName, nid);
+            issueIsOnGitlab = !!title;
+          }
+        }
+
+        if (!title) title = 'Issue #' + nid;
 
         currentProjectName = projectName;
         currentIsContrib = (projectName !== 'drupal');
@@ -747,17 +788,19 @@
           'https://git.drupalcode.org/api/v4/projects/' + encodedFork + '/repository/branches?per_page=100'
         );
 
+        const issuePageUrl = issueIsOnGitlab
+          ? 'https://git.drupalcode.org/project/' + projectName + '/-/issues/' + nid
+          : 'https://www.drupal.org/project/' + projectName + '/issues/' + nid;
+
         if (branchResp.status === 404) {
-          // Check if issue exists
-          const issueUrl = 'https://www.drupal.org/project/' + projectName + '/issues/' + nid;
           if (currentIsContrib) {
             setStatus(
-              'No issue fork exists for #' + nid + ' on ' + projectName + ' yet. Visit the issue page on drupal.org and click "Get push access" to create a fork, then come back here.',
+              'No issue fork exists for #' + nid + ' on ' + projectName + ' yet. Visit the issue page and click "Get push access" to create a fork, then come back here.',
               'info'
             );
           } else {
             setStatus(
-              'No issue fork exists for #' + nid + ' yet. To work on this issue, visit the issue page on drupal.org and click "Get push access" to create a fork, then come back here.',
+              'No issue fork exists for #' + nid + ' yet. To work on this issue, visit the issue page and click "Get push access" to create a fork, then come back here.',
               'info'
             );
           }
@@ -766,22 +809,24 @@
         if (!branchResp.ok) throw new Error('git.drupalcode.org API returned ' + branchResp.status);
         const branches = await branchResp.json();
 
-        // Step 3: try to get visible branches from Drupal.org issue page (drupalorgBranchData)
-        const issuePageUrl = 'https://www.drupal.org/project/' + projectName + '/issues/' + nid;
+        // Step 3: try to get visible branches from the Drupal.org issue page (drupalorgBranchData).
+        // Only applies to classic issues — migrated GitLab issues have no drupal.org issue page.
         let visibleBranchNames = null;
-        try {
-          const pageResp = await fetch(issuePageUrl);
-          if (pageResp.ok) {
-            const html = await pageResp.text();
-            const settingsMatch = html.match(/<script[^>]+data-drupal-selector="drupal-settings-json"[^>]*>([\s\S]*?)<\/script>/);
-            if (settingsMatch) {
-              const settings = JSON.parse(settingsMatch[1]);
-              if (settings.drupalorgBranchData && Object.keys(settings.drupalorgBranchData).length > 0) {
-                visibleBranchNames = new Set(Object.keys(settings.drupalorgBranchData));
+        if (!issueIsOnGitlab) {
+          try {
+            const pageResp = await fetch(issuePageUrl);
+            if (pageResp.ok) {
+              const html = await pageResp.text();
+              const settingsMatch = html.match(/<script[^>]+data-drupal-selector="drupal-settings-json"[^>]*>([\s\S]*?)<\/script>/);
+              if (settingsMatch) {
+                const settings = JSON.parse(settingsMatch[1]);
+                if (settings.drupalorgBranchData && Object.keys(settings.drupalorgBranchData).length > 0) {
+                  visibleBranchNames = new Set(Object.keys(settings.drupalorgBranchData));
+                }
               }
             }
-          }
-        } catch (_) { /* CORS or parse error — fall through */ }
+          } catch (_) { /* CORS or parse error — fall through */ }
+        }
 
         // Filter branches: visible set from drupal.org, or fallback to NID-prefix filter
         const issueBranches = visibleBranchNames
