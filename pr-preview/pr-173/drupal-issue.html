@@ -476,7 +476,7 @@
       <p>A suggested workspace name is auto-generated from the parameters above. It may be changed before clicking launch.</p>
 
       <h2 id="issue-forks">Issue forks</h2>
-      <p>An issue fork must already exist on <a class="cds-link" href="https://git.drupalcode.org">git.drupalcode.org</a> — use <strong>Get push access</strong> on the drupal.org issue to create one, then reload here.</p>
+      <p>An issue fork must already exist on <a class="cds-link" href="https://git.drupalcode.org">git.drupalcode.org</a> before it shows up here. For issues still on drupal.org, use <strong>Get push access</strong> on the issue page to create one. For projects whose issue queue has migrated to GitLab, create the fork from the issue's GitLab page instead — then reload here.</p>
       <p>Issue fork workspaces always run a full <code>ddev drush si</code> so the checked-out branch matches the running site (not a stale snapshot).</p>
     </section>
 
@@ -793,17 +793,14 @@
           : 'https://www.drupal.org/project/' + projectName + '/issues/' + nid;
 
         if (branchResp.status === 404) {
-          if (currentIsContrib) {
-            setStatus(
-              'No issue fork exists for #' + nid + ' on ' + projectName + ' yet. Visit the issue page and click "Get push access" to create a fork, then come back here.',
-              'info'
-            );
-          } else {
-            setStatus(
-              'No issue fork exists for #' + nid + ' yet. To work on this issue, visit the issue page and click "Get push access" to create a fork, then come back here.',
-              'info'
-            );
-          }
+          // This tool works with an existing issue fork; it doesn't create one, and
+          // the actual "create a fork" mechanism differs between drupal.org and
+          // GitLab-native issues (and we can't reliably assert either UI's exact
+          // steps here) — so just report the fact and point at the issue itself.
+          setStatus(
+            'No issue fork exists yet for #' + nid + ' on ' + projectName + ': ' + issuePageUrl,
+            'info'
+          );
           return;
         }
         if (!branchResp.ok) throw new Error('git.drupalcode.org API returned ' + branchResp.status);
