@@ -460,9 +460,32 @@ docker system <span class="nb">df</span>
 ./scripts/workspace-lifecycle-cleanup.sh <span class="nt">--force</span>
 </code></pre></div></div>
 
-<p><strong>Prerequisites:</strong> <code class="language-plaintext highlighter-rouge">coder</code> CLI authenticated against coder.ddev.com; <code class="language-plaintext highlighter-rouge">MAILGUN_API_KEY</code> and <code class="language-plaintext highlighter-rouge">MAILGUN_DOMAIN</code> set for <code class="language-plaintext highlighter-rouge">--force</code> runs. See the script header for all environment overrides (<code class="language-plaintext highlighter-rouge">NOTIFY_DAYS</code>, <code class="language-plaintext highlighter-rouge">DELETE_AFTER_DAYS</code>, <code class="language-plaintext highlighter-rouge">EXCLUDE_OWNERS</code>, etc.).</p>
+<p><strong>Prerequisites:</strong> <code class="language-plaintext highlighter-rouge">coder</code> CLI authenticated against coder.ddev.com as a user with the <code class="language-plaintext highlighter-rouge">owner</code> role (see below); <code class="language-plaintext highlighter-rouge">MAILGUN_API_KEY</code> and <code class="language-plaintext highlighter-rouge">MAILGUN_DOMAIN</code> set for <code class="language-plaintext highlighter-rouge">--force</code> runs. See the script header for all environment overrides (<code class="language-plaintext highlighter-rouge">NOTIFY_DAYS</code>, <code class="language-plaintext highlighter-rouge">DELETE_AFTER_DAYS</code>, <code class="language-plaintext highlighter-rouge">EXCLUDE_OWNERS</code>, etc.).</p>
 
 <p>The workflow can also be triggered manually (<code class="language-plaintext highlighter-rouge">workflow_dispatch</code>) with a <code class="language-plaintext highlighter-rouge">dry_run</code> input for testing.</p>
+
+<h4 id="provisioning-the-prod_coder_session_token-credential">Provisioning the <code class="language-plaintext highlighter-rouge">PROD_CODER_SESSION_TOKEN</code> credential</h4>
+
+<p>The script needs to list <em>every</em> user’s workspaces (<code class="language-plaintext highlighter-rouge">coder list --all</code>) and delete workspaces it doesn’t own. On this deployment (no Premium license, so no custom RBAC roles), <code class="language-plaintext highlighter-rouge">owner</code> is the only built-in role that can do both — there’s no narrower “workspace admin” role available. That makes this token effectively full site-admin on production, so it’s provisioned as a dedicated non-human account rather than a personal token:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 1. Create a machine identity — no GitHub OAuth login required</span>
+coder <span class="nb">users </span>create <span class="nt">--username</span> workspace-janitor <span class="se">\</span>
+  <span class="nt">--email</span> workspace-janitor@ddev.com <span class="se">\</span>
+  <span class="nt">--full-name</span> <span class="s2">"Workspace Lifecycle Janitor"</span> <span class="se">\</span>
+  <span class="nt">--login-type</span> none
+
+<span class="c"># 2. Grant it owner — the only built-in role that covers list-all + delete-any-workspace</span>
+coder <span class="nb">users </span>edit-roles workspace-janitor <span class="nt">--roles</span> owner <span class="nt">--yes</span>
+
+<span class="c"># 3. Mint a long-lived token for it (run as an existing owner/admin, e.g. your own account)</span>
+coder tokens create <span class="nt">-u</span> workspace-janitor <span class="nt">--name</span> workspace-lifecycle-ci <span class="nt">--lifetime</span> 8760h
+</code></pre></div></div>
+
+<p>Store the resulting token as the <code class="language-plaintext highlighter-rouge">PROD_CODER_SESSION_TOKEN</code> secret referenced by the workflow. Using a dedicated account rather than a personal token keeps deletions attributable to the bot (not an individual) in the audit log, and means the janitor doesn’t break if the admin’s own account is later deactivated or re-authenticated.</p>
+
+<p>Check the server’s configured max token lifetime before choosing <code class="language-plaintext highlighter-rouge">--lifetime</code> — if it’s capped below a year, use the max allowed and set a reminder to rotate the token before it expires, since an expired token fails the workflow silently until someone notices.</p>
+
+<p><code class="language-plaintext highlighter-rouge">--login-type none</code> is deprecated in favor of <code class="language-plaintext highlighter-rouge">--service-account</code> (Premium-only) but remains functional for this purpose.</p>
 
 <hr />
 

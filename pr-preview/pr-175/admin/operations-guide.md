@@ -437,9 +437,33 @@ State (which workspaces have been notified and when) is tracked in `scripts/stat
 ./scripts/workspace-lifecycle-cleanup.sh --force
 ```
 
-**Prerequisites:** `coder` CLI authenticated against coder.ddev.com; `MAILGUN_API_KEY` and `MAILGUN_DOMAIN` set for `--force` runs. See the script header for all environment overrides (`NOTIFY_DAYS`, `DELETE_AFTER_DAYS`, `EXCLUDE_OWNERS`, etc.).
+**Prerequisites:** `coder` CLI authenticated against coder.ddev.com as a user with the `owner` role (see below); `MAILGUN_API_KEY` and `MAILGUN_DOMAIN` set for `--force` runs. See the script header for all environment overrides (`NOTIFY_DAYS`, `DELETE_AFTER_DAYS`, `EXCLUDE_OWNERS`, etc.).
 
 The workflow can also be triggered manually (`workflow_dispatch`) with a `dry_run` input for testing.
+
+#### Provisioning the `PROD_CODER_SESSION_TOKEN` credential
+
+The script needs to list *every* user's workspaces (`coder list --all`) and delete workspaces it doesn't own. On this deployment (no Premium license, so no custom RBAC roles), `owner` is the only built-in role that can do both — there's no narrower "workspace admin" role available. That makes this token effectively full site-admin on production, so it's provisioned as a dedicated non-human account rather than a personal token:
+
+```bash
+# 1. Create a machine identity — no GitHub OAuth login required
+coder users create --username workspace-janitor \
+  --email workspace-janitor@ddev.com \
+  --full-name "Workspace Lifecycle Janitor" \
+  --login-type none
+
+# 2. Grant it owner — the only built-in role that covers list-all + delete-any-workspace
+coder users edit-roles workspace-janitor --roles owner --yes
+
+# 3. Mint a long-lived token for it (run as an existing owner/admin, e.g. your own account)
+coder tokens create -u workspace-janitor --name workspace-lifecycle-ci --lifetime 8760h
+```
+
+Store the resulting token as the `PROD_CODER_SESSION_TOKEN` secret referenced by the workflow. Using a dedicated account rather than a personal token keeps deletions attributable to the bot (not an individual) in the audit log, and means the janitor doesn't break if the admin's own account is later deactivated or re-authenticated.
+
+Check the server's configured max token lifetime before choosing `--lifetime` — if it's capped below a year, use the max allowed and set a reminder to rotate the token before it expires, since an expired token fails the workflow silently until someone notices.
+
+`--login-type none` is deprecated in favor of `--service-account` (Premium-only) but remains functional for this purpose.
 
 ---
 
