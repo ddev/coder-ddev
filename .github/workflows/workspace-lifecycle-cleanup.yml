@@ -16,6 +16,13 @@ name: Workspace lifecycle cleanup
 #     op://coder-ddev-secrets/MAILGUN_API_KEY/credential
 #     op://coder-ddev-secrets/MAILGUN_DOMAIN/credential
 #
+#   PROD_CODER_SESSION_TOKEN must belong to a user with the `owner` role —
+#   this deployment has no Premium license, so `owner` is the only built-in
+#   role that can list every user's workspaces and delete workspaces it
+#   doesn't own. Provision a dedicated service account for this rather than
+#   reusing a personal token; see "Provisioning the PROD_CODER_SESSION_TOKEN
+#   credential" in docs/admin/operations-guide.md for the exact commands.
+#
 # The state file at scripts/state/workspace-lifecycle-state.json is
 # committed back to the branch after every --force run so the notify/delete
 # grace period survives across ephemeral runner instances.
