@@ -42,6 +42,8 @@ https://mailpit--myworkspace--rfay.coder.ddev.com/
 
 The Coder server terminates TLS and reverse-proxies to the `url` configured on the `coder_app` (e.g. `http://localhost:8025`). The wildcard TLS certificate must cover `*.coder.ddev.com`.
 
+**Scheme correction (X-Forwarded-Proto):** Because Coder terminates TLS and forwards to DDEV's Traefik over plain HTTP entrypoints (`tls: false`), Traefik would otherwise hand the backend `X-Forwarded-Proto: http`. Apps behind these routes (the TYPO3 backend, Vite/Astro dev servers, etc.) then generate `http://` URLs, and browsers break on the resulting `https://`→`http://` downgrade — e.g. TYPO3 throws `MissingReferrerException` on `/typo3/` because the browser drops the `Referer` header. To prevent this, `coder-routes` attaches a Traefik `headers` middleware (`{project}-coder-https`) to every generated router that forces `X-Forwarded-Proto: https` (plus `X-Forwarded-Ssl: on`, `X-Forwarded-Port: 443`), restoring the real external scheme the backend sees.
+
 **`share` options** — controls who can open the URL:
 
 | Value | Access |
