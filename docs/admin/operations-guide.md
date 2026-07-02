@@ -416,6 +416,32 @@ docker system df
 
 ---
 
+### Automated Idle Workspace Cleanup
+
+A scheduled GitHub Actions workflow (`.github/workflows/workspace-lifecycle-cleanup.yml`) runs `scripts/workspace-lifecycle-cleanup.sh` daily against coder.ddev.com to keep idle workspaces from accumulating and slowly filling `/data` with `*-dind-cache` Docker volumes (each workspace keeps its full Docker-in-Docker cache volume until it's deleted, even while stopped).
+
+Policy per workspace, based on `last_used_at`:
+
+- **7 days idle** — owner gets a notice email (via Mailgun) explaining the workspace will be deleted, and pointing to the auth/access announcement if they can no longer log in.
+- **7 more days idle after the notice** — the workspace is deleted with `coder delete --yes`.
+- If the owner uses the workspace again before deletion, the pending notice is cleared automatically.
+
+State (which workspaces have been notified and when) is tracked in `scripts/state/workspace-lifecycle-state.json`, which the workflow commits back to the repo after every run so the grace period survives across runs.
+
+```bash
+# Dry run — shows what would be notified/deleted, sends no email, deletes nothing
+./scripts/workspace-lifecycle-cleanup.sh
+
+# Actually send notices, delete workspaces past their grace period, and persist state
+./scripts/workspace-lifecycle-cleanup.sh --force
+```
+
+**Prerequisites:** `coder` CLI authenticated against coder.ddev.com; `MAILGUN_API_KEY` and `MAILGUN_DOMAIN` set for `--force` runs. See the script header for all environment overrides (`NOTIFY_DAYS`, `DELETE_AFTER_DAYS`, `EXCLUDE_OWNERS`, etc.).
+
+The workflow can also be triggered manually (`workflow_dispatch`) with a `dry_run` input for testing.
+
+---
+
 ### Orphaned Workspace Cleanup
 
 When a workspace is deleted, the destroy provisioner automatically removes the host directory at `/coder-workspaces/<owner>-<workspace>`. Directories can still be orphaned if the provisioner fails or for workspaces deleted before the provisioner was added. Run the cleanup script to reclaim disk space in those cases.

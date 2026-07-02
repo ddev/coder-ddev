@@ -351,6 +351,7 @@ Additional logs in workspace:
 - `image/scripts/.ddev/global_config.yaml` - DDEV defaults copied into workspaces
 - `scripts/coder-delete-workspace-dir.sh` - Sudo wrapper for workspace host dir cleanup (must be installed on server)
 - `scripts/cleanup-deleted-workspaces.sh` - Manual cleanup for orphaned workspace dirs/volumes
+- `scripts/workspace-lifecycle-cleanup.sh` - Notifies then deletes idle workspaces on coder.ddev.com (see `.github/workflows/workspace-lifecycle-cleanup.yml`)
 - `VERSION` - Image version used by all templates (read automatically by Makefile)
 - `openspec/project.md` - Project conventions and constraints
 - `openspec/AGENTS.md` - OpenSpec workflow instructions
