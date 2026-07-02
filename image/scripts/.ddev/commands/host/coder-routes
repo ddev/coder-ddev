@@ -46,6 +46,19 @@ OUTPUT="$ROUTES_DIR/coder-routes-${DDEV_PROJECT}.yaml"
 # Seed the output file
 printf "http:\n  routers: {}\n" > /tmp/coder-routes-raw.yaml
 
+# HTTPS is always terminated at the Coder proxy (https://*.${DOMAIN}); Coder then
+# forwards to DDEV's Traefik over plain HTTP. Because these routers use HTTP
+# entrypoints (tls: false), Traefik would otherwise hand the backend
+# X-Forwarded-Proto: http, so apps (TYPO3 backend, Vite/Astro dev servers, etc.)
+# render http:// URLs and browsers break on the https->http downgrade (e.g. TYPO3
+# MissingReferrerException). This middleware restores the real external scheme.
+MW_NAME="${DDEV_PROJECT}-coder-https"
+yq e -i \
+  ".http.middlewares.\"${MW_NAME}\".headers.customRequestHeaders.\"X-Forwarded-Proto\" = \"https\" |
+   .http.middlewares.\"${MW_NAME}\".headers.customRequestHeaders.\"X-Forwarded-Ssl\" = \"on\" |
+   .http.middlewares.\"${MW_NAME}\".headers.customRequestHeaders.\"X-Forwarded-Port\" = \"443\"" \
+  /tmp/coder-routes-raw.yaml
+
 echo "Building Coder Traefik routes from ${DDEV_PROJECT}_merged.yaml:"
 
 # Iterate over every router in the merged config.
@@ -105,11 +118,12 @@ while IFS= read -r router; do
     # workspace name (the second component in the subdomain).
     CODER_HOST="${PROJECT_SLUG}--${WORKSPACE}--${OWNER}.${DOMAIN}"
     RULE='Host(`'"${CODER_HOST}"'`)'
-    RULE="$RULE" SVC="$service" \
+    RULE="$RULE" SVC="$service" MW="$MW_NAME" \
       yq e -i \
         ".http.routers.\"${ROUTER_NAME}\".entrypoints = [${ENTRY_LIST}] |
          .http.routers.\"${ROUTER_NAME}\".rule = env(RULE) |
          .http.routers.\"${ROUTER_NAME}\".service = env(SVC) |
+         .http.routers.\"${ROUTER_NAME}\".middlewares = [env(MW)] |
          .http.routers.\"${ROUTER_NAME}\".tls = false" \
       /tmp/coder-routes-raw.yaml
     echo "  + ${slug}: ${entrypoints[*]} → ${service}  (https://${CODER_HOST})"
@@ -118,11 +132,12 @@ while IFS= read -r router; do
     # use Host() rule so the Coder subdomain proxy URL routes correctly.
     CODER_HOST="${slug}--${WORKSPACE}--${OWNER}.${DOMAIN}"
     RULE='Host(`'"${CODER_HOST}"'`)'
-    RULE="$RULE" SVC="$service" \
+    RULE="$RULE" SVC="$service" MW="$MW_NAME" \
       yq e -i \
         ".http.routers.\"${ROUTER_NAME}\".entrypoints = [${ENTRY_LIST}] |
          .http.routers.\"${ROUTER_NAME}\".rule = env(RULE) |
          .http.routers.\"${ROUTER_NAME}\".service = env(SVC) |
+         .http.routers.\"${ROUTER_NAME}\".middlewares = [env(MW)] |
          .http.routers.\"${ROUTER_NAME}\".tls = false" \
       /tmp/coder-routes-raw.yaml
     echo "  + ${slug}: ${entrypoints[*]} → ${service}  (https://${CODER_HOST})"
@@ -132,11 +147,12 @@ while IFS= read -r router; do
     # https://{ext_port}--{agent}--{workspace}--{owner}.{domain}
     AGENT="${CODER_AGENT_NAME:-main}"
     RULE='PathPrefix(`/`)'
-    RULE="$RULE" SVC="$service" \
+    RULE="$RULE" SVC="$service" MW="$MW_NAME" \
       yq e -i \
         ".http.routers.\"${ROUTER_NAME}\".entrypoints = [${ENTRY_LIST}] |
          .http.routers.\"${ROUTER_NAME}\".rule = env(RULE) |
          .http.routers.\"${ROUTER_NAME}\".service = env(SVC) |
+         .http.routers.\"${ROUTER_NAME}\".middlewares = [env(MW)] |
          .http.routers.\"${ROUTER_NAME}\".tls = false |
          .http.routers.\"${ROUTER_NAME}\".priority = 1" \
       /tmp/coder-routes-raw.yaml
