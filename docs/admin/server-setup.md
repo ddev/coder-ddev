@@ -1276,6 +1276,78 @@ Update this variable whenever the issue is closed or merged. The current default
 
 ---
 
+## Step 14: Set Up Workspace Lifecycle Cleanup
+
+Stopped workspaces don't free their Docker volumes — each Sysbox workspace keeps a multi-GB `*-dind-cache` volume until it's deleted, so idle workspaces slowly fill `/data`. A systemd timer runs `scripts/workspace-lifecycle-cleanup.sh` daily to email owners of idle workspaces, then delete them if they stay idle after the notice period. Set this up on **both** coder.ddev.com and staging-coder.ddev.com — each server tracks its own workspaces and needs its own credential.
+
+### Create the `workspace-janitor` Coder account and token
+
+The script needs `owner` (list-all + delete-any-workspace; this deployment has no Premium license, so there's no narrower role). Run this once per server, against that server's own Coder deployment:
+
+```bash
+coder users create --username workspace-janitor \
+  --email workspace-janitor@ddev.com \
+  --full-name "Workspace Lifecycle Janitor" \
+  --login-type none
+
+coder users edit-roles workspace-janitor --roles owner --yes
+
+coder tokens create -u workspace-janitor --name workspace-lifecycle-cleanup --lifetime 8760h
+```
+
+Copy the printed token — you'll put it in the env file below. See [Automated Idle Workspace Cleanup](./operations-guide.md#automated-idle-workspace-cleanup) in the operations guide for why a dedicated account is used instead of a personal token.
+
+### Install the cleanup service
+
+```bash
+REPO=~/workspace/coder-ddev   # adjust if your repo is elsewhere
+
+# Install the script
+sudo install -m 755 $REPO/scripts/workspace-lifecycle-cleanup.sh /usr/local/bin/workspace-lifecycle-cleanup
+
+# Create the state directory
+sudo mkdir -p /var/lib/workspace-lifecycle-cleanup
+sudo chown rfay:rfay /var/lib/workspace-lifecycle-cleanup
+
+# Create the env file — fill in the token from above and the Mailgun credentials
+sudo tee /etc/workspace-lifecycle-cleanup.env > /dev/null <<'EOF'
+CODER_URL=https://coder.ddev.com
+CODER_SESSION_TOKEN=REPLACE_WITH_WORKSPACE_JANITOR_TOKEN
+MAILGUN_API_KEY=REPLACE_ME
+MAILGUN_DOMAIN=mg.ddev.com
+STATE_FILE=/var/lib/workspace-lifecycle-cleanup/state.json
+EOF
+sudo chmod 600 /etc/workspace-lifecycle-cleanup.env
+
+# Install and enable the systemd service + timer
+sudo install -m 644 $REPO/scripts/workspace-lifecycle-cleanup.service /etc/systemd/system/
+sudo install -m 644 $REPO/scripts/workspace-lifecycle-cleanup.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now workspace-lifecycle-cleanup.timer
+```
+
+On staging-coder.ddev.com, set `CODER_URL=https://staging-coder.ddev.com` instead, and use that server's own `workspace-janitor` token.
+
+### Test it
+
+```bash
+# Dry run as the service user, without touching the timer
+sudo -u rfay bash -c 'set -a; source /etc/workspace-lifecycle-cleanup.env; set +a; /usr/local/bin/workspace-lifecycle-cleanup'
+
+# Or run the real service unit once, on demand
+sudo systemctl start workspace-lifecycle-cleanup.service
+sudo journalctl -u workspace-lifecycle-cleanup -q -n50
+```
+
+### Notes
+
+- The `[Service]` unit's `User=rfay` only needs to run `coder`, `curl`, and `jq` — no special Linux privileges are required; change it to any account that can read the env file if `rfay` isn't appropriate on a given box.
+- `coder` picks up `CODER_URL`/`CODER_SESSION_TOKEN` directly from the environment — no `coder login` session is needed for the service user.
+- The timer fires daily at 06:17 server time (`RandomizedDelaySec=5m` to avoid a fixed-second thundering herd); check `systemctl list-timers workspace-lifecycle-cleanup.timer` to see the next run.
+- If you rotate the `workspace-janitor` token, update `/etc/workspace-lifecycle-cleanup.env` — no restart needed, it's read fresh on each timer-triggered run.
+
+---
+
 ## Troubleshooting
 
 **Coder service won't start:**

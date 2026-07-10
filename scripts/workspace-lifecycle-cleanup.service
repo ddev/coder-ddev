@@ -1,0 +1,10 @@
+[Unit]
+Description=Notify and delete idle Coder workspaces
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=rfay
+EnvironmentFile=/etc/workspace-lifecycle-cleanup.env
+ExecStart=/usr/local/bin/workspace-lifecycle-cleanup --force
