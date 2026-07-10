@@ -45,7 +45,7 @@
 #   MAILGUN_DOMAIN      Mailgun sending domain, e.g. mg.ddev.com
 #   MAILGUN_BASE_URL    Mailgun API base (default: https://api.mailgun.net/v3;
 #                       use https://api.eu.mailgun.net/v3 for EU-region domains)
-#   MAILGUN_FROM        From header (default: "DDEV Coder <coder@ddev.com>")
+#   MAILGUN_FROM        From header (default: "DDEV Coder <support@ddev.com>")
 #   ANNOUNCE_URL        Blog post explaining the auth change
 #                       (default: https://ddev.com/blog/coder-ddev-com-announcement/)
 #
@@ -60,7 +60,7 @@ DELETE_AFTER_DAYS="${DELETE_AFTER_DAYS:-7}"
 EXCLUDE_OWNERS="${EXCLUDE_OWNERS:-ci-bot}"
 STATE_FILE="${STATE_FILE:-scripts/state/workspace-lifecycle-state.json}"
 MAILGUN_BASE_URL="${MAILGUN_BASE_URL:-https://api.mailgun.net/v3}"
-MAILGUN_FROM="${MAILGUN_FROM:-DDEV Coder <coder@ddev.com>}"
+MAILGUN_FROM="${MAILGUN_FROM:-DDEV Coder <support@ddev.com>}"
 ANNOUNCE_URL="${ANNOUNCE_URL:-https://ddev.com/blog/coder-ddev-com-announcement/}"
 FORCE=false
 
