@@ -1309,15 +1309,15 @@ sudo install -m 755 $REPO/scripts/workspace-lifecycle-cleanup.sh /usr/local/bin/
 sudo mkdir -p /var/lib/workspace-lifecycle-cleanup
 sudo chown rfay:rfay /var/lib/workspace-lifecycle-cleanup
 
-# Create the env file — fill in the token from above and the Mailgun credentials
-# (Mailgun API key + sending domain: 1Password shared "DDEV" vault → "Mailgun" item.
-# This is the same account/domain DDEV already sends other mail from — no new
-# Mailgun domain setup or DNS/SPF/DKIM verification is needed.)
+# Create the env file — fill in the token from above and the Mailgun API key.
+# (1Password shared "DDEV" vault → "Mailgun" item → field "coder.ddev.com sending
+# api key". The domain is already a verified Mailgun sending domain — no new
+# Mailgun domain setup or DNS/SPF/DKIM records are needed.)
 sudo tee /etc/workspace-lifecycle-cleanup.env > /dev/null <<'EOF'
 CODER_URL=https://coder.ddev.com
 CODER_SESSION_TOKEN=REPLACE_WITH_WORKSPACE_JANITOR_TOKEN
 MAILGUN_API_KEY=REPLACE_WITH_KEY_FROM_1PASSWORD
-MAILGUN_DOMAIN=REPLACE_WITH_DOMAIN_FROM_1PASSWORD
+MAILGUN_DOMAIN=coder.ddev.com
 STATE_FILE=/var/lib/workspace-lifecycle-cleanup/state.json
 EOF
 sudo chmod 600 /etc/workspace-lifecycle-cleanup.env
@@ -1329,7 +1329,7 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now workspace-lifecycle-cleanup.timer
 ```
 
-On staging-coder.ddev.com, set `CODER_URL=https://staging-coder.ddev.com` instead, and use that server's own `workspace-janitor` token.
+On staging-coder.ddev.com, set `CODER_URL=https://staging-coder.ddev.com` and `MAILGUN_DOMAIN=staging-coder.ddev.com` instead, using that server's own `workspace-janitor` token and the corresponding `staging-coder.ddev.com sending api key` field on the same 1Password "Mailgun" item (confirm this domain is verified in Mailgun before relying on it — it may need its own SPF/DKIM setup if it hasn't been used for mail before).
 
 ### Test it
 
