@@ -436,7 +436,7 @@ State (which workspaces have been notified and when) is tracked in a local JSON 
 ./scripts/workspace-lifecycle-cleanup.sh --force
 ```
 
-**Prerequisites:** `coder` CLI on `PATH` and authenticated (either via `coder login` or the `CODER_URL`/`CODER_SESSION_TOKEN` env vars) as a user with the `owner` role (see below); `MAILGUN_API_KEY` and `MAILGUN_DOMAIN` set for `--force` runs. See the script header for all environment overrides (`NOTIFY_DAYS`, `DELETE_AFTER_DAYS`, `EXCLUDE_OWNERS`, `STATE_FILE`, etc.).
+**Prerequisites:** `coder` CLI on `PATH` and authenticated (either via `coder login` or the `CODER_URL`/`CODER_SESSION_TOKEN` env vars) as a user with the `owner` role (see below); `MAILGUN_API_KEY` and `MAILGUN_DOMAIN` set for `--force` runs — DDEV's existing Mailgun account credentials are in the shared **DDEV** 1Password vault, item **Mailgun** (same account/domain used to send other DDEV mail; no new domain or DNS verification needed). See the script header for all environment overrides (`NOTIFY_DAYS`, `DELETE_AFTER_DAYS`, `EXCLUDE_OWNERS`, `STATE_FILE`, etc.).
 
 On the server, all of this is supplied via `/etc/workspace-lifecycle-cleanup.env`, loaded by the `workspace-lifecycle-cleanup.service` systemd unit — see the install steps linked above. Check `sudo systemctl status workspace-lifecycle-cleanup.timer` and `sudo journalctl -u workspace-lifecycle-cleanup -q -f` to inspect runs.
 

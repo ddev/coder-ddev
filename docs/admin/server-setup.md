@@ -1310,11 +1310,14 @@ sudo mkdir -p /var/lib/workspace-lifecycle-cleanup
 sudo chown rfay:rfay /var/lib/workspace-lifecycle-cleanup
 
 # Create the env file — fill in the token from above and the Mailgun credentials
+# (Mailgun API key + sending domain: 1Password shared "DDEV" vault → "Mailgun" item.
+# This is the same account/domain DDEV already sends other mail from — no new
+# Mailgun domain setup or DNS/SPF/DKIM verification is needed.)
 sudo tee /etc/workspace-lifecycle-cleanup.env > /dev/null <<'EOF'
 CODER_URL=https://coder.ddev.com
 CODER_SESSION_TOKEN=REPLACE_WITH_WORKSPACE_JANITOR_TOKEN
-MAILGUN_API_KEY=REPLACE_ME
-MAILGUN_DOMAIN=mg.ddev.com
+MAILGUN_API_KEY=REPLACE_WITH_KEY_FROM_1PASSWORD
+MAILGUN_DOMAIN=REPLACE_WITH_DOMAIN_FROM_1PASSWORD
 STATE_FILE=/var/lib/workspace-lifecycle-cleanup/state.json
 EOF
 sudo chmod 600 /etc/workspace-lifecycle-cleanup.env
