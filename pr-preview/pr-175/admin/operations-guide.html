@@ -441,7 +441,7 @@ docker system <span class="nb">df</span>
 
 <h3 id="automated-idle-workspace-cleanup">Automated Idle Workspace Cleanup</h3>
 
-<p>A scheduled GitHub Actions workflow (<code class="language-plaintext highlighter-rouge">.github/workflows/workspace-lifecycle-cleanup.yml</code>) runs <code class="language-plaintext highlighter-rouge">scripts/workspace-lifecycle-cleanup.sh</code> daily against coder.ddev.com to keep idle workspaces from accumulating and slowly filling <code class="language-plaintext highlighter-rouge">/data</code> with <code class="language-plaintext highlighter-rouge">*-dind-cache</code> Docker volumes (each workspace keeps its full Docker-in-Docker cache volume until it’s deleted, even while stopped).</p>
+<p>A systemd timer runs <code class="language-plaintext highlighter-rouge">scripts/workspace-lifecycle-cleanup.sh</code> daily, directly on coder.ddev.com (production only — see <a href="/admin/server-setup.html#step-14-set-up-workspace-lifecycle-cleanup">Server Setup Guide: Step 14</a> for why staging doesn’t need it), to keep idle workspaces from accumulating and slowly filling <code class="language-plaintext highlighter-rouge">/data</code> with <code class="language-plaintext highlighter-rouge">*-dind-cache</code> Docker volumes (each workspace keeps its full Docker-in-Docker cache volume until it’s deleted, even while stopped).</p>
 
 <p>Policy per workspace, based on <code class="language-plaintext highlighter-rouge">last_used_at</code>:</p>
 
@@ -451,7 +451,7 @@ docker system <span class="nb">df</span>
   <li>If the owner uses the workspace again before deletion, the pending notice is cleared automatically.</li>
 </ul>
 
-<p>State (which workspaces have been notified and when) is tracked in <code class="language-plaintext highlighter-rouge">scripts/state/workspace-lifecycle-state.json</code>, which the workflow commits back to the repo after every run so the grace period survives across runs.</p>
+<p>State (which workspaces have been notified and when) is tracked in a local JSON file on the server (<code class="language-plaintext highlighter-rouge">/var/lib/workspace-lifecycle-cleanup/state.json</code> by default) — it never needs to leave the box, so there’s no commit-back-to-git step to manage.</p>
 
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Dry run — shows what would be notified/deleted, sends no email, deletes nothing</span>
 ./scripts/workspace-lifecycle-cleanup.sh
@@ -460,13 +460,13 @@ docker system <span class="nb">df</span>
 ./scripts/workspace-lifecycle-cleanup.sh <span class="nt">--force</span>
 </code></pre></div></div>
 
-<p><strong>Prerequisites:</strong> <code class="language-plaintext highlighter-rouge">coder</code> CLI authenticated against coder.ddev.com as a user with the <code class="language-plaintext highlighter-rouge">owner</code> role (see below); <code class="language-plaintext highlighter-rouge">MAILGUN_API_KEY</code> and <code class="language-plaintext highlighter-rouge">MAILGUN_DOMAIN</code> set for <code class="language-plaintext highlighter-rouge">--force</code> runs. See the script header for all environment overrides (<code class="language-plaintext highlighter-rouge">NOTIFY_DAYS</code>, <code class="language-plaintext highlighter-rouge">DELETE_AFTER_DAYS</code>, <code class="language-plaintext highlighter-rouge">EXCLUDE_OWNERS</code>, etc.).</p>
+<p><strong>Prerequisites:</strong> <code class="language-plaintext highlighter-rouge">coder</code> CLI on <code class="language-plaintext highlighter-rouge">PATH</code> and authenticated (either via <code class="language-plaintext highlighter-rouge">coder login</code> or the <code class="language-plaintext highlighter-rouge">CODER_URL</code>/<code class="language-plaintext highlighter-rouge">CODER_SESSION_TOKEN</code> env vars) as a user with the <code class="language-plaintext highlighter-rouge">owner</code> role (see below); <code class="language-plaintext highlighter-rouge">MAILGUN_API_KEY</code> and <code class="language-plaintext highlighter-rouge">MAILGUN_DOMAIN</code> set for <code class="language-plaintext highlighter-rouge">--force</code> runs — DDEV’s existing Mailgun account credentials are in the shared <strong>DDEV</strong> 1Password vault, item <strong>Mailgun</strong> (same account/domain used to send other DDEV mail; no new domain or DNS verification needed). See the script header for all environment overrides (<code class="language-plaintext highlighter-rouge">NOTIFY_DAYS</code>, <code class="language-plaintext highlighter-rouge">DELETE_AFTER_DAYS</code>, <code class="language-plaintext highlighter-rouge">EXCLUDE_OWNERS</code>, <code class="language-plaintext highlighter-rouge">STATE_FILE</code>, etc.).</p>
 
-<p>The workflow can also be triggered manually (<code class="language-plaintext highlighter-rouge">workflow_dispatch</code>) with a <code class="language-plaintext highlighter-rouge">dry_run</code> input for testing.</p>
+<p>On the server, all of this is supplied via <code class="language-plaintext highlighter-rouge">/etc/workspace-lifecycle-cleanup.env</code>, loaded by the <code class="language-plaintext highlighter-rouge">workspace-lifecycle-cleanup.service</code> systemd unit — see the install steps linked above. Check <code class="language-plaintext highlighter-rouge">sudo systemctl status workspace-lifecycle-cleanup.timer</code> and <code class="language-plaintext highlighter-rouge">sudo journalctl -u workspace-lifecycle-cleanup -q -f</code> to inspect runs.</p>
 
-<h4 id="provisioning-the-prod_coder_session_token-credential">Provisioning the <code class="language-plaintext highlighter-rouge">PROD_CODER_SESSION_TOKEN</code> credential</h4>
+<h4 id="provisioning-the-coder_session_token-credential">Provisioning the <code class="language-plaintext highlighter-rouge">CODER_SESSION_TOKEN</code> credential</h4>
 
-<p>The script needs to list <em>every</em> user’s workspaces (<code class="language-plaintext highlighter-rouge">coder list --all</code>) and delete workspaces it doesn’t own. On this deployment (no Premium license, so no custom RBAC roles), <code class="language-plaintext highlighter-rouge">owner</code> is the only built-in role that can do both — there’s no narrower “workspace admin” role available. That makes this token effectively full site-admin on production, so it’s provisioned as a dedicated non-human account rather than a personal token:</p>
+<p>The script needs to list <em>every</em> user’s workspaces (<code class="language-plaintext highlighter-rouge">coder list --all</code>) and delete workspaces it doesn’t own. On this deployment (no Premium license, so no custom RBAC roles), <code class="language-plaintext highlighter-rouge">owner</code> is the only built-in role that can do both — there’s no narrower “workspace admin” role available. That makes this token effectively full site-admin, so it’s provisioned as a dedicated non-human account rather than a personal token:</p>
 
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 1. Create a machine identity — no GitHub OAuth login required</span>
 coder <span class="nb">users </span>create <span class="nt">--username</span> workspace-janitor <span class="se">\</span>
@@ -478,12 +478,12 @@ coder <span class="nb">users </span>create <span class="nt">--username</span> wo
 coder <span class="nb">users </span>edit-roles workspace-janitor <span class="nt">--roles</span> owner <span class="nt">--yes</span>
 
 <span class="c"># 3. Mint a long-lived token for it (run as an existing owner/admin, e.g. your own account)</span>
-coder tokens create <span class="nt">-u</span> workspace-janitor <span class="nt">--name</span> workspace-lifecycle-ci <span class="nt">--lifetime</span> 8760h
+coder tokens create <span class="nt">-u</span> workspace-janitor <span class="nt">--name</span> workspace-lifecycle-cleanup <span class="nt">--lifetime</span> 8760h
 </code></pre></div></div>
 
-<p>Store the resulting token as the <code class="language-plaintext highlighter-rouge">PROD_CODER_SESSION_TOKEN</code> secret referenced by the workflow. Using a dedicated account rather than a personal token keeps deletions attributable to the bot (not an individual) in the audit log, and means the janitor doesn’t break if the admin’s own account is later deactivated or re-authenticated.</p>
+<p>Put the resulting token in <code class="language-plaintext highlighter-rouge">/etc/workspace-lifecycle-cleanup.env</code> as <code class="language-plaintext highlighter-rouge">CODER_SESSION_TOKEN</code> (see the install steps). Using a dedicated account rather than a personal token keeps deletions attributable to the bot (not an individual) in the audit log, and means the janitor doesn’t break if the admin’s own account is later deactivated or re-authenticated.</p>
 
-<p>Check the server’s configured max token lifetime before choosing <code class="language-plaintext highlighter-rouge">--lifetime</code> — if it’s capped below a year, use the max allowed and set a reminder to rotate the token before it expires, since an expired token fails the workflow silently until someone notices.</p>
+<p>Check the server’s configured max token lifetime before choosing <code class="language-plaintext highlighter-rouge">--lifetime</code> — if it’s capped below a year, use the max allowed and set a reminder to rotate the token before it expires, since an expired token makes the timer fail silently until someone notices (<code class="language-plaintext highlighter-rouge">journalctl -u workspace-lifecycle-cleanup</code> will show the auth error).</p>
 
 <p><code class="language-plaintext highlighter-rouge">--login-type none</code> is deprecated in favor of <code class="language-plaintext highlighter-rouge">--service-account</code> (Premium-only) but remains functional for this purpose.</p>
 

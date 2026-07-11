@@ -1519,6 +1519,80 @@ coder tokens create <span class="nt">--user</span> ci-bot <span class="nt">--lif
 
 <hr />
 
+<h2 id="step-14-set-up-workspace-lifecycle-cleanup">Step 14: Set Up Workspace Lifecycle Cleanup</h2>
+
+<p>Stopped workspaces don’t free their Docker volumes — each Sysbox workspace keeps a multi-GB <code class="language-plaintext highlighter-rouge">*-dind-cache</code> volume until it’s deleted, so idle workspaces slowly fill <code class="language-plaintext highlighter-rouge">/data</code>. A systemd timer runs <code class="language-plaintext highlighter-rouge">scripts/workspace-lifecycle-cleanup.sh</code> daily to email owners of idle workspaces, then delete them if they stay idle after the notice period.</p>
+
+<p>This is set up on <strong>coder.ddev.com (production) only</strong>. staging-coder.ddev.com doesn’t need it: its workspaces are almost entirely owned by <code class="language-plaintext highlighter-rouge">ci-bot</code> (already excluded via the default <code class="language-plaintext highlighter-rouge">EXCLUDE_OWNERS</code>), it isn’t sending real notices to real people, and <code class="language-plaintext highlighter-rouge">./scripts/workspace-lifecycle-cleanup.sh</code> (no <code class="language-plaintext highlighter-rouge">--force</code>) already gives a safe dry-run preview against production itself when you need to sanity-check the policy — no separate staging deployment adds coverage. If that changes (e.g. staging starts accumulating real user workspaces), repeat these steps there with its own <code class="language-plaintext highlighter-rouge">workspace-janitor</code> account/token and a verified Mailgun domain for staging.</p>
+
+<h3 id="create-the-workspace-janitor-coder-account-and-token">Create the <code class="language-plaintext highlighter-rouge">workspace-janitor</code> Coder account and token</h3>
+
+<p>The script needs <code class="language-plaintext highlighter-rouge">owner</code> (list-all + delete-any-workspace; this deployment has no Premium license, so there’s no narrower role):</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>coder <span class="nb">users </span>create <span class="nt">--username</span> workspace-janitor <span class="se">\</span>
+  <span class="nt">--email</span> workspace-janitor@ddev.com <span class="se">\</span>
+  <span class="nt">--full-name</span> <span class="s2">"Workspace Lifecycle Janitor"</span> <span class="se">\</span>
+  <span class="nt">--login-type</span> none
+
+coder <span class="nb">users </span>edit-roles workspace-janitor <span class="nt">--roles</span> owner <span class="nt">--yes</span>
+
+coder tokens create <span class="nt">-u</span> workspace-janitor <span class="nt">--name</span> workspace-lifecycle-cleanup <span class="nt">--lifetime</span> 8760h
+</code></pre></div></div>
+
+<p>Copy the printed token — you’ll put it in the env file below. See <a href="/admin/operations-guide.html#automated-idle-workspace-cleanup">Automated Idle Workspace Cleanup</a> in the operations guide for why a dedicated account is used instead of a personal token.</p>
+
+<h3 id="install-the-cleanup-service">Install the cleanup service</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">REPO</span><span class="o">=</span>~/workspace/coder-ddev   <span class="c"># adjust if your repo is elsewhere</span>
+
+<span class="c"># Install the script</span>
+<span class="nb">sudo install</span> <span class="nt">-m</span> 755 <span class="nv">$REPO</span>/scripts/workspace-lifecycle-cleanup.sh /usr/local/bin/workspace-lifecycle-cleanup
+
+<span class="c"># Create the state directory</span>
+<span class="nb">sudo mkdir</span> <span class="nt">-p</span> /var/lib/workspace-lifecycle-cleanup
+<span class="nb">sudo chown </span>rfay:rfay /var/lib/workspace-lifecycle-cleanup
+
+<span class="c"># Create the env file — fill in the token from above and the Mailgun API key.</span>
+<span class="c"># (1Password shared "DDEV" vault → "Mailgun" item → field "coder.ddev.com sending</span>
+<span class="c"># api key". The domain is already a verified Mailgun sending domain — no new</span>
+<span class="c"># Mailgun domain setup or DNS/SPF/DKIM records are needed.)</span>
+<span class="nb">sudo tee</span> /etc/workspace-lifecycle-cleanup.env <span class="o">&gt;</span> /dev/null <span class="o">&lt;&lt;</span><span class="sh">'</span><span class="no">EOF</span><span class="sh">'
+CODER_URL=https://staging-coder.ddev.com
+CODER_SESSION_TOKEN=REPLACE_WITH_WORKSPACE_JANITOR_TOKEN
+MAILGUN_API_KEY=REPLACE_WITH_KEY_FROM_1PASSWORD
+MAILGUN_DOMAIN=coder.ddev.com
+STATE_FILE=/var/lib/workspace-lifecycle-cleanup/state.json
+</span><span class="no">EOF
+</span><span class="nb">sudo chmod </span>600 /etc/workspace-lifecycle-cleanup.env
+
+<span class="c"># Install and enable the systemd service + timer</span>
+<span class="nb">sudo install</span> <span class="nt">-m</span> 644 <span class="nv">$REPO</span>/scripts/workspace-lifecycle-cleanup.service /etc/systemd/system/
+<span class="nb">sudo install</span> <span class="nt">-m</span> 644 <span class="nv">$REPO</span>/scripts/workspace-lifecycle-cleanup.timer /etc/systemd/system/
+<span class="nb">sudo </span>systemctl daemon-reload
+<span class="nb">sudo </span>systemctl <span class="nb">enable</span> <span class="nt">--now</span> workspace-lifecycle-cleanup.timer
+</code></pre></div></div>
+
+<h3 id="test-it-1">Test it</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Dry run as the service user, without touching the timer</span>
+<span class="nb">sudo</span> <span class="nt">-u</span> rfay bash <span class="nt">-c</span> <span class="s1">'set -a; source /etc/workspace-lifecycle-cleanup.env; set +a; /usr/local/bin/workspace-lifecycle-cleanup'</span>
+
+<span class="c"># Or run the real service unit once, on demand</span>
+<span class="nb">sudo </span>systemctl start workspace-lifecycle-cleanup.service
+<span class="nb">sudo </span>journalctl <span class="nt">-u</span> workspace-lifecycle-cleanup <span class="nt">-q</span> <span class="nt">-n50</span>
+</code></pre></div></div>
+
+<h3 id="notes-1">Notes</h3>
+
+<ul>
+  <li>The <code class="language-plaintext highlighter-rouge">[Service]</code> unit’s <code class="language-plaintext highlighter-rouge">User=rfay</code> only needs to run <code class="language-plaintext highlighter-rouge">coder</code>, <code class="language-plaintext highlighter-rouge">curl</code>, and <code class="language-plaintext highlighter-rouge">jq</code> — no special Linux privileges are required; change it to any account that can read the env file if <code class="language-plaintext highlighter-rouge">rfay</code> isn’t appropriate on a given box.</li>
+  <li><code class="language-plaintext highlighter-rouge">coder</code> picks up <code class="language-plaintext highlighter-rouge">CODER_URL</code>/<code class="language-plaintext highlighter-rouge">CODER_SESSION_TOKEN</code> directly from the environment — no <code class="language-plaintext highlighter-rouge">coder login</code> session is needed for the service user.</li>
+  <li>The timer fires daily at 06:17 server time (<code class="language-plaintext highlighter-rouge">RandomizedDelaySec=5m</code> to avoid a fixed-second thundering herd); check <code class="language-plaintext highlighter-rouge">systemctl list-timers workspace-lifecycle-cleanup.timer</code> to see the next run.</li>
+  <li>If you rotate the <code class="language-plaintext highlighter-rouge">workspace-janitor</code> token, update <code class="language-plaintext highlighter-rouge">/etc/workspace-lifecycle-cleanup.env</code> — no restart needed, it’s read fresh on each timer-triggered run.</li>
+</ul>
+
+<hr />
+
 <h2 id="troubleshooting-1">Troubleshooting</h2>
 
 <p><strong>Coder service won’t start:</strong></p>
