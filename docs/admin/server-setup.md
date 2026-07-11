@@ -1278,11 +1278,13 @@ Update this variable whenever the issue is closed or merged. The current default
 
 ## Step 14: Set Up Workspace Lifecycle Cleanup
 
-Stopped workspaces don't free their Docker volumes — each Sysbox workspace keeps a multi-GB `*-dind-cache` volume until it's deleted, so idle workspaces slowly fill `/data`. A systemd timer runs `scripts/workspace-lifecycle-cleanup.sh` daily to email owners of idle workspaces, then delete them if they stay idle after the notice period. Set this up on **both** coder.ddev.com and staging-coder.ddev.com — each server tracks its own workspaces and needs its own credential.
+Stopped workspaces don't free their Docker volumes — each Sysbox workspace keeps a multi-GB `*-dind-cache` volume until it's deleted, so idle workspaces slowly fill `/data`. A systemd timer runs `scripts/workspace-lifecycle-cleanup.sh` daily to email owners of idle workspaces, then delete them if they stay idle after the notice period.
+
+This is set up on **coder.ddev.com (production) only**. staging-coder.ddev.com doesn't need it: its workspaces are almost entirely owned by `ci-bot` (already excluded via the default `EXCLUDE_OWNERS`), it isn't sending real notices to real people, and `./scripts/workspace-lifecycle-cleanup.sh` (no `--force`) already gives a safe dry-run preview against production itself when you need to sanity-check the policy — no separate staging deployment adds coverage. If that changes (e.g. staging starts accumulating real user workspaces), repeat these steps there with its own `workspace-janitor` account/token and a verified Mailgun domain for staging.
 
 ### Create the `workspace-janitor` Coder account and token
 
-The script needs `owner` (list-all + delete-any-workspace; this deployment has no Premium license, so there's no narrower role). Run this once per server, against that server's own Coder deployment:
+The script needs `owner` (list-all + delete-any-workspace; this deployment has no Premium license, so there's no narrower role):
 
 ```bash
 coder users create --username workspace-janitor \
@@ -1328,8 +1330,6 @@ sudo install -m 644 $REPO/scripts/workspace-lifecycle-cleanup.timer /etc/systemd
 sudo systemctl daemon-reload
 sudo systemctl enable --now workspace-lifecycle-cleanup.timer
 ```
-
-On staging-coder.ddev.com, set `CODER_URL=https://staging-coder.ddev.com` and `MAILGUN_DOMAIN=staging-coder.ddev.com` instead, using that server's own `workspace-janitor` token and the corresponding `staging-coder.ddev.com sending api key` field on the same 1Password "Mailgun" item (confirm this domain is verified in Mailgun before relying on it — it may need its own SPF/DKIM setup if it hasn't been used for mail before).
 
 ### Test it
 

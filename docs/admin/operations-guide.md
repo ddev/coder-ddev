@@ -418,7 +418,7 @@ docker system df
 
 ### Automated Idle Workspace Cleanup
 
-A systemd timer runs `scripts/workspace-lifecycle-cleanup.sh` daily, directly on each Coder server (coder.ddev.com and staging-coder.ddev.com), to keep idle workspaces from accumulating and slowly filling `/data` with `*-dind-cache` Docker volumes (each workspace keeps its full Docker-in-Docker cache volume until it's deleted, even while stopped). See [Server Setup Guide: Step 14](./server-setup.md#step-14-set-up-workspace-lifecycle-cleanup) for the install steps.
+A systemd timer runs `scripts/workspace-lifecycle-cleanup.sh` daily, directly on coder.ddev.com (production only — see [Server Setup Guide: Step 14](./server-setup.md#step-14-set-up-workspace-lifecycle-cleanup) for why staging doesn't need it), to keep idle workspaces from accumulating and slowly filling `/data` with `*-dind-cache` Docker volumes (each workspace keeps its full Docker-in-Docker cache volume until it's deleted, even while stopped).
 
 Policy per workspace, based on `last_used_at`:
 
@@ -442,7 +442,7 @@ On the server, all of this is supplied via `/etc/workspace-lifecycle-cleanup.env
 
 #### Provisioning the `CODER_SESSION_TOKEN` credential
 
-The script needs to list *every* user's workspaces (`coder list --all`) and delete workspaces it doesn't own. On this deployment (no Premium license, so no custom RBAC roles), `owner` is the only built-in role that can do both — there's no narrower "workspace admin" role available. That makes this token effectively full site-admin, so it's provisioned as a dedicated non-human account rather than a personal token — do this once per server (coder.ddev.com and staging-coder.ddev.com each need their own account and token):
+The script needs to list *every* user's workspaces (`coder list --all`) and delete workspaces it doesn't own. On this deployment (no Premium license, so no custom RBAC roles), `owner` is the only built-in role that can do both — there's no narrower "workspace admin" role available. That makes this token effectively full site-admin, so it's provisioned as a dedicated non-human account rather than a personal token:
 
 ```bash
 # 1. Create a machine identity — no GitHub OAuth login required
