@@ -460,6 +460,19 @@ docker system <span class="nb">df</span>
 ./scripts/workspace-lifecycle-cleanup.sh <span class="nt">--force</span>
 </code></pre></div></div>
 
+<h4 id="one-off-purge-owners-already-notified-out-of-band">One-off purge (owners already notified out of band)</h4>
+
+<p><code class="language-plaintext highlighter-rouge">--purge-idle-days=N</code> bypasses the notify/grace state machine entirely and deletes every workspace idle at least <code class="language-plaintext highlighter-rouge">N</code> days (owners in <code class="language-plaintext highlighter-rouge">EXCLUDE_OWNERS</code> are still skipped). It sends no email, needs no Mailgun credentials, and neither reads nor writes the state file — the next normal timer run prunes any state entries for workspaces purged this way. Use it when owners have already been warned by other means (e.g. a manual email blast) and you need disk back now:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Preview what a 14-day purge would delete — deletes nothing</span>
+./scripts/workspace-lifecycle-cleanup.sh <span class="nt">--purge-idle-days</span><span class="o">=</span>14
+
+<span class="c"># Actually delete every workspace idle &gt;= 14 days</span>
+./scripts/workspace-lifecycle-cleanup.sh <span class="nt">--purge-idle-days</span><span class="o">=</span>14 <span class="nt">--force</span>
+</code></pre></div></div>
+
+<p>Like the normal flow, purge requires the <code class="language-plaintext highlighter-rouge">coder</code> CLI authenticated with the <code class="language-plaintext highlighter-rouge">owner</code> role (see below). Always run the preview first and eyeball the list — purge has no grace period and no second chance.</p>
+
 <p><strong>Prerequisites:</strong> <code class="language-plaintext highlighter-rouge">coder</code> CLI on <code class="language-plaintext highlighter-rouge">PATH</code> and authenticated (either via <code class="language-plaintext highlighter-rouge">coder login</code> or the <code class="language-plaintext highlighter-rouge">CODER_URL</code>/<code class="language-plaintext highlighter-rouge">CODER_SESSION_TOKEN</code> env vars) as a user with the <code class="language-plaintext highlighter-rouge">owner</code> role (see below); <code class="language-plaintext highlighter-rouge">MAILGUN_API_KEY</code> and <code class="language-plaintext highlighter-rouge">MAILGUN_DOMAIN</code> set for <code class="language-plaintext highlighter-rouge">--force</code> runs — DDEV’s existing Mailgun account credentials are in the shared <strong>DDEV</strong> 1Password vault, item <strong>Mailgun</strong> (same account/domain used to send other DDEV mail; no new domain or DNS verification needed). See the script header for all environment overrides (<code class="language-plaintext highlighter-rouge">NOTIFY_DAYS</code>, <code class="language-plaintext highlighter-rouge">DELETE_AFTER_DAYS</code>, <code class="language-plaintext highlighter-rouge">EXCLUDE_OWNERS</code>, <code class="language-plaintext highlighter-rouge">STATE_FILE</code>, etc.).</p>
 
 <p>On the server, all of this is supplied via <code class="language-plaintext highlighter-rouge">/etc/workspace-lifecycle-cleanup.env</code>, loaded by the <code class="language-plaintext highlighter-rouge">workspace-lifecycle-cleanup.service</code> systemd unit — see the install steps linked above. Check <code class="language-plaintext highlighter-rouge">sudo systemctl status workspace-lifecycle-cleanup.timer</code> and <code class="language-plaintext highlighter-rouge">sudo journalctl -u workspace-lifecycle-cleanup -q -f</code> to inspect runs.</p>
