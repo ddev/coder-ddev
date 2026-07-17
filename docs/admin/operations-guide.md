@@ -436,6 +436,20 @@ State (which workspaces have been notified and when) is tracked in a local JSON 
 ./scripts/workspace-lifecycle-cleanup.sh --force
 ```
 
+#### One-off purge (owners already notified out of band)
+
+`--purge-idle-days=N` bypasses the notify/grace state machine entirely and deletes every workspace idle at least `N` days (owners in `EXCLUDE_OWNERS` are still skipped). It sends no email, needs no Mailgun credentials, and neither reads nor writes the state file — the next normal timer run prunes any state entries for workspaces purged this way. Use it when owners have already been warned by other means (e.g. a manual email blast) and you need disk back now:
+
+```bash
+# Preview what a 14-day purge would delete — deletes nothing
+./scripts/workspace-lifecycle-cleanup.sh --purge-idle-days=14
+
+# Actually delete every workspace idle >= 14 days
+./scripts/workspace-lifecycle-cleanup.sh --purge-idle-days=14 --force
+```
+
+Like the normal flow, purge requires the `coder` CLI authenticated with the `owner` role (see below). Always run the preview first and eyeball the list — purge has no grace period and no second chance.
+
 **Prerequisites:** `coder` CLI on `PATH` and authenticated (either via `coder login` or the `CODER_URL`/`CODER_SESSION_TOKEN` env vars) as a user with the `owner` role (see below); `MAILGUN_API_KEY` and `MAILGUN_DOMAIN` set for `--force` runs — DDEV's existing Mailgun account credentials are in the shared **DDEV** 1Password vault, item **Mailgun** (same account/domain used to send other DDEV mail; no new domain or DNS verification needed). See the script header for all environment overrides (`NOTIFY_DAYS`, `DELETE_AFTER_DAYS`, `EXCLUDE_OWNERS`, `STATE_FILE`, etc.).
 
 On the server, all of this is supplied via `/etc/workspace-lifecycle-cleanup.env`, loaded by the `workspace-lifecycle-cleanup.service` systemd unit — see the install steps linked above. Check `sudo systemctl status workspace-lifecycle-cleanup.timer` and `sudo journalctl -u workspace-lifecycle-cleanup -q -f` to inspect runs.

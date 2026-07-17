@@ -29,6 +29,14 @@
 # first notice. That is the intended one-time "grandfather" behavior; no
 # separate rollout mode is needed.
 #
+# One-off purge mode (--purge-idle-days=N):
+#   Bypasses the notify/grace state machine and deletes every workspace idle
+#   >= N days (EXCLUDE_OWNERS still applies). Sends no email and neither
+#   reads nor writes the state file — the next normal run prunes state
+#   entries for anything purged here. Use when owners have already been
+#   notified out of band. Like everything else, it's a dry run unless
+#   combined with --force. Mailgun credentials are not required.
+#
 # By default runs in dry-run mode (prints what would happen, does not send
 # email, delete workspaces, or write the state file). Pass --force to act.
 #
@@ -51,8 +59,10 @@
 #                       (default: https://ddev.com/blog/coder-ddev-com-announcement/)
 #
 # Usage:
-#   ./scripts/workspace-lifecycle-cleanup.sh              # dry run
-#   ./scripts/workspace-lifecycle-cleanup.sh --force      # actually notify/delete
+#   ./scripts/workspace-lifecycle-cleanup.sh                            # dry run
+#   ./scripts/workspace-lifecycle-cleanup.sh --force                    # actually notify/delete
+#   ./scripts/workspace-lifecycle-cleanup.sh --purge-idle-days=14           # preview purge
+#   ./scripts/workspace-lifecycle-cleanup.sh --purge-idle-days=14 --force   # delete idle >=14d now
 
 set -euo pipefail
 
@@ -64,10 +74,18 @@ MAILGUN_BASE_URL="${MAILGUN_BASE_URL:-https://api.mailgun.net/v3}"
 MAILGUN_FROM="${MAILGUN_FROM:-DDEV Coder <support@ddev.com>}"
 ANNOUNCE_URL="${ANNOUNCE_URL:-https://ddev.com/blog/coder-ddev-com-announcement/}"
 FORCE=false
+PURGE_IDLE_DAYS=""
 
 for arg in "$@"; do
   case "$arg" in
     --force) FORCE=true ;;
+    --purge-idle-days=*)
+      PURGE_IDLE_DAYS="${arg#*=}"
+      if ! [[ "$PURGE_IDLE_DAYS" =~ ^[0-9]+$ ]] || [[ "$PURGE_IDLE_DAYS" -eq 0 ]]; then
+        echo "ERROR: --purge-idle-days requires a whole number of days >= 1, got '${PURGE_IDLE_DAYS}'" >&2
+        exit 1
+      fi
+      ;;
     --help | -h)
       awk 'NR > 1 && !/^#/ { exit } NR > 1 { sub(/^# ?/, ""); print }' "$0"
       exit 0
@@ -84,7 +102,9 @@ if [[ "$FORCE" == false ]]; then
   echo
 fi
 
-if [[ "$FORCE" == true ]]; then
+# Purge mode sends no email, so Mailgun credentials are only needed for
+# the normal notify/delete flow.
+if [[ "$FORCE" == true && -z "$PURGE_IDLE_DAYS" ]]; then
   : "${MAILGUN_API_KEY:?MAILGUN_API_KEY is required with --force}"
   : "${MAILGUN_DOMAIN:?MAILGUN_DOMAIN is required with --force}"
 fi
@@ -123,6 +143,56 @@ epoch_to_iso() {
   date -u -j -r "$epoch" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null
 }
 
+if ! workspaces_json=$(coder list --all --output json 2>/dev/null); then
+  echo "ERROR: 'coder list --all --output json' failed. Is the coder CLI authenticated?" >&2
+  exit 1
+fi
+
+workspace_count=$(echo "$workspaces_json" | jq 'length')
+if [[ "$workspace_count" -eq 0 ]]; then
+  echo "ERROR: 'coder list' returned zero workspaces. Refusing to proceed — this looks like an auth or connectivity problem, not an empty fleet." >&2
+  exit 1
+fi
+
+now=$(date +%s)
+
+# --- One-off purge mode: delete everything idle >= N days, no notices ---
+if [[ -n "$PURGE_IDLE_DAYS" ]]; then
+  purge_deleted=0 purge_failed=0 purge_kept=0
+  while IFS=$'\t' read -r id name owner last_used_at; do
+    [[ -z "$id" ]] && continue
+
+    if grep -qx "$owner" <<<"$(tr ' ' '\n' <<<"$EXCLUDE_OWNERS")"; then
+      continue
+    fi
+
+    last_epoch=$(iso_to_epoch "$last_used_at")
+    age_days=$(((now - last_epoch) / 86400))
+
+    if [[ "$age_days" -ge "$PURGE_IDLE_DAYS" ]]; then
+      echo "DELETE  $owner/$name — idle ${age_days}d (>= ${PURGE_IDLE_DAYS}d)"
+      purge_deleted=$((purge_deleted + 1))
+      if [[ "$FORCE" == true ]]; then
+        if ! coder delete "$owner/$name" --yes; then
+          echo "  WARN: delete failed for $owner/$name" >&2
+          purge_deleted=$((purge_deleted - 1))
+          purge_failed=$((purge_failed + 1))
+        fi
+      fi
+    else
+      purge_kept=$((purge_kept + 1))
+    fi
+  done < <(echo "$workspaces_json" | jq -r '.[] | [.id, .name, .owner_name, .last_used_at] | @tsv')
+
+  echo
+  echo "Purge summary: deleted=$purge_deleted failed=$purge_failed kept=$purge_kept"
+  if [[ "$FORCE" == false ]]; then
+    echo
+    echo "Re-run with --force to actually delete."
+  fi
+  exit 0
+fi
+
 mkdir -p "$(dirname "$STATE_FILE")"
 if [[ -f "$STATE_FILE" ]]; then
   state_json=$(cat "$STATE_FILE")
@@ -139,23 +209,10 @@ persist_state() {
   fi
 }
 
-if ! workspaces_json=$(coder list --all --output json 2>/dev/null); then
-  echo "ERROR: 'coder list --all --output json' failed. Is the coder CLI authenticated?" >&2
-  exit 1
-fi
-
-workspace_count=$(echo "$workspaces_json" | jq 'length')
-if [[ "$workspace_count" -eq 0 ]]; then
-  echo "ERROR: 'coder list' returned zero workspaces. Refusing to proceed — this looks like an auth or connectivity problem, not an empty fleet." >&2
-  exit 1
-fi
-
 if ! users_json=$(coder users list --output json 2>/dev/null); then
   echo "ERROR: 'coder users list --output json' failed." >&2
   exit 1
 fi
-
-now=$(date +%s)
 
 send_notice_email() {
   local to_email="$1" owner_name="$2" workspace_name="$3" last_used_human="$4" delete_date_human="$5"
