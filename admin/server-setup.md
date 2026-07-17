@@ -1085,6 +1085,8 @@ This should post a message to your Discord channel.
 - The relay listens on `127.0.0.1` only — it is not exposed externally
 - Logs: `sudo journalctl -u coder-discord-relay -q -f`
 - The relay formats workspace and user events compactly; all other events fall back to Coder's pre-formatted title
+- Workspace created/deleted messages show `<owner>/<workspace>`
+- Coder fans a single event out to one webhook call per recipient (e.g. one per user admin); the relay dedupes identical `notification_name`+labels pairs within a 30-second window so this only posts once to Discord
 - If you regenerate the Discord webhook URL, update `/etc/coder-discord-relay.env` and restart the relay
 
 ---

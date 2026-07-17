@@ -1259,6 +1259,8 @@ curl <span class="nt">-s</span> http://localhost:9876/
   <li>The relay listens on <code class="language-plaintext highlighter-rouge">127.0.0.1</code> only — it is not exposed externally</li>
   <li>Logs: <code class="language-plaintext highlighter-rouge">sudo journalctl -u coder-discord-relay -q -f</code></li>
   <li>The relay formats workspace and user events compactly; all other events fall back to Coder’s pre-formatted title</li>
+  <li>Workspace created/deleted messages show <code class="language-plaintext highlighter-rouge">&lt;owner&gt;/&lt;workspace&gt;</code></li>
+  <li>Coder fans a single event out to one webhook call per recipient (e.g. one per user admin); the relay dedupes identical <code class="language-plaintext highlighter-rouge">notification_name</code>+labels pairs within a 30-second window so this only posts once to Discord</li>
   <li>If you regenerate the Discord webhook URL, update <code class="language-plaintext highlighter-rouge">/etc/coder-discord-relay.env</code> and restart the relay</li>
 </ul>
 
