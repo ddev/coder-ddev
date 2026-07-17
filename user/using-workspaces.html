@@ -142,7 +142,7 @@ coder stop my-workspace
 coder list
 
 <span class="c"># Create second workspace</span>
-coder create <span class="nt">--template</span> user-defined-web my-second-workspace <span class="nt">--yes</span>
+coder create <span class="nt">--template</span> freeform my-second-workspace <span class="nt">--yes</span>
 
 <span class="c"># Switch between workspaces</span>
 coder ssh my-first-workspace
@@ -1114,7 +1114,7 @@ coder stop my-workspace
 
 <span class="c"># Delete and recreate with more resources</span>
 coder delete my-workspace <span class="nt">--yes</span>
-coder create <span class="nt">--template</span> user-defined-web my-workspace <span class="se">\</span>
+coder create <span class="nt">--template</span> freeform my-workspace <span class="se">\</span>
   <span class="nt">--parameter</span> <span class="nv">cpu</span><span class="o">=</span>8 <span class="se">\</span>
   <span class="nt">--parameter</span> <span class="nv">memory</span><span class="o">=</span>16 <span class="se">\</span>
   <span class="nt">--yes</span>

@@ -1014,16 +1014,12 @@ curl <span class="nt">-fsSL</span> <span class="nt">-o</span> /tmp/coder.deb <sp
 git clone https://github.com/ddev/coder-ddev
 <span class="nb">cd </span>coder-ddev
 
-<span class="c"># Build the image, push it, and deploy all four templates</span>
-make deploy-user-defined-web
-make push-template-drupal-core
-make push-template-drupal-contrib
-make push-template-freeform
+<span class="c"># Build the image, push it, and deploy all three templates</span>
+make deploy-all
 </code></pre></div></div>
 
-<p>This deploys four templates:</p>
+<p>This deploys three templates:</p>
 <ul>
-  <li><strong>user-defined-web</strong> — general-purpose DDEV workspace; users configure their own project type</li>
   <li><strong>drupal-core</strong> — automated Drupal core development environment; clones Drupal core, installs the site, and sets up the <a href="https://github.com/amateescu/ddev-drupal-dev">amateescu/ddev-drupal-dev</a> add-on (see Step 10 for the recommended seed cache setup)</li>
   <li><strong>drupal-contrib</strong> — automated environment for developing Drupal contrib modules and themes; uses the <a href="https://github.com/ddev/ddev-drupal-contrib">ddev/ddev-drupal-contrib</a> add-on, which installs Drupal as a dev dependency and symlinks the module/theme into the web root</li>
   <li><strong>freeform</strong> — multi-project workspace: keeps ddev-router running so multiple DDEV projects can coexist in one workspace, each reachable at its own hostname via Host-header routing</li>

@@ -140,11 +140,10 @@ make info
 
 <h3 id="using-the-makefile-1">Using the Makefile</h3>
 
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Push all four templates (no image build — use when only HCL changed)</span>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Push all templates (no image build — use when only HCL changed)</span>
 make push-all-templates
 
 <span class="c"># Push a single template</span>
-make push-template-user-defined-web
 make push-template-drupal-core
 make push-template-drupal-contrib
 make push-template-freeform
@@ -162,7 +161,6 @@ make build-and-push-no-cache <span class="o">&amp;&amp;</span> make push-all-tem
 
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>coder templates edit drupal-core      <span class="nt">--default-ttl</span> 2h <span class="nt">--yes</span>
 coder templates edit drupal-contrib   <span class="nt">--default-ttl</span> 2h <span class="nt">--yes</span>
-coder templates edit user-defined-web <span class="nt">--default-ttl</span> 2h <span class="nt">--yes</span>
 coder templates edit freeform         <span class="nt">--default-ttl</span> 2h <span class="nt">--yes</span>
 </code></pre></div></div>
 
@@ -170,7 +168,7 @@ coder templates edit freeform         <span class="nt">--default-ttl</span> 2h <
 
 <h3 id="template-configuration">Template Configuration</h3>
 
-<p>The template is defined in <code class="language-plaintext highlighter-rouge">user-defined-web/template.tf</code>. Key configuration parameters:</p>
+<p>The template is defined in <code class="language-plaintext highlighter-rouge">freeform/template.tf</code>. Key configuration parameters:</p>
 
 <div class="language-hcl highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">variable</span> <span class="s2">"workspace_image_registry"</span> <span class="p">{</span>
   <span class="nx">default</span> <span class="p">=</span> <span class="s2">"index.docker.io/ddev/coder-ddev"</span>
@@ -198,7 +196,7 @@ coder templates edit freeform         <span class="nt">--default-ttl</span> 2h <
 <ol>
   <li>Update <code class="language-plaintext highlighter-rouge">workspace_image_registry</code> in <code class="language-plaintext highlighter-rouge">template.tf</code></li>
   <li>Configure <code class="language-plaintext highlighter-rouge">registry_username</code> and <code class="language-plaintext highlighter-rouge">registry_password</code> variables</li>
-  <li>Push template: <code class="language-plaintext highlighter-rouge">coder templates push --directory user-defined-web user-defined-web --yes</code></li>
+  <li>Push template: <code class="language-plaintext highlighter-rouge">coder templates push --directory freeform freeform --yes</code></li>
 </ol>
 
 <h2 id="version-management">Version Management</h2>
@@ -212,11 +210,11 @@ coder templates edit freeform         <span class="nt">--default-ttl</span> 2h <
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 1. Update VERSION file</span>
 <span class="nb">echo</span> <span class="s2">"v0.7"</span> <span class="o">&gt;</span> VERSION
 
-<span class="c"># 2. Build, push image, and push template (VERSION is synced automatically)</span>
-make deploy-user-defined-web
+<span class="c"># 2. Build image, push image, and push template (VERSION is synced automatically)</span>
+make build-and-push <span class="o">&amp;&amp;</span> make push-template-freeform
 
 <span class="c"># Or without cache for clean build</span>
-make deploy-user-defined-web-no-cache
+make build-and-push-no-cache <span class="o">&amp;&amp;</span> make push-template-freeform
 </code></pre></div></div>
 
 <h2 id="managing-workspaces">Managing Workspaces</h2>
@@ -227,7 +225,7 @@ make deploy-user-defined-web-no-cache
 <ol>
   <li>Log into Coder dashboard</li>
   <li>Click “Create Workspace”</li>
-  <li>Select “user-defined-web” template</li>
+  <li>Select “freeform” template</li>
   <li>Enter workspace name</li>
   <li>Configure parameters (optional: CPU, memory)</li>
   <li>Click “Create Workspace”</li>
@@ -235,10 +233,10 @@ make deploy-user-defined-web-no-cache
 
 <p><strong>Via CLI:</strong></p>
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Create with defaults</span>
-coder create <span class="nt">--template</span> user-defined-web my-workspace <span class="nt">--yes</span>
+coder create <span class="nt">--template</span> freeform my-workspace <span class="nt">--yes</span>
 
 <span class="c"># Create with custom parameters</span>
-coder create <span class="nt">--template</span> user-defined-web my-workspace <span class="se">\</span>
+coder create <span class="nt">--template</span> freeform my-workspace <span class="se">\</span>
   <span class="nt">--parameter</span> <span class="nv">cpu</span><span class="o">=</span>8 <span class="se">\</span>
   <span class="nt">--parameter</span> <span class="nv">memory</span><span class="o">=</span>16 <span class="se">\</span>
   <span class="nt">--yes</span>
@@ -250,7 +248,7 @@ coder create <span class="nt">--template</span> user-defined-web my-workspace <s
 coder list
 
 <span class="c"># List workspaces for specific template</span>
-coder list <span class="nt">--template</span> user-defined-web
+coder list <span class="nt">--template</span> freeform
 
 <span class="c"># Show detailed workspace info</span>
 coder show my-workspace
@@ -315,10 +313,10 @@ coder delete my-workspace <span class="nt">--yes</span>
 <h3 id="updating-template-configuration">Updating Template Configuration</h3>
 
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 1. Edit template.tf</span>
-vim user-defined-web/template.tf
+vim freeform/template.tf
 
 <span class="c"># 2. Push updated template</span>
-make push-template-user-defined-web
+make push-template-freeform
 </code></pre></div></div>
 
 <h3 id="updating-docker-image">Updating Docker Image</h3>
@@ -327,8 +325,9 @@ make push-template-user-defined-web
 <span class="c"># 2. Increment version (template reads this automatically)</span>
 <span class="nb">echo</span> <span class="s2">"v0.7"</span> <span class="o">&gt;</span> VERSION
 
-<span class="c"># 3. Build and deploy</span>
-make deploy-user-defined-web
+<span class="c"># 3. Build and push the image, then push the templates that use it</span>
+make build-and-push
+make push-all-templates
 
 <span class="c"># Users must rebuild workspaces to get new Docker image</span>
 </code></pre></div></div>
@@ -361,8 +360,8 @@ coder delete test-workspace <span class="nt">--yes</span>
 <h3 id="rolling-back">Rolling Back</h3>
 
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Revert to previous template version</span>
-git checkout &lt;previous-commit&gt; user-defined-web/template.tf
-coder templates push <span class="nt">--directory</span> user-defined-web user-defined-web <span class="nt">--yes</span>
+git checkout &lt;previous-commit&gt; freeform/template.tf
+coder templates push <span class="nt">--directory</span> freeform freeform <span class="nt">--yes</span>
 
 <span class="c"># Users on old version are unaffected</span>
 <span class="c"># Users can update to rollback version via: coder update &lt;workspace&gt;</span>
@@ -472,7 +471,7 @@ git tag <span class="nt">-a</span> v0.1 <span class="nt">-m</span> <span class="
 git push origin v0.1
 
 <span class="c"># Track changes</span>
-git log <span class="nt">--oneline</span> user-defined-web/template.tf
+git log <span class="nt">--oneline</span> freeform/template.tf
 </code></pre></div></div>
 
 <h3 id="monitoring">Monitoring</h3>
@@ -573,8 +572,8 @@ coder ssh my-workspace <span class="nt">--</span> systemctl status docker
 <h3 id="template-naming">Template Naming</h3>
 
 <ul>
-  <li>Use clear, descriptive names: <code class="language-plaintext highlighter-rouge">user-defined-web</code>, <code class="language-plaintext highlighter-rouge">ddev-developer</code></li>
-  <li>Version templates for major changes: <code class="language-plaintext highlighter-rouge">user-defined-web-v2</code></li>
+  <li>Use clear, descriptive names: <code class="language-plaintext highlighter-rouge">drupal-core</code>, <code class="language-plaintext highlighter-rouge">ddev-developer</code></li>
+  <li>Version templates for major changes: <code class="language-plaintext highlighter-rouge">drupal-core-v2</code></li>
   <li>Avoid generic names: <code class="language-plaintext highlighter-rouge">template1</code>, <code class="language-plaintext highlighter-rouge">test</code></li>
 </ul>
 
