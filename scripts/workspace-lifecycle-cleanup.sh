@@ -16,7 +16,8 @@
 #       -> the owner came back; clear the state entry (no deletion)
 #   - Already notified, DELETE_AFTER_DAYS have passed since notified_at,
 #     and last_used_at still hasn't advanced
-#       -> `coder delete`, drop the state entry
+#       -> `coder delete <owner>/<name>`, drop the state entry (on failure
+#          the entry is kept so deletion is retried next run)
 #   - Already notified, still within the grace window
 #       -> leave alone
 #   - State entry exists for a workspace that no longer exists
@@ -68,7 +69,7 @@ for arg in "$@"; do
   case "$arg" in
     --force) FORCE=true ;;
     --help | -h)
-      sed -n '2,45p' "$0" | sed 's/^# \?//'
+      awk 'NR > 1 && !/^#/ { exit } NR > 1 { sub(/^# ?/, ""); print }' "$0"
       exit 0
       ;;
     *)
@@ -129,6 +130,15 @@ else
   state_json='{}'
 fi
 
+# Persist immediately after every state transition, not just at the end of
+# the run: notice emails are the one side effect that can't be taken back,
+# so a mid-run failure must not forget who has already been notified.
+persist_state() {
+  if [[ "$FORCE" == true ]]; then
+    echo "$state_json" | jq '.' >"$STATE_FILE"
+  fi
+}
+
 if ! workspaces_json=$(coder list --all --output json 2>/dev/null); then
   echo "ERROR: 'coder list --all --output json' failed. Is the coder CLI authenticated?" >&2
   exit 1
@@ -186,12 +196,15 @@ EOF
   )
 
   if [[ "$FORCE" == true ]]; then
-    curl -sf --user "api:${MAILGUN_API_KEY}" \
+    if ! curl -sf --user "api:${MAILGUN_API_KEY}" \
       "${MAILGUN_BASE_URL}/${MAILGUN_DOMAIN}/messages" \
       -F from="${MAILGUN_FROM}" \
       -F to="${to_email}" \
       -F subject="${subject}" \
-      -F text="${body}" >/dev/null
+      -F text="${body}" >/dev/null; then
+      echo "  WARN: Mailgun send to ${to_email} failed" >&2
+      return 1
+    fi
   fi
 }
 
@@ -209,6 +222,7 @@ while IFS= read -r stale_id; do
   fi
 done < <(echo "$state_json" | jq -r 'keys[]')
 state_json="$new_state_json"
+persist_state
 
 # --- Walk workspaces ---
 while IFS=$'\t' read -r id name owner last_used_at; do
@@ -227,21 +241,26 @@ while IFS=$'\t' read -r id name owner last_used_at; do
     notified_at=$(echo "$entry" | jq -r '.notified_at')
     notified_epoch=$(iso_to_epoch "$notified_at")
 
-    if [[ "$age_days" -lt "$NOTIFY_DAYS" ]]; then
+    if [[ "$last_epoch" -gt "$notified_epoch" ]]; then
       echo "REVIVE  $name (owner=$owner) — used again since notice, clearing pending deletion"
       revived=$((revived + 1))
       state_json=$(echo "$state_json" | jq --arg id "$id" 'del(.[$id])')
+      persist_state
       continue
     fi
 
     since_notice_days=$(((now - notified_epoch) / 86400))
     if [[ "$since_notice_days" -ge "$DELETE_AFTER_DAYS" ]]; then
-      echo "DELETE  $name (owner=$owner) — idle ${age_days}d, notified ${since_notice_days}d ago"
+      echo "DELETE  $owner/$name — idle ${age_days}d, notified ${since_notice_days}d ago"
       deleted=$((deleted + 1))
       if [[ "$FORCE" == true ]]; then
-        coder delete "$name" --yes || echo "  WARN: delete failed for $name" >&2
+        if coder delete "$owner/$name" --yes; then
+          state_json=$(echo "$state_json" | jq --arg id "$id" 'del(.[$id])')
+          persist_state
+        else
+          echo "  WARN: delete failed for $owner/$name — keeping state entry to retry next run" >&2
+        fi
       fi
-      state_json=$(echo "$state_json" | jq --arg id "$id" 'del(.[$id])')
     else
       echo "PENDING $name (owner=$owner) — notified ${since_notice_days}d ago, deletes in $((DELETE_AFTER_DAYS - since_notice_days))d unless used"
       pending=$((pending + 1))
@@ -250,8 +269,8 @@ while IFS=$'\t' read -r id name owner last_used_at; do
   fi
 
   if [[ "$age_days" -ge "$NOTIFY_DAYS" ]]; then
-    owner_email=$(echo "$users_json" | jq -r --arg u "$owner" '.[] | select(.username==$u) | .email')
-    owner_display=$(echo "$users_json" | jq -r --arg u "$owner" '.[] | select(.username==$u) | .name')
+    owner_email=$(echo "$users_json" | jq -r --arg u "$owner" '.[] | select(.username==$u) | .email // empty')
+    owner_display=$(echo "$users_json" | jq -r --arg u "$owner" '.[] | select(.username==$u) | .name // empty')
     if [[ -z "$owner_email" ]]; then
       echo "  WARN: no email found for owner $owner (workspace $name), skipping notice" >&2
       continue
@@ -262,11 +281,14 @@ while IFS=$'\t' read -r id name owner last_used_at; do
     delete_date_human=$(epoch_to_ymd "$delete_epoch")
 
     echo "NOTIFY  $name (owner=$owner <$owner_email>) — idle ${age_days}d, last used $last_used_human, deletes $delete_date_human unless used"
-    notified=$((notified + 1))
-    send_notice_email "$owner_email" "${owner_display:-$owner}" "$name" "$last_used_human" "$delete_date_human"
-
-    state_json=$(echo "$state_json" | jq --arg id "$id" --arg at "$(epoch_to_iso "$now")" --arg name "$name" --arg owner "$owner" \
-      '.[$id] = {notified_at: $at, name: $name, owner: $owner}')
+    if send_notice_email "$owner_email" "${owner_display:-$owner}" "$name" "$last_used_human" "$delete_date_human"; then
+      notified=$((notified + 1))
+      state_json=$(echo "$state_json" | jq --arg id "$id" --arg at "$(epoch_to_iso "$now")" --arg name "$name" --arg owner "$owner" \
+        '.[$id] = {notified_at: $at, name: $name, owner: $owner}')
+      persist_state
+    else
+      echo "  WARN: notice for $name not recorded; will retry next run" >&2
+    fi
   else
     kept=$((kept + 1))
   fi
@@ -276,7 +298,7 @@ echo
 echo "Summary: notified=$notified pending=$pending deleted=$deleted revived=$revived kept=$kept pruned=$pruned"
 
 if [[ "$FORCE" == true ]]; then
-  echo "$state_json" | jq '.' >"$STATE_FILE"
+  persist_state
   echo "State written to $STATE_FILE"
 else
   echo
