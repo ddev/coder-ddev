@@ -40,6 +40,14 @@
 # By default runs in dry-run mode (prints what would happen, does not send
 # email, delete workspaces, or write the state file). Pass --force to act.
 #
+# `coder delete`'s own build-log output is captured rather than streamed —
+# it's noise on success. It's only shown (indented) when a delete fails.
+#
+# Every run ends with a counts line (notified=... deleted=... failed=...)
+# followed by a "what and why" breakdown: one section per category listing
+# the affected workspace and the reason, e.g. under "Failed" a delete that
+# will be retried next run, or a notice email that didn't send.
+#
 # Requires: coder CLI (authenticated), jq, curl, a Mailgun account.
 #
 # Environment:
@@ -156,9 +164,23 @@ fi
 
 now=$(date +%s)
 
+# Print a labeled list only if non-empty — used to build the detailed,
+# what-and-why breakdown that follows the terse counts summary.
+print_details() {
+  local title="$1"
+  shift
+  local -a items=("$@")
+  if [[ ${#items[@]} -gt 0 ]]; then
+    echo
+    echo "${title}:"
+    printf '  - %s\n' "${items[@]}"
+  fi
+}
+
 # --- One-off purge mode: delete everything idle >= N days, no notices ---
 if [[ -n "$PURGE_IDLE_DAYS" ]]; then
   purge_deleted=0 purge_failed=0 purge_kept=0
+  purge_deleted_details=() purge_failed_details=()
   while IFS=$'\t' read -r id name owner last_used_at; do
     [[ -z "$id" ]] && continue
 
@@ -170,14 +192,24 @@ if [[ -n "$PURGE_IDLE_DAYS" ]]; then
     age_days=$(((now - last_epoch) / 86400))
 
     if [[ "$age_days" -ge "$PURGE_IDLE_DAYS" ]]; then
-      echo "DELETE  $owner/$name — idle ${age_days}d (>= ${PURGE_IDLE_DAYS}d)"
-      purge_deleted=$((purge_deleted + 1))
+      reason="idle ${age_days}d (>= ${PURGE_IDLE_DAYS}d), last used $(epoch_to_ymd "$last_epoch")"
+      echo "DELETE  $owner/$name — $reason"
       if [[ "$FORCE" == true ]]; then
-        if ! coder delete "$owner/$name" --yes; then
+        # Capture coder's build-log output instead of letting it stream to
+        # the terminal/journal — it's noisy and uninteresting on success;
+        # only show it when the delete actually failed.
+        if delete_output=$(coder delete "$owner/$name" --yes 2>&1); then
+          purge_deleted=$((purge_deleted + 1))
+          purge_deleted_details+=("$owner/$name — $reason")
+        else
           echo "  WARN: delete failed for $owner/$name" >&2
-          purge_deleted=$((purge_deleted - 1))
+          [[ -n "$delete_output" ]] && echo "    ${delete_output//$'\n'/$'\n'    }" >&2
           purge_failed=$((purge_failed + 1))
+          purge_failed_details+=("$owner/$name — delete failed, $reason")
         fi
+      else
+        purge_deleted=$((purge_deleted + 1))
+        purge_deleted_details+=("$owner/$name — $reason")
       fi
     else
       purge_kept=$((purge_kept + 1))
@@ -186,6 +218,8 @@ if [[ -n "$PURGE_IDLE_DAYS" ]]; then
 
   echo
   echo "Purge summary: deleted=$purge_deleted failed=$purge_failed kept=$purge_kept"
+  print_details "Deleted" "${purge_deleted_details[@]}"
+  print_details "Failed to delete" "${purge_failed_details[@]}"
   if [[ "$FORCE" == false ]]; then
     echo
     echo "Re-run with --force to actually delete."
@@ -270,7 +304,8 @@ EOF
   fi
 }
 
-notified=0 revived=0 deleted=0 pending=0 kept=0 pruned=0
+notified=0 revived=0 deleted=0 pending=0 kept=0 pruned=0 failed=0
+notified_details=() revived_details=() deleted_details=() pending_details=() pruned_details=() failed_details=()
 
 # --- Prune state entries for workspaces that no longer exist ---
 current_ids=$(echo "$workspaces_json" | jq -r '.[].id')
@@ -281,6 +316,7 @@ while IFS= read -r stale_id; do
     echo "PRUNE  state entry for deleted workspace $stale_id"
     new_state_json=$(echo "$new_state_json" | jq --arg id "$stale_id" 'del(.[$id])')
     pruned=$((pruned + 1))
+    pruned_details+=("$stale_id — workspace no longer exists")
   fi
 done < <(echo "$state_json" | jq -r 'keys[]')
 state_json="$new_state_json"
@@ -306,6 +342,7 @@ while IFS=$'\t' read -r id name owner last_used_at; do
     if [[ "$last_epoch" -gt "$notified_epoch" ]]; then
       echo "REVIVE  $name (owner=$owner) — used again since notice, clearing pending deletion"
       revived=$((revived + 1))
+      revived_details+=("$owner/$name — used again since notice, deletion canceled")
       state_json=$(echo "$state_json" | jq --arg id "$id" 'del(.[$id])')
       persist_state
       continue
@@ -313,19 +350,30 @@ while IFS=$'\t' read -r id name owner last_used_at; do
 
     since_notice_days=$(((now - notified_epoch) / 86400))
     if [[ "$since_notice_days" -ge "$DELETE_AFTER_DAYS" ]]; then
-      echo "DELETE  $owner/$name — idle ${age_days}d, notified ${since_notice_days}d ago"
-      deleted=$((deleted + 1))
+      reason="idle ${age_days}d, notified ${since_notice_days}d ago, never used since"
+      echo "DELETE  $owner/$name — $reason"
       if [[ "$FORCE" == true ]]; then
-        if coder delete "$owner/$name" --yes; then
+        # Capture coder's build-log output instead of streaming it — only
+        # show it (indented, on stderr) when the delete actually failed.
+        if delete_output=$(coder delete "$owner/$name" --yes 2>&1); then
+          deleted=$((deleted + 1))
+          deleted_details+=("$owner/$name — $reason")
           state_json=$(echo "$state_json" | jq --arg id "$id" 'del(.[$id])')
           persist_state
         else
           echo "  WARN: delete failed for $owner/$name — keeping state entry to retry next run" >&2
+          [[ -n "$delete_output" ]] && echo "    ${delete_output//$'\n'/$'\n'    }" >&2
+          failed=$((failed + 1))
+          failed_details+=("$owner/$name — delete failed, will retry next run ($reason)")
         fi
+      else
+        deleted=$((deleted + 1))
+        deleted_details+=("$owner/$name — $reason")
       fi
     else
       echo "PENDING $name (owner=$owner) — notified ${since_notice_days}d ago, deletes in $((DELETE_AFTER_DAYS - since_notice_days))d unless used"
       pending=$((pending + 1))
+      pending_details+=("$owner/$name — notified ${since_notice_days}d ago, deletes in $((DELETE_AFTER_DAYS - since_notice_days))d unless used")
     fi
     continue
   fi
@@ -335,6 +383,8 @@ while IFS=$'\t' read -r id name owner last_used_at; do
     owner_display=$(echo "$users_json" | jq -r --arg u "$owner" '.[] | select(.username==$u) | .name // empty')
     if [[ -z "$owner_email" ]]; then
       echo "  WARN: no email found for owner $owner (workspace $name), skipping notice" >&2
+      failed=$((failed + 1))
+      failed_details+=("$owner/$name — no email on file for owner, notice skipped")
       continue
     fi
 
@@ -345,11 +395,14 @@ while IFS=$'\t' read -r id name owner last_used_at; do
     echo "NOTIFY  $name (owner=$owner <$owner_email>) — idle ${age_days}d, last used $last_used_human, deletes $delete_date_human unless used"
     if send_notice_email "$owner_email" "${owner_display:-$owner}" "$name" "$last_used_human" "$delete_date_human"; then
       notified=$((notified + 1))
+      notified_details+=("$owner/$name <$owner_email> — idle ${age_days}d, last used $last_used_human, deletes $delete_date_human unless used")
       state_json=$(echo "$state_json" | jq --arg id "$id" --arg at "$(epoch_to_iso "$now")" --arg name "$name" --arg owner "$owner" \
         '.[$id] = {notified_at: $at, name: $name, owner: $owner}')
       persist_state
     else
       echo "  WARN: notice for $name not recorded; will retry next run" >&2
+      failed=$((failed + 1))
+      failed_details+=("$owner/$name — notice email failed, will retry next run")
     fi
   else
     kept=$((kept + 1))
@@ -357,7 +410,13 @@ while IFS=$'\t' read -r id name owner last_used_at; do
 done < <(echo "$workspaces_json" | jq -r '.[] | [.id, .name, .owner_name, .last_used_at] | @tsv')
 
 echo
-echo "Summary: notified=$notified pending=$pending deleted=$deleted revived=$revived kept=$kept pruned=$pruned"
+echo "Summary: notified=$notified pending=$pending deleted=$deleted revived=$revived kept=$kept pruned=$pruned failed=$failed"
+print_details "Deleted" "${deleted_details[@]}"
+print_details "Notified" "${notified_details[@]}"
+print_details "Revived" "${revived_details[@]}"
+print_details "Pending (notified, in grace period)" "${pending_details[@]}"
+print_details "Pruned state entries" "${pruned_details[@]}"
+print_details "Failed (will retry next run)" "${failed_details[@]}"
 
 if [[ "$FORCE" == true ]]; then
   persist_state
