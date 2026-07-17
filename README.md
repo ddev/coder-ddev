@@ -34,14 +34,13 @@ Coder workspace template for DDEV-based development with Docker-in-Docker suppor
 
 ### Building and Deploying
 
-The base Docker image is built from the `image/Dockerfile` and the Coder template is in `template/`. Use the provided Makefile to manage everything:
+The base Docker image is built from the `image/Dockerfile` and shared by all templates. Use the provided Makefile to manage everything:
 
 ```bash
-# Full deployment (build, push image, push template)
-make deploy-user-defined-web
-
-# Full deployment without cache
-make deploy-user-defined-web-no-cache
+# Full deployment (build image, push image, push a template)
+make deploy-drupal-core
+make deploy-drupal-contrib
+make deploy-freeform
 
 # Image operations
 make build              # Build the image with cache
@@ -50,7 +49,10 @@ make push               # Push to Docker Hub
 make build-and-push     # Build and push in one command
 
 # Template operations
-make push-template-user-defined-web      # Push user-defined-web template to Coder
+make push-template-drupal-core       # Push drupal-core template to Coder
+make push-template-drupal-contrib    # Push drupal-contrib template to Coder
+make push-template-freeform          # Push freeform template to Coder
+make push-all-templates              # Push all templates (no image build)
 
 # Utility commands
 make test               # Test the built image
@@ -60,17 +62,17 @@ make help               # See all available commands
 
 ### Version Management
 
-The `VERSION` file in the root directory controls the image tag. The Makefile automatically copies it into the template directory before pushing, and `template.tf` reads it from there — no manual edits to `template.tf` are needed.
+The `VERSION` file in the root directory controls the image tag. The Makefile automatically copies it into each template directory before pushing, and `template.tf` reads it from there — no manual edits to `template.tf` are needed.
 
 **To release a new version:**
 1. Update the `VERSION` file (e.g., `v0.7`)
-2. Run `make deploy-user-defined-web` to build image, push image, and push template
+2. Run `make build-and-push` to build and push the image, then `make push-all-templates` to update the templates
 
 **Quick deployment:**
 ```bash
-make deploy-user-defined-web        # Build with cache and deploy
+make deploy-all                # Build with cache, push image, and push all templates
 # or
-make deploy-user-defined-web-no-cache  # Clean build and deploy
+make build-and-push-no-cache && make push-all-templates  # Clean build and deploy
 ```
 
 ## Documentation
@@ -96,30 +98,33 @@ make deploy-user-defined-web-no-cache  # Clean build and deploy
 
 ```
 coder-ddev/
-├── user-defined-web/          # General-purpose DDEV template
+├── freeform/           # Multi-project, general-purpose DDEV template
 │   ├── template.tf
 │   └── README.md
-├── drupal-core/   # Drupal core development template
+├── drupal-core/        # Drupal core development template
+│   ├── template.tf
+│   └── README.md
+├── drupal-contrib/     # Drupal contrib module/theme development template
 │   ├── template.tf
 │   └── README.md
 ├── image/              # Shared Docker image
-└── Makefile           # Build and deploy automation
+└── Makefile            # Build and deploy automation
 ```
 
 ## Available Templates
 
-### user-defined-web (General Purpose)
-Basic DDEV development environment for any project type.
+### freeform (General Purpose)
+DDEV development environment for one or more projects of any type, each reachable at its own stable URL via ddev-router Host-header routing.
 
 - **Resources**: 4 cores, 8 GB RAM (default)
 - **Setup**: Manual (clone your own repository)
-- **Use Case**: Any DDEV-compatible project (Drupal, WordPress, Laravel, etc.)
+- **Use Case**: Any DDEV-compatible project (Drupal, WordPress, Laravel, etc.); multiple projects can coexist in one workspace
 - **Start Time**: < 1 minute
-- **Template Directory**: `user-defined-web/`
+- **Template Directory**: `freeform/`
 
 **Create workspace:**
 ```bash
-coder create --template user-defined-web my-workspace
+coder create --template freeform my-workspace
 ```
 
 ### drupal-core (Drupal Core Development)
@@ -164,9 +169,10 @@ coder create --template drupal-contrib my-contrib-dev \
 
 ### Choosing a Template
 
-- Use **user-defined-web** for:
+- Use **freeform** for:
   - Site building and custom site projects
   - General Drupal/PHP projects
+  - Multiple DDEV projects in one workspace
   - Maximum flexibility
 
 - Use **drupal-core** for:
@@ -184,7 +190,7 @@ Create a new workspace using your chosen template:
 
 ```bash
 # General-purpose DDEV environment
-coder create --template user-defined-web <workspace-name>
+coder create --template freeform <workspace-name>
 
 # Drupal core development environment
 coder create --template drupal-core <workspace-name>
@@ -212,10 +218,11 @@ docker build -t ddev/coder-ddev:v0.1 .
 docker push ddev/coder-ddev:v0.1
 
 # Deploy template to Coder
-coder templates push --directory user-defined-web user-defined-web --yes
+coder templates push --directory freeform freeform --yes
 
 # Or use Makefile
-make deploy-user-defined-web  # Build + push image + push template
+make build-and-push       # Build + push image
+make deploy-freeform       # Push freeform template (uses existing image)
 ```
 
 **📖 [Full Operations Guide](./docs/admin/operations-guide.md)**

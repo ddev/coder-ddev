@@ -235,10 +235,11 @@ Image versions are managed via the `VERSION` file in the repository root.
    echo "v0.7" > ../VERSION
    ```
 
-2. Build, push image, and push template (VERSION is synced automatically):
+2. Build and push the image, then push the templates that use it (VERSION is synced automatically):
    ```bash
    cd ..  # Back to repository root
-   make deploy-user-defined-web
+   make build-and-push
+   make push-all-templates
    ```
 
 ## Troubleshooting

@@ -75,11 +75,6 @@ jobs:
     strategy:
       matrix:
         include:
-          - template: user-defined-web
-            ws_name: udw
-            extra_vars: ""
-            extra_params: ""
-            app_slug: "ddev-web"
           - template: freeform
             ws_name: ff
             extra_vars: ""
@@ -294,11 +289,6 @@ jobs:
     strategy:
       matrix:
         include:
-          - template: user-defined-web
-            ws_name: udw
-            extra_vars: ""
-            extra_params: ""
-            app_slug: "ddev-web"
           - template: freeform
             ws_name: ff
             extra_vars: ""

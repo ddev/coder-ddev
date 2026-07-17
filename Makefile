@@ -7,7 +7,7 @@ DOCKERFILE_DIR := image
 DOCKERFILE := $(DOCKERFILE_DIR)/Dockerfile
 
 # Template directories (name == directory name == Coder template name)
-TEMPLATES := user-defined-web drupal-core drupal-contrib freeform
+TEMPLATES := drupal-core drupal-contrib freeform
 
 # Host path to the drupal-core seed cache (bind-mounted read-only into workspaces).
 # This path is specific to the server where the template is deployed.
@@ -27,7 +27,6 @@ IMAGE_TAG := $(IMAGE_NAME):$(VERSION)
 IMAGE_LATEST := $(IMAGE_NAME):latest
 
 # Per-template extra variables passed to `coder templates push`
-TEMPLATE_VARS_user-defined-web := --variable workspace_image_registry=index.docker.io/$(IMAGE_NAME)
 TEMPLATE_VARS_drupal-core      := --variable workspace_image_registry=index.docker.io/$(IMAGE_NAME) \
                                    --variable cache_path=$(DRUPAL_CACHE_PATH)
 TEMPLATE_VARS_drupal-contrib   := --variable workspace_image_registry=index.docker.io/$(IMAGE_NAME)
@@ -35,9 +34,6 @@ TEMPLATE_VARS_freeform         := --variable workspace_image_registry=index.dock
 
 # Per-template display metadata set via `coder templates edit` after push
 # (coder templates push only supports --name, not --description)
-TEMPLATE_EDIT_user-defined-web := --display-name "[DEPRECATED] DDEV Web Workspace" \
-                                   --description "Deprecated: use the freeform template instead. Existing workspaces continue to work." \
-                                   --deprecated "Deprecated: use the freeform template instead. Existing workspaces continue to work."
 TEMPLATE_EDIT_drupal-core      := --display-name "Drupal Core Development" \
                                    --description "Drupal core dev environment: full DDEV stack, core clone, Umami demo site. Built on the amateescu/ddev-drupal-dev add-on."
 TEMPLATE_EDIT_drupal-contrib   := --display-name "Drupal Contrib Development" \
@@ -166,10 +162,6 @@ info: ## Show image and template information
 
 # --- Template push targets ---
 
-.PHONY: push-template-user-defined-web
-push-template-user-defined-web: ## Push user-defined-web template to Coder
-	$(call push_template,user-defined-web)
-
 .PHONY: push-template-drupal-core
 push-template-drupal-core: ## Push drupal-core template to Coder
 	$(call push_template,drupal-core)
@@ -183,18 +175,10 @@ push-template-freeform: ## Push freeform template to Coder
 	$(call push_template,freeform)
 
 .PHONY: push-all-templates
-push-all-templates: push-template-user-defined-web push-template-drupal-core push-template-drupal-contrib push-template-freeform ## Push all templates to Coder (no image build)
+push-all-templates: push-template-drupal-core push-template-drupal-contrib push-template-freeform ## Push all templates to Coder (no image build)
 	@echo "All templates pushed!"
 
 # --- Deploy targets ---
-
-.PHONY: deploy-user-defined-web
-deploy-user-defined-web: build-and-push push-template-user-defined-web ## Build image, push image, and push user-defined-web template
-	@echo "Deployment of user-defined-web complete!"
-
-.PHONY: deploy-user-defined-web-no-cache
-deploy-user-defined-web-no-cache: build-and-push-no-cache push-template-user-defined-web ## Build image (no cache), push, and push user-defined-web template
-	@echo "Deployment of user-defined-web complete!"
 
 .PHONY: deploy-drupal-core
 deploy-drupal-core: push-template-drupal-core ## Deploy drupal-core template (uses existing image)
