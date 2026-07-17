@@ -7,6 +7,7 @@ Listens for HTTP POST requests from Coder and forwards them as Discord messages.
 import json
 import logging
 import os
+import time
 import urllib.request
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
@@ -15,6 +16,26 @@ log = logging.getLogger(__name__)
 
 DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL", "")
 LISTEN_PORT = int(os.environ.get("LISTEN_PORT", "9876"))
+
+# Coder fans a single logical event out to one webhook call per recipient
+# (e.g. one per user admin for "User account created", one per template admin
+# for "Workspace Created"). Every fan-out call for the same event carries the
+# same notification_name + labels, so we dedupe on that pair within a short
+# window to avoid posting the same event to Discord multiple times.
+DEDUP_WINDOW_SECONDS = 30
+_recent_events = {}  # dedup_key -> last-seen monotonic time
+
+
+def _is_duplicate(event: str, labels: dict) -> bool:
+    key = (event, json.dumps(labels, sort_keys=True))
+    now = time.monotonic()
+    for k, seen_at in list(_recent_events.items()):
+        if now - seen_at > DEDUP_WINDOW_SECONDS:
+            del _recent_events[k]
+    if key in _recent_events:
+        return True
+    _recent_events[key] = now
+    return False
 
 
 def post_to_discord(message: str) -> None:
@@ -43,16 +64,26 @@ class CoderWebhookHandler(BaseHTTPRequestHandler):
             labels = p.get("labels", {})
             event = p.get("notification_name", "")
 
+            if _is_duplicate(event, labels):
+                log.info("Suppressing duplicate notification for event %r labels: %s", event, json.dumps(labels))
+                self.send_response(204)
+                self.end_headers()
+                return
+
             if event == "Workspace Created":
                 owner = labels.get("workspace_owner_username", "?")
                 workspace = labels.get("workspace", "?")
                 template = labels.get("template", "?")
                 message = f"**New workspace:** `{owner}/{workspace}` (template: {template})"
             elif event == "Workspace Deleted":
-                name = labels.get("name", "?")
+                # Deleted notifications are only ever sent to the workspace
+                # owner, so the top-level user_username is the owner — the
+                # "name" label alone (no owner) isn't in the payload.
+                owner = p.get("user_username", "?")
+                workspace = labels.get("name", "?")
                 initiator = labels.get("initiator", "?")
                 reason = labels.get("reason", "")
-                message = f"**Workspace deleted:** `{name}` by {initiator}" + (f" ({reason})" if reason and reason != "initiated by user" else "")
+                message = f"**Workspace deleted:** `{owner}/{workspace}` by {initiator}" + (f" ({reason})" if reason and reason != "initiated by user" else "")
             elif "User account" in event:
                 # labels vary; fall back to title which contains the username
                 message = f"**{data.get('title', event)}**"
