@@ -37,11 +37,10 @@ When writing or reviewing `coder` CLI commands in documentation, **always verify
 
 ## Template Architecture Overview
 
-Four templates exist, each with a distinct routing model:
+Three templates exist, each with a distinct routing model:
 
 | Template             | Web port | Routing model                                         |
 | -------------------- | -------- | ----------------------------------------------------- |
-| `user-defined-web`   | 80       | Direct bind, no ddev-router                           |
 | `drupal-core`        | 80       | Direct bind, no ddev-router                           |
 | `drupal-contrib`     | 8080     | Direct bind, no ddev-router                           |
 | `freeform`           | 8080     | ddev-router on 8080, Host-header dispatch per project |
@@ -61,7 +60,6 @@ Run these before every push to avoid CI failures:
 terraform fmt -recursive
 
 # Terraform validation for each template you touched
-terraform -chdir=user-defined-web init -backend=false && terraform -chdir=user-defined-web validate
 terraform -chdir=drupal-core init -backend=false && terraform -chdir=drupal-core validate
 terraform -chdir=drupal-contrib init -backend=false && terraform -chdir=drupal-contrib validate
 terraform -chdir=freeform init -backend=false && terraform -chdir=freeform validate
@@ -102,29 +100,25 @@ To run a command in a specific directory without a shell wrapper, use `env -C <d
 
 ### Template Management
 ```bash
-# Push all four templates (no image build — use when only HCL changed)
+# Push all templates (no image build — use when only HCL changed)
 make push-all-templates
 
 # Push a single template
 make push-template-drupal-core
 make push-template-drupal-contrib
 make push-template-freeform
-make push-template-user-defined-web
-
-# Build image + push image + push template (user-defined-web only)
-make deploy-user-defined-web
 
 # List all templates
 coder templates list
 
 # Delete template (must delete workspaces first)
-coder templates delete user-defined-web --yes
+coder templates delete <template-name> --yes
 ```
 
 ### Workspace Management
 ```bash
 # Create workspace
-coder create --template user-defined-web <workspace-name> --yes
+coder create --template freeform <workspace-name> --yes
 
 # List workspaces
 coder list
@@ -150,7 +144,7 @@ make build-and-push
 
 # Update version for new releases
 echo "v0.2" > VERSION
-make deploy-user-defined-web
+make deploy-drupal-core
 ```
 
 ### DDEV Commands (within workspace)
@@ -224,7 +218,7 @@ The template uses **Sysbox-runc** instead of privileged Docker containers:
 **Critical:** The `/home/coder` volume mount hides image contents, so files must be copied from `/home/coder-files/` during startup script execution.
 
 ### Startup Script Flow
-The startup script is inline in `user-defined-web/template.tf` (inside the `coder_agent` resource's `startup_script` field). It performs:
+The startup script is inline in each template's `template.tf` (e.g. `freeform/template.tf`, inside the `coder_agent` resource's `startup_script` field). It performs:
 1. **Permissions** - Fix ownership of `/home/coder` volume
 2. **Home initialization** - Copy skeleton files if first run
 3. **Git SSH setup** - Configure Coder's GitSSH wrapper
@@ -242,7 +236,7 @@ The startup script is inline in `user-defined-web/template.tf` (inside the `code
 - **Isolation**: Each workspace gets separate host directory and Docker volume
 
 ### Terraform Variables
-Key template variables in `user-defined-web/template.tf`:
+Key template variables (e.g. in `freeform/template.tf`):
 - `workspace_image_registry` - Docker registry URL (default: `index.docker.io/ddev/coder-ddev`)
 - `image_version` - Image tag (default: read from `VERSION` file or `v0.1`)
 - `cpu` / `memory` - Resource limits (defaults: 4 cores, 8GB RAM)
@@ -350,7 +344,6 @@ Additional logs in workspace:
 
 ## Important Code Locations
 
-- `user-defined-web/template.tf` - Generic user-defined workspace template
 - `drupal-core/template.tf` - Drupal core development template (most actively developed)
 - `drupal-contrib/template.tf` - Drupal contributed module development template
 - `freeform/template.tf` - Multi-project freeform workspace template (keeps ddev-router)

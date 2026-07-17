@@ -45,7 +45,7 @@ set -euo pipefail
 CI_OWNER="${CI_OWNER:-ci-bot}"
 AGE_MINUTES="${AGE_MINUTES:-20}"
 DRY_RUN="${DRY_RUN:-true}"
-TEMPLATES="${TEMPLATES:-drupal-core drupal-contrib freeform user-defined-web}"
+TEMPLATES="${TEMPLATES:-drupal-core drupal-contrib freeform}"
 
 for arg in "$@"; do
   case "$arg" in
