@@ -218,9 +218,15 @@ send_notice_email() {
   local to_email="$1" owner_name="$2" workspace_name="$3" last_used_human="$4" delete_date_human="$5"
 
   local subject="Action needed: your coder.ddev.com workspace \"${workspace_name}\" will be deleted on ${delete_date_human}"
+  # `read -d ''` rather than `body=$(cat <<EOF ... EOF)`: bash 3.2 (macOS's
+  # default /bin/bash) mis-parses a heredoc nested inside a $(...) command
+  # substitution whenever the body has an odd number of apostrophes,
+  # failing with "unexpected EOF while looking for matching `''" for the
+  # *entire script*. This form has no command substitution around the
+  # heredoc, so the bug never triggers. `read -d ''` always returns
+  # non-zero at end-of-input, hence `|| true` under `set -e`.
   local body
-  body=$(
-    cat <<EOF
+  read -r -d '' body <<EOF || true
 Hi ${owner_name},
 
 Your DDEV Coder workspace "${workspace_name}" on coder.ddev.com hasn't been
@@ -250,7 +256,6 @@ usable for everyone.
 
 — The DDEV team
 EOF
-  )
 
   if [[ "$FORCE" == true ]]; then
     if ! curl -sf --user "api:${MAILGUN_API_KEY}" \
