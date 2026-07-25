@@ -84,6 +84,16 @@ class CoderWebhookHandler(BaseHTTPRequestHandler):
                 initiator = labels.get("initiator", "?")
                 reason = labels.get("reason", "")
                 message = f"**Workspace deleted:** `{owner}/{workspace}` by {initiator}" + (f" ({reason})" if reason and reason != "initiated by user" else "")
+            elif event == "Workspace Deletion Threatened":
+                # Not a real Coder notification — scripts/workspace-lifecycle-cleanup.sh
+                # posts this synthetic event directly in the same envelope shape
+                # when it emails an owner that their idle workspace will be
+                # deleted soon.
+                owner = labels.get("workspace_owner_username", "?")
+                workspace = labels.get("workspace", "?")
+                idle_days = labels.get("idle_days", "?")
+                delete_date = labels.get("delete_date", "?")
+                message = f"**Workspace deletion threatened:** `{owner}/{workspace}` idle {idle_days}d — will be deleted {delete_date} unless used"
             elif "User account" in event:
                 # labels vary; fall back to title which contains the username
                 message = f"**{data.get('title', event)}**"

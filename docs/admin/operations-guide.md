@@ -426,6 +426,8 @@ Policy per workspace, based on `last_used_at`:
 - **7 more days idle after the notice** — the workspace is deleted with `coder delete --yes`.
 - If the owner uses the workspace again before deletion, the pending notice is cleared automatically.
 
+Both the notice and the eventual deletion are visible in Discord if [coder-discord-relay](./server-setup.md#step-11-set-up-discord-notifications) is set up: the notice email triggers a direct **Workspace Deletion Threatened** post to the relay (`DISCORD_RELAY_URL`, best-effort — a missing or unreachable relay never blocks the email), and the later `coder delete` call is picked up natively as Coder's own **Workspace Deleted** event, same as any other deletion.
+
 State (which workspaces have been notified and when) is tracked in a local JSON file on the server (`/var/lib/workspace-lifecycle-cleanup/state.json` by default) — it never needs to leave the box, so there's no commit-back-to-git step to manage.
 
 ```bash
@@ -459,10 +461,12 @@ On the server, all of this is supplied via `/etc/workspace-lifecycle-cleanup.env
 The script needs to list *every* user's workspaces (`coder list --all`) and delete workspaces it doesn't own. On this deployment (no Premium license, so no custom RBAC roles), `owner` is the only built-in role that can do both — there's no narrower "workspace admin" role available. That makes this token effectively full site-admin, so it's provisioned as a dedicated non-human account rather than a personal token:
 
 ```bash
-# 0. Raise the server's max token lifetime first — Coder caps --lifetime at
-#    CODER_MAX_TOKEN_LIFETIME (default 168h/1 week), which is too short for an
-#    unattended daily timer. Add to /etc/coder.d/coder.env, then `sudo systemctl restart coder`:
-#      CODER_MAX_TOKEN_LIFETIME=8760h
+# 0. Raise the server's max *admin* token lifetime first — Coder caps --lifetime
+#    for owner-role accounts at CODER_MAX_ADMIN_TOKEN_LIFETIME (default 168h/1
+#    week; the much larger CODER_MAX_TOKEN_LIFETIME default doesn't apply to
+#    owner accounts), which is too short for an unattended daily timer. Add to
+#    /etc/coder.d/coder.env, then `sudo systemctl restart coder`:
+#      CODER_MAX_ADMIN_TOKEN_LIFETIME=8760h
 
 # 1. Create a machine identity — no GitHub OAuth login required
 coder users create --username workspace-janitor \

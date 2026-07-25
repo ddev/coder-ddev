@@ -1084,6 +1084,7 @@ This should post a message to your Discord channel.
 - Workspace created/deleted messages show `<owner>/<workspace>`
 - Coder fans a single event out to one webhook call per recipient (e.g. one per user admin); the relay dedupes identical `notification_name`+labels pairs within a 30-second window so this only posts once to Discord
 - If you regenerate the Discord webhook URL, update `/etc/coder-discord-relay.env` and restart the relay
+- `scripts/workspace-lifecycle-cleanup.sh` also posts directly to this relay (`http://localhost:9876/` by default) whenever it emails an owner about an idle workspace, so threatened deletions show up in Discord the same way actual `coder delete` calls already do via **Workspace Deleted** — see [Automated Idle Workspace Cleanup](./operations-guide.md#automated-idle-workspace-cleanup)
 
 ---
 
@@ -1234,8 +1235,6 @@ Get a fresh registration token for each batch from **GitHub → Settings → Act
 
 #### 2. Create the CI bot user on staging
 
-`--lifetime 8760h` requires `CODER_MAX_TOKEN_LIFETIME=8760h` in `/etc/coder.d/coder.env` on staging-coder.ddev.com (Coder's default cap is `168h`) — see [Step 14](#step-14-set-up-workspace-lifecycle-cleanup) for the same setting on production. Restart Coder after adding it before running the commands below.
-
 ```bash
 coder users create --email ci@staging-coder.ddev.com --username ci-bot --login-type none
 coder users edit-roles ci-bot --roles template-admin --yes
@@ -1284,12 +1283,12 @@ Stopped workspaces don't free their Docker volumes — each Sysbox workspace kee
 
 This is set up on **coder.ddev.com (production) only**. staging-coder.ddev.com doesn't need it: its workspaces are almost entirely owned by `ci-bot` (already excluded via the default `EXCLUDE_OWNERS`), it isn't sending real notices to real people, and `./scripts/workspace-lifecycle-cleanup.sh` (no `--force`) already gives a safe dry-run preview against production itself when you need to sanity-check the policy — no separate staging deployment adds coverage. If that changes (e.g. staging starts accumulating real user workspaces), repeat these steps there with its own `workspace-janitor` account/token and a verified Mailgun domain for staging.
 
-### Raise the server's max token lifetime
+### Raise the server's max admin token lifetime
 
-Coder caps `coder tokens create --lifetime` at `CODER_MAX_TOKEN_LIFETIME` (default `168h`, i.e. 1 week). A weekly-rotation requirement isn't workable for an unattended daily timer, so raise the cap before minting the janitor's token. Add to `/etc/coder.d/coder.env`:
+`workspace-janitor` is granted the `owner` role below, so its token lifetime is capped by `CODER_MAX_ADMIN_TOKEN_LIFETIME` (default `168h`, i.e. 1 week) — not `CODER_MAX_TOKEN_LIFETIME` (default `876600h`/100 years), which only bounds non-admin tokens. A weekly-rotation requirement isn't workable for an unattended daily timer, so raise the admin cap before minting the janitor's token. Add to `/etc/coder.d/coder.env`:
 
 ```bash
-CODER_MAX_TOKEN_LIFETIME=8760h
+CODER_MAX_ADMIN_TOKEN_LIFETIME=8760h
 ```
 
 Then restart Coder:

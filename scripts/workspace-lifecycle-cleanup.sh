@@ -65,6 +65,10 @@
 #   MAILGUN_FROM        From header (default: "DDEV Coder <support@ddev.com>")
 #   ANNOUNCE_URL        Blog post explaining the auth change
 #                       (default: https://ddev.com/blog/coder-ddev-com-announcement/)
+#   DISCORD_RELAY_URL   coder-discord-relay endpoint to notify when a notice
+#                       email goes out (default: http://localhost:9876/; set
+#                       empty to disable). Best-effort — a failed or missing
+#                       relay never blocks the notice email itself.
 #
 # Usage:
 #   ./scripts/workspace-lifecycle-cleanup.sh                            # dry run
@@ -81,6 +85,7 @@ STATE_FILE="${STATE_FILE:-scripts/state/workspace-lifecycle-state.json}"
 MAILGUN_BASE_URL="${MAILGUN_BASE_URL:-https://api.mailgun.net/v3}"
 MAILGUN_FROM="${MAILGUN_FROM:-DDEV Coder <support@ddev.com>}"
 ANNOUNCE_URL="${ANNOUNCE_URL:-https://ddev.com/blog/coder-ddev-com-announcement/}"
+DISCORD_RELAY_URL="${DISCORD_RELAY_URL-http://localhost:9876/}"
 FORCE=false
 PURGE_IDLE_DAYS=""
 
@@ -304,6 +309,29 @@ EOF
   fi
 }
 
+# Best-effort: tell coder-discord-relay a notice went out, so admins see
+# threatened deletions in Discord the same way they already see actual
+# `coder delete` calls (via Coder's native "Workspace Deleted" event). A
+# missing or unreachable relay must never fail the run — it's informational.
+post_discord_notice() {
+  local owner_name="$1" workspace_name="$2" idle_days="$3" delete_date_human="$4"
+
+  [[ "$FORCE" == true && -n "$DISCORD_RELAY_URL" ]] || return 0
+
+  local payload
+  payload=$(jq -n \
+    --arg owner "$owner_name" --arg ws "$workspace_name" \
+    --arg days "$idle_days" --arg date "$delete_date_human" \
+    '{payload: {notification_name: "Workspace Deletion Threatened",
+                labels: {workspace_owner_username: $owner, workspace: $ws,
+                         idle_days: $days, delete_date: $date}}}')
+
+  if ! curl -sf -X POST -H "Content-Type: application/json" \
+    -d "$payload" "$DISCORD_RELAY_URL" >/dev/null; then
+    echo "  WARN: Discord relay notice for ${owner_name}/${workspace_name} failed (non-fatal)" >&2
+  fi
+}
+
 notified=0 revived=0 deleted=0 pending=0 kept=0 pruned=0 failed=0
 notified_details=() revived_details=() deleted_details=() pending_details=() pruned_details=() failed_details=()
 
@@ -396,6 +424,7 @@ while IFS=$'\t' read -r id name owner last_used_at; do
     if send_notice_email "$owner_email" "${owner_display:-$owner}" "$name" "$last_used_human" "$delete_date_human"; then
       notified=$((notified + 1))
       notified_details+=("$owner/$name <$owner_email> — idle ${age_days}d, last used $last_used_human, deletes $delete_date_human unless used")
+      post_discord_notice "$owner" "$name" "$age_days" "$delete_date_human"
       state_json=$(echo "$state_json" | jq --arg id "$id" --arg at "$(epoch_to_iso "$now")" --arg name "$name" --arg owner "$owner" \
         '.[$id] = {notified_at: $at, name: $name, owner: $owner}')
       persist_state
