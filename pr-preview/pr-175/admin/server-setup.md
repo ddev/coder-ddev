@@ -840,15 +840,11 @@ Quick summary:
 git clone https://github.com/ddev/coder-ddev
 cd coder-ddev
 
-# Build the image, push it, and deploy all four templates
-make deploy-user-defined-web
-make push-template-drupal-core
-make push-template-drupal-contrib
-make push-template-freeform
+# Build the image, push it, and deploy all three templates
+make deploy-all
 ```
 
-This deploys four templates:
-- **user-defined-web** — general-purpose DDEV workspace; users configure their own project type
+This deploys three templates:
 - **drupal-core** — automated Drupal core development environment; clones Drupal core, installs the site, and sets up the [amateescu/ddev-drupal-dev](https://github.com/amateescu/ddev-drupal-dev) add-on (see Step 10 for the recommended seed cache setup)
 - **drupal-contrib** — automated environment for developing Drupal contrib modules and themes; uses the [ddev/ddev-drupal-contrib](https://github.com/ddev/ddev-drupal-contrib) add-on, which installs Drupal as a dev dependency and symlinks the module/theme into the web root
 - **freeform** — multi-project workspace: keeps ddev-router running so multiple DDEV projects can coexist in one workspace, each reachable at its own hostname via Host-header routing

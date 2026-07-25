@@ -111,11 +111,10 @@ gh workflow run push-image.yml --ref <branch>
 ### Using the Makefile
 
 ```bash
-# Push all four templates (no image build — use when only HCL changed)
+# Push all templates (no image build — use when only HCL changed)
 make push-all-templates
 
 # Push a single template
-make push-template-user-defined-web
 make push-template-drupal-core
 make push-template-drupal-contrib
 make push-template-freeform
@@ -134,7 +133,6 @@ Set a default auto-stop so idle workspaces shut down and free resources. Run onc
 ```bash
 coder templates edit drupal-core      --default-ttl 2h --yes
 coder templates edit drupal-contrib   --default-ttl 2h --yes
-coder templates edit user-defined-web --default-ttl 2h --yes
 coder templates edit freeform         --default-ttl 2h --yes
 ```
 
@@ -142,7 +140,7 @@ Users can override the TTL on their individual workspaces if needed.
 
 ### Template Configuration
 
-The template is defined in `user-defined-web/template.tf`. Key configuration parameters:
+The template is defined in `freeform/template.tf`. Key configuration parameters:
 
 ```hcl
 variable "workspace_image_registry" {
@@ -170,7 +168,7 @@ variable "docker_gid" {
 
 1. Update `workspace_image_registry` in `template.tf`
 2. Configure `registry_username` and `registry_password` variables
-3. Push template: `coder templates push --directory user-defined-web user-defined-web --yes`
+3. Push template: `coder templates push --directory freeform freeform --yes`
 
 ## Version Management
 
@@ -184,11 +182,11 @@ The `VERSION` file in the root directory controls the image tag. The Makefile au
 # 1. Update VERSION file
 echo "v0.7" > VERSION
 
-# 2. Build, push image, and push template (VERSION is synced automatically)
-make deploy-user-defined-web
+# 2. Build image, push image, and push template (VERSION is synced automatically)
+make build-and-push && make push-template-freeform
 
 # Or without cache for clean build
-make deploy-user-defined-web-no-cache
+make build-and-push-no-cache && make push-template-freeform
 ```
 
 ## Managing Workspaces
@@ -198,7 +196,7 @@ make deploy-user-defined-web-no-cache
 **Via Web UI:**
 1. Log into Coder dashboard
 2. Click "Create Workspace"
-3. Select "user-defined-web" template
+3. Select "freeform" template
 4. Enter workspace name
 5. Configure parameters (optional: CPU, memory)
 6. Click "Create Workspace"
@@ -206,10 +204,10 @@ make deploy-user-defined-web-no-cache
 **Via CLI:**
 ```bash
 # Create with defaults
-coder create --template user-defined-web my-workspace --yes
+coder create --template freeform my-workspace --yes
 
 # Create with custom parameters
-coder create --template user-defined-web my-workspace \
+coder create --template freeform my-workspace \
   --parameter cpu=8 \
   --parameter memory=16 \
   --yes
@@ -222,7 +220,7 @@ coder create --template user-defined-web my-workspace \
 coder list
 
 # List workspaces for specific template
-coder list --template user-defined-web
+coder list --template freeform
 
 # Show detailed workspace info
 coder show my-workspace
@@ -287,10 +285,10 @@ If the provisioner doesn't run (e.g. Terraform error, or directories orphaned be
 
 ```bash
 # 1. Edit template.tf
-vim user-defined-web/template.tf
+vim freeform/template.tf
 
 # 2. Push updated template
-make push-template-user-defined-web
+make push-template-freeform
 ```
 
 ### Updating Docker Image
@@ -300,8 +298,9 @@ make push-template-user-defined-web
 # 2. Increment version (template reads this automatically)
 echo "v0.7" > VERSION
 
-# 3. Build and deploy
-make deploy-user-defined-web
+# 3. Build and push the image, then push the templates that use it
+make build-and-push
+make push-all-templates
 
 # Users must rebuild workspaces to get new Docker image
 ```
@@ -336,8 +335,8 @@ If you push again with `ACTIVATE=true` (the default) rather than using `promote`
 
 ```bash
 # Revert to previous template version
-git checkout <previous-commit> user-defined-web/template.tf
-coder templates push --directory user-defined-web user-defined-web --yes
+git checkout <previous-commit> freeform/template.tf
+coder templates push --directory freeform freeform --yes
 
 # Users on old version are unaffected
 # Users can update to rollback version via: coder update <workspace>
@@ -514,7 +513,7 @@ git tag -a v0.1 -m "Release v0.1"
 git push origin v0.1
 
 # Track changes
-git log --oneline user-defined-web/template.tf
+git log --oneline freeform/template.tf
 ```
 
 ### Monitoring
@@ -608,8 +607,8 @@ Monitor resource usage and adjust template defaults accordingly.
 
 ### Template Naming
 
-- Use clear, descriptive names: `user-defined-web`, `ddev-developer`
-- Version templates for major changes: `user-defined-web-v2`
+- Use clear, descriptive names: `drupal-core`, `ddev-developer`
+- Version templates for major changes: `drupal-core-v2`
 - Avoid generic names: `template1`, `test`
 
 ### Image Management

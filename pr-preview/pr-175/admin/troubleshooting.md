@@ -23,7 +23,7 @@ This guide covers common issues with the DDEV Coder template and their solutions
 **Check:**
 ```bash
 # Validate Terraform syntax
-cd user-defined-web
+cd freeform
 terraform init
 terraform validate
 
@@ -40,15 +40,15 @@ terraform fmt -check
 **Solution:**
 ```bash
 # Fix syntax errors
-terraform fmt user-defined-web/template.tf
+terraform fmt freeform/template.tf
 
 # Test locally
-cd user-defined-web
+cd freeform
 terraform init
 terraform plan
 
 # Push with verbose output
-coder templates push --directory user-defined-web user-defined-web --yes --verbose
+coder templates push --directory freeform freeform --yes --verbose
 ```
 
 ### Template Not Visible to Users
@@ -61,7 +61,7 @@ coder templates push --directory user-defined-web user-defined-web --yes --verbo
 coder templates list
 
 # Check template organization
-coder templates list -o json | jq '.[] | select(.name=="user-defined-web") | .organization_name'
+coder templates list -o json | jq '.[] | select(.name=="freeform") | .organization_name'
 
 # Check user's organization
 coder users show <username> --json | grep organization
@@ -85,13 +85,13 @@ docker pull ddev/coder-ddev:v0.1
 docker login
 
 # Check template image reference
-grep workspace_image_registry user-defined-web/template.tf
+grep workspace_image_registry freeform/template.tf
 ```
 
 **Solution:**
 ```bash
 # For private registries, configure template variables:
-coder create --template user-defined-web my-workspace \
+coder create --template freeform my-workspace \
   --parameter registry_username=myuser \
   --parameter registry_password=mypass \
   --yes
@@ -143,7 +143,7 @@ df -h /coder-workspaces/
 
 **Symptom:** Startup script fails with permission or command errors
 
-**Check startup script:** `user-defined-web/scripts/startup.sh`
+**Check startup script:** inline in the `startup_script` field of `freeform/template.tf` (the `coder_agent` resource)
 
 **Common issues:**
 
@@ -200,7 +200,7 @@ docker ps -a | grep coder
 ```bash
 # Delete and recreate workspace
 coder delete my-workspace --yes
-coder create --template user-defined-web my-workspace --yes
+coder create --template freeform my-workspace --yes
 
 # Or force restart
 docker restart coder-<workspace-id>
@@ -248,14 +248,14 @@ apt-get install -y jq ./sysbox-ce_${SYSBOX_VERSION}-0.linux_amd64.deb
 **Cause 2: Container not using Sysbox runtime**
 ```bash
 # Check template.tf
-grep runtime user-defined-web/template.tf
+grep runtime freeform/template.tf
 # Should be: runtime = "sysbox-runc"
 ```
 
 **Cause 3: Missing security profiles**
 ```bash
 # Check template.tf
-grep security_opt user-defined-web/template.tf
+grep security_opt freeform/template.tf
 # Should include:
 # security_opt = ["apparmor:unconfined", "seccomp:unconfined"]
 ```
@@ -273,11 +273,11 @@ docker volume ls | grep dind-cache
 **Solution:**
 ```bash
 # Fix template.tf and redeploy
-coder templates push --directory user-defined-web user-defined-web --yes
+coder templates push --directory freeform freeform --yes
 
 # Recreate workspace
 coder delete my-workspace --yes
-coder create --template user-defined-web my-workspace --yes
+coder create --template freeform my-workspace --yes
 ```
 
 ### Docker Daemon Crashes
@@ -304,7 +304,7 @@ cat /tmp/dockerd.log
 # To increase resources, delete and recreate workspace with higher memory
 # (Back up data first: coder ssh my-workspace -- tar -czf ~/backup.tar.gz ~/projects)
 coder delete my-workspace --yes
-coder create --template user-defined-web my-workspace --parameter memory=16 --yes
+coder create --template freeform my-workspace --parameter memory=16 --yes
 
 # Clean up Docker resources
 docker system prune -a --volumes -f
@@ -423,7 +423,7 @@ df -h
 # To increase memory, delete and recreate workspace with higher memory
 # (Back up data first: ddev export-db --file=dump.sql.gz)
 coder delete my-workspace --yes
-coder create --template user-defined-web my-workspace --parameter memory=16 --yes
+coder create --template freeform my-workspace --parameter memory=16 --yes
 
 # Split large imports
 gunzip < dump.sql.gz | split -l 50000 - split_
@@ -719,7 +719,7 @@ docker stats $(docker ps -q --filter name=ddev)
 # To increase resources, delete and recreate workspace
 # (Back up data first: coder ssh my-workspace -- tar -czf ~/backup.tar.gz ~/projects)
 coder delete my-workspace --yes
-coder create --template user-defined-web my-workspace --parameter memory=16 --yes
+coder create --template freeform my-workspace --parameter memory=16 --yes
 
 # Use NFS for file sharing (if Mutagen is slow)
 # Edit .ddev/config.yaml:
@@ -829,7 +829,7 @@ scp my-workspace.coder:~/backup.tar.gz ./
 
 # 3. Delete and recreate workspace
 coder delete my-workspace --yes
-coder create --template user-defined-web my-workspace --yes
+coder create --template freeform my-workspace --yes
 
 # 4. Restore data
 scp ./backup.tar.gz my-workspace.coder:~/
@@ -889,7 +889,7 @@ When reporting issues, provide:
 
 3. **Template version:**
    ```bash
-   grep image_version user-defined-web/template.tf
+   grep image_version freeform/template.tf
    cat VERSION
    ```
 

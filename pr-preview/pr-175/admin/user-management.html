@@ -136,9 +136,9 @@ coder organizations members add &lt;org-name&gt; &lt;username&gt;
 
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Deploy template to specific organization</span>
 coder templates push <span class="se">\</span>
-  <span class="nt">--directory</span> user-defined-web <span class="se">\</span>
+  <span class="nt">--directory</span> freeform <span class="se">\</span>
   <span class="nt">--org</span> &lt;org-name&gt; <span class="se">\</span>
-  user-defined-web <span class="se">\</span>
+  freeform <span class="se">\</span>
   <span class="nt">--yes</span>
 
 <span class="c"># Users can only create workspaces from templates in their organization</span>
@@ -178,7 +178,7 @@ coder templates push <span class="se">\</span>
 
 <p>The DDEV template automatically configures Git SSH via Coder’s GitSSH wrapper:</p>
 
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># In workspace startup script (user-defined-web/scripts/startup.sh):</span>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># In the workspace startup script (inline in freeform/template.tf):</span>
 git config <span class="nt">--global</span> core.sshCommand <span class="s2">"</span><span class="nv">$GIT_SSH_COMMAND</span><span class="s2">"</span>
 </code></pre></div></div>
 
@@ -314,7 +314,7 @@ coder list
 
 <p><strong>Template-level defaults:</strong></p>
 
-<p>Edit <code class="language-plaintext highlighter-rouge">user-defined-web/template.tf</code>:</p>
+<p>Edit <code class="language-plaintext highlighter-rouge">freeform/template.tf</code>:</p>
 <div class="language-hcl highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">variable</span> <span class="s2">"cpu"</span> <span class="p">{</span>
   <span class="nx">default</span>     <span class="p">=</span> <span class="mi">4</span>
   <span class="nx">validation</span> <span class="p">{</span>

@@ -406,7 +406,7 @@ ddev start
 
 <p><strong>Coder DDEV onboarding:</strong></p>
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Developer's first day</span>
-coder create <span class="nt">--template</span> user-defined-web my-workspace <span class="nt">--yes</span>
+coder create <span class="nt">--template</span> freeform my-workspace <span class="nt">--yes</span>
 <span class="c"># Done!</span>
 </code></pre></div></div>
 
@@ -591,7 +591,7 @@ coder create <span class="nt">--template</span> user-defined-web my-workspace <s
   <li>Choose cloud provider (AWS, GCP, Azure, on-prem)</li>
   <li>Install Coder server</li>
   <li>Install Sysbox on agent nodes</li>
-  <li>Build and deploy user-defined-web template</li>
+  <li>Build and deploy the freeform template</li>
 </ul>
 
 <p><strong>3. Pilot:</strong></p>
@@ -663,7 +663,7 @@ git push
 Access: https://project.ddev.site
 
 <span class="gu">## Coder DDEV</span>
-<span class="p">1.</span> Create workspace: <span class="sb">`coder create --template user-defined-web my-workspace`</span>
+<span class="p">1.</span> Create workspace: <span class="sb">`coder create --template freeform my-workspace`</span>
 <span class="p">2.</span> Clone project: <span class="sb">`git clone ...`</span>
 <span class="p">3.</span> Start DDEV: <span class="sb">`ddev start`</span>
 <span class="p">4.</span> Access via Coder UI port forwarding (port 80/443)

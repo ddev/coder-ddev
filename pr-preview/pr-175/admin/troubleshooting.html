@@ -43,7 +43,7 @@
 
 <p><strong>Check:</strong></p>
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Validate Terraform syntax</span>
-<span class="nb">cd </span>user-defined-web
+<span class="nb">cd </span>freeform
 terraform init
 terraform validate
 
@@ -61,15 +61,15 @@ terraform <span class="nb">fmt</span> <span class="nt">-check</span>
 
 <p><strong>Solution:</strong></p>
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Fix syntax errors</span>
-terraform <span class="nb">fmt </span>user-defined-web/template.tf
+terraform <span class="nb">fmt </span>freeform/template.tf
 
 <span class="c"># Test locally</span>
-<span class="nb">cd </span>user-defined-web
+<span class="nb">cd </span>freeform
 terraform init
 terraform plan
 
 <span class="c"># Push with verbose output</span>
-coder templates push <span class="nt">--directory</span> user-defined-web user-defined-web <span class="nt">--yes</span> <span class="nt">--verbose</span>
+coder templates push <span class="nt">--directory</span> freeform freeform <span class="nt">--yes</span> <span class="nt">--verbose</span>
 </code></pre></div></div>
 
 <h3 id="template-not-visible-to-users">Template Not Visible to Users</h3>
@@ -81,7 +81,7 @@ coder templates push <span class="nt">--directory</span> user-defined-web user-d
 coder templates list
 
 <span class="c"># Check template organization</span>
-coder templates list <span class="nt">-o</span> json | jq <span class="s1">'.[] | select(.name=="user-defined-web") | .organization_name'</span>
+coder templates list <span class="nt">-o</span> json | jq <span class="s1">'.[] | select(.name=="freeform") | .organization_name'</span>
 
 <span class="c"># Check user's organization</span>
 coder <span class="nb">users </span>show &lt;username&gt; <span class="nt">--json</span> | <span class="nb">grep </span>organization
@@ -106,12 +106,12 @@ docker pull ddev/coder-ddev:v0.1
 docker login
 
 <span class="c"># Check template image reference</span>
-<span class="nb">grep </span>workspace_image_registry user-defined-web/template.tf
+<span class="nb">grep </span>workspace_image_registry freeform/template.tf
 </code></pre></div></div>
 
 <p><strong>Solution:</strong></p>
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># For private registries, configure template variables:</span>
-coder create <span class="nt">--template</span> user-defined-web my-workspace <span class="se">\</span>
+coder create <span class="nt">--template</span> freeform my-workspace <span class="se">\</span>
   <span class="nt">--parameter</span> <span class="nv">registry_username</span><span class="o">=</span>myuser <span class="se">\</span>
   <span class="nt">--parameter</span> <span class="nv">registry_password</span><span class="o">=</span>mypass <span class="se">\</span>
   <span class="nt">--yes</span>
@@ -163,7 +163,7 @@ docker stats
 
 <p><strong>Symptom:</strong> Startup script fails with permission or command errors</p>
 
-<p><strong>Check startup script:</strong> <code class="language-plaintext highlighter-rouge">user-defined-web/scripts/startup.sh</code></p>
+<p><strong>Check startup script:</strong> inline in the <code class="language-plaintext highlighter-rouge">startup_script</code> field of <code class="language-plaintext highlighter-rouge">freeform/template.tf</code> (the <code class="language-plaintext highlighter-rouge">coder_agent</code> resource)</p>
 
 <p><strong>Common issues:</strong></p>
 
@@ -212,7 +212,7 @@ docker ps <span class="nt">-a</span> | <span class="nb">grep </span>coder
 <p><strong>Solution:</strong></p>
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Delete and recreate workspace</span>
 coder delete my-workspace <span class="nt">--yes</span>
-coder create <span class="nt">--template</span> user-defined-web my-workspace <span class="nt">--yes</span>
+coder create <span class="nt">--template</span> freeform my-workspace <span class="nt">--yes</span>
 
 <span class="c"># Or force restart</span>
 docker restart coder-&lt;workspace-id&gt;
@@ -257,13 +257,13 @@ apt-get <span class="nb">install</span> <span class="nt">-y</span> jq ./sysbox-c
 
 <p><strong>Cause 2: Container not using Sysbox runtime</strong></p>
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Check template.tf</span>
-<span class="nb">grep </span>runtime user-defined-web/template.tf
+<span class="nb">grep </span>runtime freeform/template.tf
 <span class="c"># Should be: runtime = "sysbox-runc"</span>
 </code></pre></div></div>
 
 <p><strong>Cause 3: Missing security profiles</strong></p>
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Check template.tf</span>
-<span class="nb">grep </span>security_opt user-defined-web/template.tf
+<span class="nb">grep </span>security_opt freeform/template.tf
 <span class="c"># Should include:</span>
 <span class="c"># security_opt = ["apparmor:unconfined", "seccomp:unconfined"]</span>
 </code></pre></div></div>
@@ -279,11 +279,11 @@ docker volume <span class="nb">ls</span> | <span class="nb">grep </span>dind-cac
 
 <p><strong>Solution:</strong></p>
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Fix template.tf and redeploy</span>
-coder templates push <span class="nt">--directory</span> user-defined-web user-defined-web <span class="nt">--yes</span>
+coder templates push <span class="nt">--directory</span> freeform freeform <span class="nt">--yes</span>
 
 <span class="c"># Recreate workspace</span>
 coder delete my-workspace <span class="nt">--yes</span>
-coder create <span class="nt">--template</span> user-defined-web my-workspace <span class="nt">--yes</span>
+coder create <span class="nt">--template</span> freeform my-workspace <span class="nt">--yes</span>
 </code></pre></div></div>
 
 <h3 id="docker-daemon-crashes">Docker Daemon Crashes</h3>
@@ -308,7 +308,7 @@ dmesg | <span class="nb">grep </span>oom
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># To increase resources, delete and recreate workspace with higher memory</span>
 <span class="c"># (Back up data first: coder ssh my-workspace -- tar -czf ~/backup.tar.gz ~/projects)</span>
 coder delete my-workspace <span class="nt">--yes</span>
-coder create <span class="nt">--template</span> user-defined-web my-workspace <span class="nt">--parameter</span> <span class="nv">memory</span><span class="o">=</span>16 <span class="nt">--yes</span>
+coder create <span class="nt">--template</span> freeform my-workspace <span class="nt">--parameter</span> <span class="nv">memory</span><span class="o">=</span>16 <span class="nt">--yes</span>
 
 <span class="c"># Clean up Docker resources</span>
 docker system prune <span class="nt">-a</span> <span class="nt">--volumes</span> <span class="nt">-f</span>
@@ -417,7 +417,7 @@ ddev logs db
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># To increase memory, delete and recreate workspace with higher memory</span>
 <span class="c"># (Back up data first: ddev export-db --file=dump.sql.gz)</span>
 coder delete my-workspace <span class="nt">--yes</span>
-coder create <span class="nt">--template</span> user-defined-web my-workspace <span class="nt">--parameter</span> <span class="nv">memory</span><span class="o">=</span>16 <span class="nt">--yes</span>
+coder create <span class="nt">--template</span> freeform my-workspace <span class="nt">--parameter</span> <span class="nv">memory</span><span class="o">=</span>16 <span class="nt">--yes</span>
 
 <span class="c"># Split large imports</span>
 <span class="nb">gunzip</span> &lt; dump.sql.gz | <span class="nb">split</span> <span class="nt">-l</span> 50000 - split_
@@ -710,7 +710,7 @@ docker stats <span class="si">$(</span>docker ps <span class="nt">-q</span> <spa
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># To increase resources, delete and recreate workspace</span>
 <span class="c"># (Back up data first: coder ssh my-workspace -- tar -czf ~/backup.tar.gz ~/projects)</span>
 coder delete my-workspace <span class="nt">--yes</span>
-coder create <span class="nt">--template</span> user-defined-web my-workspace <span class="nt">--parameter</span> <span class="nv">memory</span><span class="o">=</span>16 <span class="nt">--yes</span>
+coder create <span class="nt">--template</span> freeform my-workspace <span class="nt">--parameter</span> <span class="nv">memory</span><span class="o">=</span>16 <span class="nt">--yes</span>
 
 <span class="c"># Use NFS for file sharing (if Mutagen is slow)</span>
 <span class="c"># Edit .ddev/config.yaml:</span>
@@ -852,7 +852,7 @@ scp my-workspace.coder:~/backup.tar.gz ./
 
 <span class="c"># 3. Delete and recreate workspace</span>
 coder delete my-workspace <span class="nt">--yes</span>
-coder create <span class="nt">--template</span> user-defined-web my-workspace <span class="nt">--yes</span>
+coder create <span class="nt">--template</span> freeform my-workspace <span class="nt">--yes</span>
 
 <span class="c"># 4. Restore data</span>
 scp ./backup.tar.gz my-workspace.coder:~/
@@ -907,7 +907,7 @@ docker ps  <span class="c"># verify healthy</span>
 </code></pre></div>    </div>
   </li>
   <li><strong>Template version:</strong>
-    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">grep </span>image_version user-defined-web/template.tf
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">grep </span>image_version freeform/template.tf
 <span class="nb">cat </span>VERSION
 </code></pre></div>    </div>
   </li>
