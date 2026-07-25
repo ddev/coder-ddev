@@ -426,6 +426,8 @@ Policy per workspace, based on `last_used_at`:
 - **7 more days idle after the notice** — the workspace is deleted with `coder delete --yes`.
 - If the owner uses the workspace again before deletion, the pending notice is cleared automatically.
 
+Both the notice and the eventual deletion are visible in Discord if [coder-discord-relay](./server-setup.md#step-11-set-up-discord-notifications) is set up: the notice email triggers a direct **Workspace Deletion Threatened** post to the relay (`DISCORD_RELAY_URL`, best-effort — a missing or unreachable relay never blocks the email), and the later `coder delete` call is picked up natively as Coder's own **Workspace Deleted** event, same as any other deletion.
+
 State (which workspaces have been notified and when) is tracked in a local JSON file on the server (`/var/lib/workspace-lifecycle-cleanup/state.json` by default) — it never needs to leave the box, so there's no commit-back-to-git step to manage.
 
 ```bash

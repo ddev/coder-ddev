@@ -1084,6 +1084,7 @@ This should post a message to your Discord channel.
 - Workspace created/deleted messages show `<owner>/<workspace>`
 - Coder fans a single event out to one webhook call per recipient (e.g. one per user admin); the relay dedupes identical `notification_name`+labels pairs within a 30-second window so this only posts once to Discord
 - If you regenerate the Discord webhook URL, update `/etc/coder-discord-relay.env` and restart the relay
+- `scripts/workspace-lifecycle-cleanup.sh` also posts directly to this relay (`http://localhost:9876/` by default) whenever it emails an owner about an idle workspace, so threatened deletions show up in Discord the same way actual `coder delete` calls already do via **Workspace Deleted** — see [Automated Idle Workspace Cleanup](./operations-guide.md#automated-idle-workspace-cleanup)
 
 ---
 
