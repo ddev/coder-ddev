@@ -922,12 +922,39 @@ WELCOME_STATIC
       if [ "$SETUP_FAILED" != "true" ]; then
         log_setup "Adding Drush to composer.local.json..."
         update_status "⏳ Drush install: In progress..."
+        _drush_ok=false
         if ddev composer require drush/drush >> "$SETUP_LOG" 2>&1; then
+          _drush_ok=true
+        else
+          # Drush's Guzzle constraint lags core's. Core main moved to
+          # guzzlehttp/guzzle ^8.0 on 2026-07-24 (drupal.org issue #3612544)
+          # while every Drush version still requires ^7.0, so a plain
+          # `composer require drush/drush` is unsatisfiable against Drupal 12
+          # HEAD. Guzzle 8 works with Drush at runtime, so retry with an inline
+          # alias presenting the locked Guzzle version as a 7.x one. Composer
+          # only accepts an exact version as an alias source, hence reading it
+          # from composer.lock. Remove this fallback once Drush ships Guzzle 8
+          # support (drush-ops/drush#6602).
+          _guzzle_ver=$(jq -r '.packages[] | select(.name == "guzzlehttp/guzzle") | .version' composer.lock 2>/dev/null || true)
+          case "$_guzzle_ver" in
+            8.*)
+              log_setup "Drush/Guzzle constraint conflict — retrying with guzzle $_guzzle_ver aliased as 7.99.0..."
+              if ddev composer require "guzzlehttp/guzzle:$_guzzle_ver as 7.99.0" drush/drush -W >> "$SETUP_LOG" 2>&1; then
+                _drush_ok=true
+              fi
+              ;;
+          esac
+        fi
+        if [ "$_drush_ok" = "true" ]; then
           log_setup "✓ Drush installed"
           update_status "✓ Drush install: Success"
         else
-          log_setup "⚠ Warning: Failed to install Drush (non-critical)"
-          update_status "⚠ Drush install: Warning"
+          # Every later step (site install, cache rebuild, uli) runs through
+          # Drush, so treat this as fatal instead of emitting a cascade of
+          # "drush is not available" errors.
+          log_setup "✗ Failed to install Drush — cannot install Drupal without it"
+          update_status "✗ Drush install: Failed"
+          SETUP_FAILED=true
         fi
       fi
     fi
