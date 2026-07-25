@@ -1258,6 +1258,7 @@ curl <span class="nt">-s</span> http://localhost:9876/
   <li>Workspace created/deleted messages show <code class="language-plaintext highlighter-rouge">&lt;owner&gt;/&lt;workspace&gt;</code></li>
   <li>Coder fans a single event out to one webhook call per recipient (e.g. one per user admin); the relay dedupes identical <code class="language-plaintext highlighter-rouge">notification_name</code>+labels pairs within a 30-second window so this only posts once to Discord</li>
   <li>If you regenerate the Discord webhook URL, update <code class="language-plaintext highlighter-rouge">/etc/coder-discord-relay.env</code> and restart the relay</li>
+  <li><code class="language-plaintext highlighter-rouge">scripts/workspace-lifecycle-cleanup.sh</code> also posts directly to this relay (<code class="language-plaintext highlighter-rouge">http://localhost:9876/</code> by default) whenever it emails an owner about an idle workspace, so threatened deletions show up in Discord the same way actual <code class="language-plaintext highlighter-rouge">coder delete</code> calls already do via <strong>Workspace Deleted</strong> — see <a href="/admin/operations-guide.html#automated-idle-workspace-cleanup">Automated Idle Workspace Cleanup</a></li>
 </ul>
 
 <hr />
@@ -1449,8 +1450,6 @@ coder provisioner start
 
 <h4 id="2-create-the-ci-bot-user-on-staging">2. Create the CI bot user on staging</h4>
 
-<p><code class="language-plaintext highlighter-rouge">--lifetime 8760h</code> requires <code class="language-plaintext highlighter-rouge">CODER_MAX_TOKEN_LIFETIME=8760h</code> in <code class="language-plaintext highlighter-rouge">/etc/coder.d/coder.env</code> on staging-coder.ddev.com (Coder’s default cap is <code class="language-plaintext highlighter-rouge">168h</code>) — see <a href="#step-14-set-up-workspace-lifecycle-cleanup">Step 14</a> for the same setting on production. Restart Coder after adding it before running the commands below.</p>
-
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>coder <span class="nb">users </span>create <span class="nt">--email</span> ci@staging-coder.ddev.com <span class="nt">--username</span> ci-bot <span class="nt">--login-type</span> none
 coder <span class="nb">users </span>edit-roles ci-bot <span class="nt">--roles</span> template-admin <span class="nt">--yes</span>
 coder tokens create <span class="nt">--user</span> ci-bot <span class="nt">--lifetime</span> 8760h
@@ -1525,11 +1524,11 @@ coder tokens create <span class="nt">--user</span> ci-bot <span class="nt">--lif
 
 <p>This is set up on <strong>coder.ddev.com (production) only</strong>. staging-coder.ddev.com doesn’t need it: its workspaces are almost entirely owned by <code class="language-plaintext highlighter-rouge">ci-bot</code> (already excluded via the default <code class="language-plaintext highlighter-rouge">EXCLUDE_OWNERS</code>), it isn’t sending real notices to real people, and <code class="language-plaintext highlighter-rouge">./scripts/workspace-lifecycle-cleanup.sh</code> (no <code class="language-plaintext highlighter-rouge">--force</code>) already gives a safe dry-run preview against production itself when you need to sanity-check the policy — no separate staging deployment adds coverage. If that changes (e.g. staging starts accumulating real user workspaces), repeat these steps there with its own <code class="language-plaintext highlighter-rouge">workspace-janitor</code> account/token and a verified Mailgun domain for staging.</p>
 
-<h3 id="raise-the-servers-max-token-lifetime">Raise the server’s max token lifetime</h3>
+<h3 id="raise-the-servers-max-admin-token-lifetime">Raise the server’s max admin token lifetime</h3>
 
-<p>Coder caps <code class="language-plaintext highlighter-rouge">coder tokens create --lifetime</code> at <code class="language-plaintext highlighter-rouge">CODER_MAX_TOKEN_LIFETIME</code> (default <code class="language-plaintext highlighter-rouge">168h</code>, i.e. 1 week). A weekly-rotation requirement isn’t workable for an unattended daily timer, so raise the cap before minting the janitor’s token. Add to <code class="language-plaintext highlighter-rouge">/etc/coder.d/coder.env</code>:</p>
+<p><code class="language-plaintext highlighter-rouge">workspace-janitor</code> is granted the <code class="language-plaintext highlighter-rouge">owner</code> role below, so its token lifetime is capped by <code class="language-plaintext highlighter-rouge">CODER_MAX_ADMIN_TOKEN_LIFETIME</code> (default <code class="language-plaintext highlighter-rouge">168h</code>, i.e. 1 week) — not <code class="language-plaintext highlighter-rouge">CODER_MAX_TOKEN_LIFETIME</code> (default <code class="language-plaintext highlighter-rouge">876600h</code>/100 years), which only bounds non-admin tokens. A weekly-rotation requirement isn’t workable for an unattended daily timer, so raise the admin cap before minting the janitor’s token. Add to <code class="language-plaintext highlighter-rouge">/etc/coder.d/coder.env</code>:</p>
 
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">CODER_MAX_TOKEN_LIFETIME</span><span class="o">=</span>8760h
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">CODER_MAX_ADMIN_TOKEN_LIFETIME</span><span class="o">=</span>8760h
 </code></pre></div></div>
 
 <p>Then restart Coder:</p>

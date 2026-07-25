@@ -450,6 +450,8 @@ docker system <span class="nb">df</span>
   <li>If the owner uses the workspace again before deletion, the pending notice is cleared automatically.</li>
 </ul>
 
+<p>Both the notice and the eventual deletion are visible in Discord if <a href="/admin/server-setup.html#step-11-set-up-discord-notifications">coder-discord-relay</a> is set up: the notice email triggers a direct <strong>Workspace Deletion Threatened</strong> post to the relay (<code class="language-plaintext highlighter-rouge">DISCORD_RELAY_URL</code>, best-effort — a missing or unreachable relay never blocks the email), and the later <code class="language-plaintext highlighter-rouge">coder delete</code> call is picked up natively as Coder’s own <strong>Workspace Deleted</strong> event, same as any other deletion.</p>
+
 <p>State (which workspaces have been notified and when) is tracked in a local JSON file on the server (<code class="language-plaintext highlighter-rouge">/var/lib/workspace-lifecycle-cleanup/state.json</code> by default) — it never needs to leave the box, so there’s no commit-back-to-git step to manage.</p>
 
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Dry run — shows what would be notified/deleted, sends no email, deletes nothing</span>
@@ -480,10 +482,12 @@ docker system <span class="nb">df</span>
 
 <p>The script needs to list <em>every</em> user’s workspaces (<code class="language-plaintext highlighter-rouge">coder list --all</code>) and delete workspaces it doesn’t own. On this deployment (no Premium license, so no custom RBAC roles), <code class="language-plaintext highlighter-rouge">owner</code> is the only built-in role that can do both — there’s no narrower “workspace admin” role available. That makes this token effectively full site-admin, so it’s provisioned as a dedicated non-human account rather than a personal token:</p>
 
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 0. Raise the server's max token lifetime first — Coder caps --lifetime at</span>
-<span class="c">#    CODER_MAX_TOKEN_LIFETIME (default 168h/1 week), which is too short for an</span>
-<span class="c">#    unattended daily timer. Add to /etc/coder.d/coder.env, then `sudo systemctl restart coder`:</span>
-<span class="c">#      CODER_MAX_TOKEN_LIFETIME=8760h</span>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 0. Raise the server's max *admin* token lifetime first — Coder caps --lifetime</span>
+<span class="c">#    for owner-role accounts at CODER_MAX_ADMIN_TOKEN_LIFETIME (default 168h/1</span>
+<span class="c">#    week; the much larger CODER_MAX_TOKEN_LIFETIME default doesn't apply to</span>
+<span class="c">#    owner accounts), which is too short for an unattended daily timer. Add to</span>
+<span class="c">#    /etc/coder.d/coder.env, then `sudo systemctl restart coder`:</span>
+<span class="c">#      CODER_MAX_ADMIN_TOKEN_LIFETIME=8760h</span>
 
 <span class="c"># 1. Create a machine identity — no GitHub OAuth login required</span>
 coder <span class="nb">users </span>create <span class="nt">--username</span> workspace-janitor <span class="se">\</span>
