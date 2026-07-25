@@ -148,7 +148,18 @@ for PAIR in "${TESTS[@]}"; do
   ddev composer install 2>&1 || COMPOSER_EXIT=$?
 
   if [ "$COMPOSER_EXIT" = "0" ]; then
-    ddev composer require drush/drush 2>&1 | tail -5
+    # Mirrors the Drush install in template.tf: fall back to an inline Guzzle
+    # alias while Drush still requires guzzlehttp/guzzle ^7.0 and core main
+    # requires ^8.0 (drush-ops/drush#6602).
+    DRUSH_EXIT=0
+    ddev composer require drush/drush > /tmp/drush-require.log 2>&1 || DRUSH_EXIT=$?
+    tail -5 /tmp/drush-require.log
+    if [ "$DRUSH_EXIT" != "0" ]; then
+      GUZZLE_VER=$(jq -r '.packages[] | select(.name == "guzzlehttp/guzzle") | .version' composer.lock 2>/dev/null || true)
+      case "$GUZZLE_VER" in
+        8.*) ddev composer require "guzzlehttp/guzzle:$GUZZLE_VER as 7.99.0" drush/drush -W 2>&1 | tail -5 ;;
+      esac
+    fi
   fi
 
   # --- Record result ---
