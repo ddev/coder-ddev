@@ -887,12 +887,33 @@ WELCOME_STATIC
         if [ -z "$${_COMPOSER_GITHUB_TOKEN}" ]; then
           _CODER_BIN=$(find /tmp -name "coder" -path "*/coder.*/*" -type f -executable 2>/dev/null | head -1)
           if [ -n "$${_CODER_BIN}" ]; then
-            _COMPOSER_GITHUB_TOKEN=$("$${_CODER_BIN}" external-auth access-token github 2>/dev/null || true)
+            # `coder external-auth access-token` prints the token to stdout and exits 0,
+            # but when the user has no linked GitHub account it prints the *authentication
+            # URL* to stdout and exits 1. The exit code must be honored: handing that URL
+            # to Composer as an OAuth token makes every github.com dist download fail with
+            # "Could not authenticate against github.com" and suppresses the anonymous
+            # fallback, which is strictly worse than configuring no token at all.
+            if _token=$("$${_CODER_BIN}" external-auth access-token github 2>/dev/null); then
+              _COMPOSER_GITHUB_TOKEN="$_token"
+            else
+              log_setup "No linked GitHub account — using anonymous Composer downloads"
+            fi
           fi
+        fi
+        # An expired or revoked token fails the same opaque way, so verify before use.
+        if [ -n "$${_COMPOSER_GITHUB_TOKEN}" ] && \
+           ! curl -sSf --max-time 10 -o /dev/null -H "Authorization: Bearer $${_COMPOSER_GITHUB_TOKEN}" https://api.github.com/user 2>/dev/null; then
+          log_setup "⚠ GitHub token rejected by api.github.com — using anonymous Composer downloads"
+          _COMPOSER_GITHUB_TOKEN=""
         fi
         if [ -n "$${_COMPOSER_GITHUB_TOKEN}" ]; then
           log_setup "Configuring Composer GitHub OAuth..."
           ddev exec composer config --global github-oauth.github.com "$${_COMPOSER_GITHUB_TOKEN}" >> "$SETUP_LOG" 2>&1 || true
+        else
+          # Clear any token a previous run configured. Composer's global config lives in
+          # a persistent DDEV volume, so a bad value keeps breaking every later start
+          # even once this code stops writing one.
+          ddev exec composer config --global --unset github-oauth.github.com >> "$SETUP_LOG" 2>&1 || true
         fi
 
         # Retry up to 3 times to handle transient codeload.github.com 400s.
@@ -1006,9 +1027,13 @@ WELCOME_STATIC
     fi
     fi # end SETUP_FAILED guard
 
-    # Step 6.5: Cache rebuild — ensures a clean state after any setup path
-    log_setup "Running cache rebuild..."
-    ddev drush cr >> "$SETUP_LOG" 2>&1 || true
+    # Step 6.5: Cache rebuild — ensures a clean state after any successful setup path.
+    # Skipped when setup failed: there is no installed site to rebuild, and running it
+    # anyway just appends a confusing "drush is not available" error to the log.
+    if [ "$SETUP_FAILED" != "true" ]; then
+      log_setup "Running cache rebuild..."
+      ddev drush cr >> "$SETUP_LOG" 2>&1 || true
+    fi
 
     # Step 6.6: Set up phpunit.xml for running core tests
     if [ ! -f "phpunit.xml" ] && [ -f "phpunit-ddev.xml" ]; then
