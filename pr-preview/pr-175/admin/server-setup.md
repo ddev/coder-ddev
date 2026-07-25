@@ -1234,6 +1234,8 @@ Get a fresh registration token for each batch from **GitHub → Settings → Act
 
 #### 2. Create the CI bot user on staging
 
+`--lifetime 8760h` requires `CODER_MAX_TOKEN_LIFETIME=8760h` in `/etc/coder.d/coder.env` on staging-coder.ddev.com (Coder's default cap is `168h`) — see [Step 14](#step-14-set-up-workspace-lifecycle-cleanup) for the same setting on production. Restart Coder after adding it before running the commands below.
+
 ```bash
 coder users create --email ci@staging-coder.ddev.com --username ci-bot --login-type none
 coder users edit-roles ci-bot --roles template-admin --yes
@@ -1281,6 +1283,20 @@ Update this variable whenever the issue is closed or merged. The current default
 Stopped workspaces don't free their Docker volumes — each Sysbox workspace keeps a multi-GB `*-dind-cache` volume until it's deleted, so idle workspaces slowly fill `/data`. A systemd timer runs `scripts/workspace-lifecycle-cleanup.sh` daily to email owners of idle workspaces, then delete them if they stay idle after the notice period.
 
 This is set up on **coder.ddev.com (production) only**. staging-coder.ddev.com doesn't need it: its workspaces are almost entirely owned by `ci-bot` (already excluded via the default `EXCLUDE_OWNERS`), it isn't sending real notices to real people, and `./scripts/workspace-lifecycle-cleanup.sh` (no `--force`) already gives a safe dry-run preview against production itself when you need to sanity-check the policy — no separate staging deployment adds coverage. If that changes (e.g. staging starts accumulating real user workspaces), repeat these steps there with its own `workspace-janitor` account/token and a verified Mailgun domain for staging.
+
+### Raise the server's max token lifetime
+
+Coder caps `coder tokens create --lifetime` at `CODER_MAX_TOKEN_LIFETIME` (default `168h`, i.e. 1 week). A weekly-rotation requirement isn't workable for an unattended daily timer, so raise the cap before minting the janitor's token. Add to `/etc/coder.d/coder.env`:
+
+```bash
+CODER_MAX_TOKEN_LIFETIME=8760h
+```
+
+Then restart Coder:
+
+```bash
+sudo systemctl restart coder
+```
 
 ### Create the `workspace-janitor` Coder account and token
 

@@ -480,7 +480,12 @@ docker system <span class="nb">df</span>
 
 <p>The script needs to list <em>every</em> user’s workspaces (<code class="language-plaintext highlighter-rouge">coder list --all</code>) and delete workspaces it doesn’t own. On this deployment (no Premium license, so no custom RBAC roles), <code class="language-plaintext highlighter-rouge">owner</code> is the only built-in role that can do both — there’s no narrower “workspace admin” role available. That makes this token effectively full site-admin, so it’s provisioned as a dedicated non-human account rather than a personal token:</p>
 
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 1. Create a machine identity — no GitHub OAuth login required</span>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 0. Raise the server's max token lifetime first — Coder caps --lifetime at</span>
+<span class="c">#    CODER_MAX_TOKEN_LIFETIME (default 168h/1 week), which is too short for an</span>
+<span class="c">#    unattended daily timer. Add to /etc/coder.d/coder.env, then `sudo systemctl restart coder`:</span>
+<span class="c">#      CODER_MAX_TOKEN_LIFETIME=8760h</span>
+
+<span class="c"># 1. Create a machine identity — no GitHub OAuth login required</span>
 coder <span class="nb">users </span>create <span class="nt">--username</span> workspace-janitor <span class="se">\</span>
   <span class="nt">--email</span> workspace-janitor@ddev.com <span class="se">\</span>
   <span class="nt">--full-name</span> <span class="s2">"Workspace Lifecycle Janitor"</span> <span class="se">\</span>
@@ -495,7 +500,7 @@ coder tokens create <span class="nt">-u</span> workspace-janitor <span class="nt
 
 <p>Put the resulting token in <code class="language-plaintext highlighter-rouge">/etc/workspace-lifecycle-cleanup.env</code> as <code class="language-plaintext highlighter-rouge">CODER_SESSION_TOKEN</code> (see the install steps). Using a dedicated account rather than a personal token keeps deletions attributable to the bot (not an individual) in the audit log, and means the janitor doesn’t break if the admin’s own account is later deactivated or re-authenticated.</p>
 
-<p>Check the server’s configured max token lifetime before choosing <code class="language-plaintext highlighter-rouge">--lifetime</code> — if it’s capped below a year, use the max allowed and set a reminder to rotate the token before it expires, since an expired token makes the timer fail silently until someone notices (<code class="language-plaintext highlighter-rouge">journalctl -u workspace-lifecycle-cleanup</code> will show the auth error).</p>
+<p>If you can’t raise <code class="language-plaintext highlighter-rouge">CODER_MAX_TOKEN_LIFETIME</code> on a given deployment, use the max allowed instead and set a reminder to rotate the token before it expires — an expired token makes the timer fail silently until someone notices (<code class="language-plaintext highlighter-rouge">journalctl -u workspace-lifecycle-cleanup</code> will show the auth error).</p>
 
 <p><code class="language-plaintext highlighter-rouge">--login-type none</code> is deprecated in favor of <code class="language-plaintext highlighter-rouge">--service-account</code> (Premium-only) but remains functional for this purpose.</p>
 

@@ -459,6 +459,11 @@ On the server, all of this is supplied via `/etc/workspace-lifecycle-cleanup.env
 The script needs to list *every* user's workspaces (`coder list --all`) and delete workspaces it doesn't own. On this deployment (no Premium license, so no custom RBAC roles), `owner` is the only built-in role that can do both — there's no narrower "workspace admin" role available. That makes this token effectively full site-admin, so it's provisioned as a dedicated non-human account rather than a personal token:
 
 ```bash
+# 0. Raise the server's max token lifetime first — Coder caps --lifetime at
+#    CODER_MAX_TOKEN_LIFETIME (default 168h/1 week), which is too short for an
+#    unattended daily timer. Add to /etc/coder.d/coder.env, then `sudo systemctl restart coder`:
+#      CODER_MAX_TOKEN_LIFETIME=8760h
+
 # 1. Create a machine identity — no GitHub OAuth login required
 coder users create --username workspace-janitor \
   --email workspace-janitor@ddev.com \
@@ -474,7 +479,7 @@ coder tokens create -u workspace-janitor --name workspace-lifecycle-cleanup --li
 
 Put the resulting token in `/etc/workspace-lifecycle-cleanup.env` as `CODER_SESSION_TOKEN` (see the install steps). Using a dedicated account rather than a personal token keeps deletions attributable to the bot (not an individual) in the audit log, and means the janitor doesn't break if the admin's own account is later deactivated or re-authenticated.
 
-Check the server's configured max token lifetime before choosing `--lifetime` — if it's capped below a year, use the max allowed and set a reminder to rotate the token before it expires, since an expired token makes the timer fail silently until someone notices (`journalctl -u workspace-lifecycle-cleanup` will show the auth error).
+If you can't raise `CODER_MAX_TOKEN_LIFETIME` on a given deployment, use the max allowed instead and set a reminder to rotate the token before it expires — an expired token makes the timer fail silently until someone notices (`journalctl -u workspace-lifecycle-cleanup` will show the auth error).
 
 `--login-type none` is deprecated in favor of `--service-account` (Premium-only) but remains functional for this purpose.
 
