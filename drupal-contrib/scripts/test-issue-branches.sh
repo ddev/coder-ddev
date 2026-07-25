@@ -135,7 +135,25 @@ for SPEC in "${TESTS[@]}"; do
     ddev exec composer require --dev drush/drush --no-update --no-interaction 2>&1 | tail -5
 
     log "Running ddev poser..."
-    if ! ddev poser 2>&1 | tail -10; then
+    POSER_RC=0
+    ddev poser > /tmp/poser-attempt.log 2>&1 || POSER_RC=$?
+    tail -10 /tmp/poser-attempt.log
+    # Mirrors the Guzzle alias fallback in template.tf: Drush still requires
+    # guzzlehttp/guzzle ^7.0 while core main requires ^8.0, which makes a plain
+    # poser run unsolvable on Drupal 12 HEAD. Removal tracked in #179
+    # (upstream: drush-ops/drush#6602).
+    if [ "$POSER_RC" != "0" ] && grep -q "drush/drush.*requires guzzlehttp/guzzle" /tmp/poser-attempt.log; then
+      GUZZLE_VER=$(curl -fsSL --max-time 30 https://repo.packagist.org/p2/guzzlehttp/guzzle.json 2>/dev/null |
+        jq -r '[.packages["guzzlehttp/guzzle"][].version | select(test("^8[.][0-9]+[.][0-9]+$"))] | sort_by(split(".") | map(tonumber)) | last // empty' 2>/dev/null || true)
+      if [ -n "$GUZZLE_VER" ]; then
+        log "Drush/Guzzle conflict — retrying poser with guzzle $GUZZLE_VER aliased as 7.99.0..."
+        jq --arg v "$GUZZLE_VER as 7.99.0" '.["require-dev"]["guzzlehttp/guzzle"] = $v' composer.json > composer.json.tmp && mv composer.json.tmp composer.json
+        POSER_RC=0
+        ddev poser > /tmp/poser-attempt.log 2>&1 || POSER_RC=$?
+        tail -10 /tmp/poser-attempt.log
+      fi
+    fi
+    if [ "$POSER_RC" != "0" ]; then
       log "ERROR: ddev poser failed"
       RESULTS["$DIR_KEY"]="FAIL (ddev poser)"
       DURATIONS["$DIR_KEY"]=$((SECONDS - START))
