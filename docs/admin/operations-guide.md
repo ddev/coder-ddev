@@ -459,10 +459,12 @@ On the server, all of this is supplied via `/etc/workspace-lifecycle-cleanup.env
 The script needs to list *every* user's workspaces (`coder list --all`) and delete workspaces it doesn't own. On this deployment (no Premium license, so no custom RBAC roles), `owner` is the only built-in role that can do both — there's no narrower "workspace admin" role available. That makes this token effectively full site-admin, so it's provisioned as a dedicated non-human account rather than a personal token:
 
 ```bash
-# 0. Raise the server's max token lifetime first — Coder caps --lifetime at
-#    CODER_MAX_TOKEN_LIFETIME (default 168h/1 week), which is too short for an
-#    unattended daily timer. Add to /etc/coder.d/coder.env, then `sudo systemctl restart coder`:
-#      CODER_MAX_TOKEN_LIFETIME=8760h
+# 0. Raise the server's max *admin* token lifetime first — Coder caps --lifetime
+#    for owner-role accounts at CODER_MAX_ADMIN_TOKEN_LIFETIME (default 168h/1
+#    week; the much larger CODER_MAX_TOKEN_LIFETIME default doesn't apply to
+#    owner accounts), which is too short for an unattended daily timer. Add to
+#    /etc/coder.d/coder.env, then `sudo systemctl restart coder`:
+#      CODER_MAX_ADMIN_TOKEN_LIFETIME=8760h
 
 # 1. Create a machine identity — no GitHub OAuth login required
 coder users create --username workspace-janitor \
