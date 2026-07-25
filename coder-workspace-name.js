@@ -43,6 +43,19 @@
   }
 
   /**
+   * Truncates an already-sanitized name to MAX_WORKSPACE_NAME_LENGTH, re-sanitizing
+   * afterward in case the cut lands on a trailing hyphen.
+   *
+   * @param {string} name
+   * @returns {string}
+   */
+  function capWorkspaceName(name) {
+    return name.length > MAX_WORKSPACE_NAME_LENGTH
+      ? sanitizeWorkspaceName(name.slice(0, MAX_WORKSPACE_NAME_LENGTH))
+      : name;
+  }
+
+  /**
    * Issue picker: version + profile + (branch name if multiple branch options, else issue NID).
    * Falls back to the issue NID when a branch-based name exceeds MAX_WORKSPACE_NAME_LENGTH.
    *
@@ -58,21 +71,15 @@
     const nidSeg = String(issueNid);
     const withNid = sanitizeWorkspaceName(base + '-' + nidSeg);
 
-    function cap(name) {
-      return name.length > MAX_WORKSPACE_NAME_LENGTH
-        ? sanitizeWorkspaceName(name.slice(0, MAX_WORKSPACE_NAME_LENGTH))
-        : name;
-    }
-
     if (branchOptionCount > 1 && branchName) {
       const withBranch = sanitizeWorkspaceName(base + '-' + branchName);
       if (withBranch.length > MAX_WORKSPACE_NAME_LENGTH) {
-        return cap(withNid);
+        return capWorkspaceName(withNid);
       }
       return withBranch;
     }
 
-    return cap(withNid);
+    return capWorkspaceName(withNid);
   }
 
   /**
@@ -152,6 +159,7 @@
     PROFILE_SLUG: PROFILE_SLUG,
     VERSION_SLUG: VERSION_SLUG,
     sanitizeWorkspaceName: sanitizeWorkspaceName,
+    capWorkspaceName: capWorkspaceName,
     workspaceNameFromCoreChoices: workspaceNameFromCoreChoices,
     suggestedIssueForkWorkspaceName: suggestedIssueForkWorkspaceName,
     validateWorkspaceName: validateWorkspaceName,
