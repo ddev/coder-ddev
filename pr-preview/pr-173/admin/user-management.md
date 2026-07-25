@@ -94,9 +94,9 @@ coder organizations members add <org-name> <username>
 ```bash
 # Deploy template to specific organization
 coder templates push \
-  --directory user-defined-web \
+  --directory freeform \
   --org <org-name> \
-  user-defined-web \
+  freeform \
   --yes
 
 # Users can only create workspaces from templates in their organization
@@ -134,7 +134,7 @@ SSH key management (add/remove keys) is done via the Coder web UI under **Accoun
 The DDEV template automatically configures Git SSH via Coder's GitSSH wrapper:
 
 ```bash
-# In workspace startup script (user-defined-web/scripts/startup.sh):
+# In the workspace startup script (inline in freeform/template.tf):
 git config --global core.sshCommand "$GIT_SSH_COMMAND"
 ```
 
@@ -256,7 +256,7 @@ Coder does not support workspace sharing out-of-the-box.
 
 **Template-level defaults:**
 
-Edit `user-defined-web/template.tf`:
+Edit `freeform/template.tf`:
 ```hcl
 variable "cpu" {
   default     = 4

@@ -46,7 +46,7 @@
 <ul>
   <li>Coder server URL (e.g., <code class="language-plaintext highlighter-rouge">https://coder.example.com</code>)</li>
   <li>Username and password (or SSO login)</li>
-  <li>Confirmation that the <code class="language-plaintext highlighter-rouge">user-defined-web</code> template is available</li>
+  <li>Confirmation that the <code class="language-plaintext highlighter-rouge">freeform</code> template is available</li>
 </ul>
 
 <h3 id="local-tools">Local Tools</h3>
@@ -125,7 +125,7 @@ coder login https://coder.example.com
 
 <ol>
   <li>Click <strong>Create Workspace</strong> button</li>
-  <li>Select <strong>user-defined-web</strong> template</li>
+  <li>Select <strong>freeform</strong> template</li>
   <li>Enter a workspace name (e.g., <code class="language-plaintext highlighter-rouge">my-first-workspace</code>)
     <ul>
       <li>Use lowercase, numbers, hyphens</li>
@@ -151,10 +151,10 @@ coder login https://coder.example.com
 <h3 id="via-cli-1">Via CLI</h3>
 
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Create workspace with defaults</span>
-coder create <span class="nt">--template</span> user-defined-web my-first-workspace <span class="nt">--yes</span>
+coder create <span class="nt">--template</span> freeform my-first-workspace <span class="nt">--yes</span>
 
 <span class="c"># Or with custom parameters</span>
-coder create <span class="nt">--template</span> user-defined-web my-first-workspace <span class="se">\</span>
+coder create <span class="nt">--template</span> freeform my-first-workspace <span class="se">\</span>
   <span class="nt">--parameter</span> <span class="nv">cpu</span><span class="o">=</span>8 <span class="se">\</span>
   <span class="nt">--parameter</span> <span class="nv">memory</span><span class="o">=</span>16 <span class="se">\</span>
   <span class="nt">--yes</span>

@@ -88,7 +88,7 @@ coder stop my-workspace
 coder list
 
 # Create second workspace
-coder create --template user-defined-web my-second-workspace --yes
+coder create --template freeform my-second-workspace --yes
 
 # Switch between workspaces
 coder ssh my-first-workspace
@@ -994,7 +994,7 @@ coder stop my-workspace
 
 # Delete and recreate with more resources
 coder delete my-workspace --yes
-coder create --template user-defined-web my-workspace \
+coder create --template freeform my-workspace \
   --parameter cpu=8 \
   --parameter memory=16 \
   --yes
