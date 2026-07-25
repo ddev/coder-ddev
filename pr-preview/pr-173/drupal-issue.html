@@ -493,7 +493,7 @@
     const CODER_BASE = 'https://staging-coder.ddev.com';
     const CODER_TEMPLATE_CORE   = 'coder/drupal-core';
     const CODER_TEMPLATE_CONTRIB = 'coder/drupal-contrib';
-    const { sanitizeWorkspaceName, workspaceNameFromCoreChoices, suggestedIssueForkWorkspaceName, applyWorkspaceNameFieldValidation, bindWorkspaceNameFieldValidation, CORE_DISABLE_PARAMS } = window.CoderWorkspace;
+    const { sanitizeWorkspaceName, capWorkspaceName, workspaceNameFromCoreChoices, suggestedIssueForkWorkspaceName, applyWorkspaceNameFieldValidation, bindWorkspaceNameFieldValidation, CORE_DISABLE_PARAMS } = window.CoderWorkspace;
 
     function updateWorkspaceUrlSlug(inputId, spanId) {
       const input = document.getElementById(inputId);
@@ -581,8 +581,8 @@
       if (!currentProjectName) return;
       const dv = getCheckedRadioValue('plain_drupal_version');
       const profile = getCheckedRadioValue('plain_install_profile');
-      document.getElementById('plain-workspace-name').value = sanitizeWorkspaceName(
-        workspaceNameFromCoreChoices(dv, profile) + '-' + currentProjectName
+      document.getElementById('plain-workspace-name').value = capWorkspaceName(
+        sanitizeWorkspaceName(workspaceNameFromCoreChoices(dv, profile) + '-' + currentProjectName)
       );
       updateWorkspaceUrlSlug('plain-workspace-name', 'issue-plain-workspace-url-slug');
       applyWorkspaceNameFieldValidation('plain-workspace-name', 'plain-workspace-name-error');
@@ -592,8 +592,8 @@
       if (!currentNid) return;
       const dv = getCheckedRadioValue('manual_drupal_version');
       const prof = getCheckedRadioValue('manual_install_profile');
-      document.getElementById('manual-workspace-name').value = sanitizeWorkspaceName(
-        workspaceNameFromCoreChoices(dv, prof) + '-' + currentNid
+      document.getElementById('manual-workspace-name').value = capWorkspaceName(
+        sanitizeWorkspaceName(workspaceNameFromCoreChoices(dv, prof) + '-' + currentNid)
       );
       updateWorkspaceUrlSlug('manual-workspace-name', 'issue-manual-workspace-url-slug');
       applyWorkspaceNameFieldValidation('manual-workspace-name', 'manual-workspace-name-error');
@@ -998,8 +998,8 @@
       const wsField = document.getElementById('plain-workspace-name').value.trim();
       const wsName = wsField
         ? sanitizeWorkspaceName(wsField)
-        : sanitizeWorkspaceName(
-            workspaceNameFromCoreChoices(drupalVersion, profile) + '-' + currentProjectName
+        : capWorkspaceName(
+            sanitizeWorkspaceName(workspaceNameFromCoreChoices(drupalVersion, profile) + '-' + currentProjectName)
           );
 
       if (!currentProjectName) {
@@ -1028,8 +1028,8 @@
       const wsField = document.getElementById('manual-workspace-name').value.trim();
       const wsName = wsField
         ? sanitizeWorkspaceName(wsField)
-        : sanitizeWorkspaceName(
-            workspaceNameFromCoreChoices(drupalVersion, profile) + '-' + currentNid
+        : capWorkspaceName(
+            sanitizeWorkspaceName(workspaceNameFromCoreChoices(drupalVersion, profile) + '-' + currentNid)
           );
 
       if (!fork || !branch) {
