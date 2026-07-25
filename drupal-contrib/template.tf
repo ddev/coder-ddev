@@ -750,18 +750,11 @@ COMPOSE_EOF
         # then runs composer install (installs Drupal + drush together), then removes composer.contrib.json
         # Retry up to 3 times to handle transient codeload.github.com 400s.
         _poser_ok=false
-        _guzzle_aliased=false
         for _attempt in 1 2 3; do
           log_setup "Running ddev poser (attempt $_attempt/3)..."
           update_status "⏳ ddev poser: Attempt $_attempt/3..."
           _t=$SECONDS
-          # Capture this attempt separately so the conflict check below cannot
-          # match output from an earlier attempt or an earlier workspace start
-          # ($SETUP_LOG is append-only across restarts).
-          _poser_rc=0
-          ddev poser > /tmp/poser-attempt.log 2>&1 || _poser_rc=$?
-          cat /tmp/poser-attempt.log >> "$SETUP_LOG"
-          if [ "$_poser_rc" = "0" ]; then
+          if ddev poser >> "$SETUP_LOG" 2>&1; then
             log_setup "✓ ddev poser complete ($((SECONDS - _t))s)"
             update_status "✓ ddev poser: Success"
             # Hide the drush require-dev line from git status without touching the
@@ -772,37 +765,6 @@ COMPOSE_EOF
             break
           fi
           log_setup "✗ ddev poser attempt $_attempt failed ($((SECONDS - _t))s)"
-
-          # Drush's Guzzle constraint lags core's: core main moved to
-          # guzzlehttp/guzzle ^8.0 on 2026-07-24 (drupal.org #3612544) while
-          # every Drush version still requires ^7.0, so Composer cannot solve
-          # drush/drush against Drupal 12 HEAD. Guzzle 8 works with Drush at
-          # runtime, so retry with an inline alias presenting a Guzzle 8 release
-          # as a 7.x one — the same workaround #178 added to drupal-core, which
-          # deliberately left this template alone because the version cannot be
-          # read from a lock file here: ddev poser resolves core and Drush in one
-          # solve and deletes composer.contrib.lock afterwards. Composer only
-          # accepts an exact version as an alias source, so ask packagist for the
-          # newest stable 8.x instead. Applied only on this specific failure, so
-          # Drupal 11 builds (core requires Guzzle ^7) keep resolving normally,
-          # and it self-clears once Drush is fixed. Unlike drupal-core, where the
-          # alias lands in gitignored composer.local.json, here it lands in the
-          # module's tracked composer.json — the skip-worktree call above keeps
-          # it out of git status, same as the drush require-dev line. Removal is
-          # tracked in #179 (upstream: drush-ops/drush#6602).
-          if [ "$_guzzle_aliased" = "false" ] && \
-             grep -q "drush/drush.*requires guzzlehttp/guzzle" /tmp/poser-attempt.log; then
-            _guzzle_ver=$(curl -fsSL --max-time 30 https://repo.packagist.org/p2/guzzlehttp/guzzle.json 2>/dev/null |
-              jq -r '[.packages["guzzlehttp/guzzle"][].version | select(test("^8[.][0-9]+[.][0-9]+$"))] | sort_by(split(".") | map(tonumber)) | last // empty' 2>/dev/null || true)
-            if [ -n "$_guzzle_ver" ]; then
-              log_setup "Drush/Guzzle constraint conflict — retrying with guzzle $_guzzle_ver aliased as 7.99.0..."
-              jq --arg v "$_guzzle_ver as 7.99.0" '.["require-dev"]["guzzlehttp/guzzle"] = $v' composer.json > composer.json.tmp && mv composer.json.tmp composer.json
-              _guzzle_aliased=true
-              continue
-            fi
-            log_setup "⚠ Could not determine a stable Guzzle 8 version from packagist"
-          fi
-
           if [ "$_attempt" -lt 3 ]; then
             log_setup "Retrying in 15s..."
             sleep 15
