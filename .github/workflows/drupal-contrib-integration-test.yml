@@ -393,8 +393,11 @@ jobs:
     strategy:
       # PRs run a single module (smoke); push-to-main and nightly run the full
       # set. Cuts per-PR workspace load on staging. See ci-reap.yml.
+      # The smoke cell is the D12 one on purpose: it tracks Drupal core HEAD, so
+      # it is where dependency churn (e.g. core's Guzzle 8 bump) breaks first.
+      # The D11 cells are stable and covered on push-to-main and nightly.
       matrix:
-        include: ${{ github.event_name == 'pull_request' && fromJSON('[{"project":"token","drupal_version":"11"}]') || fromJSON('[{"project":"token","drupal_version":"11"},{"project":"pathauto","drupal_version":"11"},{"project":"skipto","drupal_version":"12"}]') }}
+        include: ${{ github.event_name == 'pull_request' && fromJSON('[{"project":"skipto","drupal_version":"12"}]') || fromJSON('[{"project":"token","drupal_version":"11"},{"project":"pathauto","drupal_version":"11"},{"project":"skipto","drupal_version":"12"}]') }}
       fail-fast: false
     defaults:
       run:
