@@ -132,3 +132,53 @@ run "memory_above_maximum" {
   }
   expect_failures = [var.memory]
 }
+
+run "linuxbrew_volume_created" {
+  command = plan
+  assert {
+    condition     = docker_volume.coder_linuxbrew.name == "coder-testuser-test-workspace-linuxbrew"
+    error_message = "docker_volume.coder_linuxbrew must be named per the coder-<owner>-<workspace>-linuxbrew convention"
+  }
+}
+
+run "claude_code_off_by_default" {
+  command = plan
+  assert {
+    condition     = length(coder_app.claude_code) == 0
+    error_message = "coder_app.claude_code must not be created when enable_claude_code=false"
+  }
+}
+
+run "claude_code_enabled" {
+  command = plan
+  variables {
+    enable_claude_code = true
+  }
+  assert {
+    condition     = length(coder_app.claude_code) == 1
+    error_message = "coder_app.claude_code must be created when enable_claude_code=true"
+  }
+}
+
+run "claude_code_skip_permissions_off_by_default" {
+  command = plan
+  variables {
+    enable_claude_code = true
+  }
+  assert {
+    condition     = !strcontains(coder_app.claude_code["claude-code"].command, "--dangerously-skip-permissions")
+    error_message = "claude_code_skip_permissions must default to false"
+  }
+}
+
+run "claude_code_skip_permissions_enabled" {
+  command = plan
+  variables {
+    enable_claude_code           = true
+    claude_code_skip_permissions = true
+  }
+  assert {
+    condition     = strcontains(coder_app.claude_code["claude-code"].command, "--dangerously-skip-permissions")
+    error_message = "claude_code_skip_permissions=true must append --dangerously-skip-permissions"
+  }
+}

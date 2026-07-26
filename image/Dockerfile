@@ -165,9 +165,17 @@ RUN printf '#!/usr/bin/env bash\nddev php "$@"\n' > /usr/local/bin/php && \
 
 RUN mkdir -p /home/linuxbrew/.linuxbrew && chown -R coder:coder /home/linuxbrew/
 
+# Homebrew's cache must live on the same filesystem as the Cellar
+# (/home/linuxbrew/.linuxbrew) to avoid cross-device link (EXDEV) errors when
+# brew hardlinks a downloaded bottle from cache into the Cellar. At runtime,
+# /home/linuxbrew is mounted as a persistent per-workspace volume (see each
+# template's template.tf), so this path stays on the same filesystem as the
+# Cellar across workspace restarts too.
+ENV HOMEBREW_CACHE=/home/linuxbrew/.cache/Homebrew
+
 USER coder
 RUN /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-RUN /home/linuxbrew/.linuxbrew/bin/brew install \
+RUN mkdir -p "$HOMEBREW_CACHE" && /home/linuxbrew/.linuxbrew/bin/brew install \
   bats-core \
   bats-core/bats-core/bats-assert \
   bats-core/bats-core/bats-file \

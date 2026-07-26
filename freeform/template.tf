@@ -183,6 +183,18 @@ variable "enable_adminer" {
   default     = false
 }
 
+variable "enable_claude_code" {
+  description = "Enable Claude Code remote control: upgrades Claude Code via Homebrew at workspace startup and starts one persistent tmux session (named after the workspace) running `claude`, attachable from any device. Interactive OAuth login is required on first attach (no API key is configured by this template)."
+  type        = bool
+  default     = false
+}
+
+variable "claude_code_skip_permissions" {
+  description = "Append --dangerously-skip-permissions to the `claude` command started by enable_claude_code. No effect unless enable_claude_code is also true."
+  type        = bool
+  default     = false
+}
+
 resource "coder_agent" "main" {
   arch = "amd64"
   os   = "linux"
@@ -206,6 +218,7 @@ resource "coder_agent" "main" {
     fi
 
     sudo chown coder:coder /home/coder
+    sudo chown -R coder:coder /home/linuxbrew
 
     if [ ! -f "/home/coder/.bashrc" ]; then
         echo "Initializing home directory..."
@@ -401,6 +414,35 @@ BASHCOMP
       echo 'export PATH="$HOME/.npm-global/bin:$PATH"' >> ~/.bashrc
     fi
 
+    %{if var.enable_claude_code~}
+    # --- Claude Code remote control (enable_claude_code) ---------------------
+    echo "Setting up Claude Code remote-control session..."
+
+    if command -v brew > /dev/null 2>&1; then
+      brew update > /dev/null 2>&1 || echo "Warning: brew update failed, continuing with existing formula metadata"
+      (brew upgrade claude-code || brew install claude-code) || \
+        echo "Warning: claude-code install/upgrade via brew failed; continuing with existing version (if any)"
+    else
+      echo "Warning: brew not found on PATH; skipping claude-code upgrade"
+    fi
+
+    CLAUDE_CMD="claude"
+    %{if var.claude_code_skip_permissions~}
+    CLAUDE_CMD="claude --dangerously-skip-permissions"
+    %{endif~}
+
+    if command -v tmux > /dev/null 2>&1 && command -v claude > /dev/null 2>&1; then
+      if ! tmux has-session -t "$CODER_WORKSPACE_NAME" 2>/dev/null; then
+        echo "Starting Claude Code tmux session '$CODER_WORKSPACE_NAME'..."
+        tmux new-session -d -s "$CODER_WORKSPACE_NAME" -c "$HOME" "$CLAUDE_CMD"
+      else
+        echo "Claude Code tmux session '$CODER_WORKSPACE_NAME' already running."
+      fi
+    else
+      echo "Warning: tmux or claude not available; skipping Claude Code session startup"
+    fi
+    %{endif~}
+
     echo ""
     echo "=== Setup Complete ==="
     echo ""
@@ -441,6 +483,15 @@ BASHCOMP
 
 resource "docker_volume" "coder_dind_cache" {
   name = "coder-${data.coder_workspace_owner.me.name}-${lower(data.coder_workspace.me.name)}-dind-cache"
+}
+
+# Persists /home/linuxbrew (Homebrew Cellar) across workspace stop/start so
+# `brew upgrade`/`brew install` (e.g. for Claude Code) survives restarts. Not
+# gated by start_count, matching coder_dind_cache above. Docker auto-populates
+# a newly-created named volume from the image's existing directory contents
+# on first mount, so no manual copy-from-image seed step is needed here.
+resource "docker_volume" "coder_linuxbrew" {
+  name = "coder-${data.coder_workspace_owner.me.name}-${lower(data.coder_workspace.me.name)}-linuxbrew"
 }
 
 module "vscode-web" {
@@ -526,6 +577,20 @@ resource "coder_app" "adminer" {
   }
 }
 
+# Claude Code remote control (enable_claude_code): opens/attaches the
+# workspace's single dedicated tmux session (named after the workspace)
+# running `claude`. Shared by every client that attaches — see README for
+# the cd/git-checkout caveat.
+resource "coder_app" "claude_code" {
+  for_each     = var.enable_claude_code ? toset(["claude-code"]) : toset([])
+  agent_id     = coder_agent.main.id
+  slug         = "claude-code"
+  display_name = "Claude Code"
+  icon         = "/icon/terminal.svg"
+  command      = "tmux attach -t $CODER_WORKSPACE_NAME || tmux new -s $CODER_WORKSPACE_NAME claude${var.claude_code_skip_permissions ? " --dangerously-skip-permissions" : ""}"
+  share        = "owner"
+}
+
 resource "coder_script" "ddev_shutdown" {
   agent_id     = coder_agent.main.id
   display_name = "Stop DDEV Projects"
@@ -575,6 +640,12 @@ resource "docker_container" "workspace" {
     type   = "volume"
     source = docker_volume.coder_dind_cache.name
     target = "/var/lib/docker"
+  }
+
+  mounts {
+    type   = "volume"
+    source = docker_volume.coder_linuxbrew.name
+    target = "/home/linuxbrew"
   }
 
   env = [
