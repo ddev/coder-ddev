@@ -92,9 +92,6 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
 
-      - name: Copy VERSION into template directory
-        run: cp VERSION drupal-contrib/VERSION
-
       - name: Push template (inactive)
         run: |
           coder templates push drupal-contrib \
@@ -102,6 +99,7 @@ jobs:
             --activate=false \
             --name ${{ env.WORKSPACE_NAME }} \
             --yes \
+            --variable image_version="$(cat VERSION)" \
             --variable workspace_image_registry=index.docker.io/ddev/coder-ddev
 
       - name: Create workspace
@@ -274,9 +272,6 @@ jobs:
           echo "ISSUE_BRANCH=$ISSUE_BRANCH"         >> "$GITHUB_ENV"
           echo "ISSUE_FORK_VERSION=$DRUPAL_VERSION" >> "$GITHUB_ENV"
 
-      - name: Copy VERSION into template directory
-        run: cp VERSION drupal-contrib/VERSION
-
       - name: Push template (inactive)
         run: |
           coder templates push drupal-contrib \
@@ -284,6 +279,7 @@ jobs:
             --activate=false \
             --name cc-${{ github.run_number }}-${{ github.run_attempt }} \
             --yes \
+            --variable image_version="$(cat VERSION)" \
             --variable workspace_image_registry=index.docker.io/ddev/coder-ddev
 
       - name: Create workspace
@@ -424,9 +420,6 @@ jobs:
           access_url: ${{ vars.TEST_CODER_URL }}
           coder_session_token: ${{ env.TEST_CODER_SESSION_TOKEN }}
 
-      - name: Copy VERSION into template directory
-        run: cp VERSION drupal-contrib/VERSION
-
       - name: Push template (inactive)
         run: |
           coder templates push drupal-contrib \
@@ -434,6 +427,7 @@ jobs:
             --activate=false \
             --name ${{ env.WORKSPACE_NAME }} \
             --yes \
+            --variable image_version="$(cat VERSION)" \
             --variable workspace_image_registry=index.docker.io/ddev/coder-ddev \
             --variable github_token=${{ secrets.GITHUB_TOKEN }}
 
@@ -579,9 +573,6 @@ jobs:
           echo "ISSUE_BRANCH=$ISSUE_BRANCH"         >> "$GITHUB_ENV"
           echo "ISSUE_FORK_VERSION=$DRUPAL_VERSION" >> "$GITHUB_ENV"
 
-      - name: Copy VERSION into template directory
-        run: cp VERSION drupal-contrib/VERSION
-
       - name: Push template (inactive)
         run: |
           coder templates push drupal-contrib \
@@ -589,6 +580,7 @@ jobs:
             --activate=false \
             --name gc-${{ github.run_number }}-${{ github.run_attempt }} \
             --yes \
+            --variable image_version="$(cat VERSION)" \
             --variable workspace_image_registry=index.docker.io/ddev/coder-ddev \
             --variable github_token=${{ secrets.GITHUB_TOKEN }}
 
