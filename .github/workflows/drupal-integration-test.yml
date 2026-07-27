@@ -31,9 +31,15 @@ name: Drupal Integration Tests
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
+# Shared literal (not ref-scoped) so this queues behind any other workflow
+# that also provisions real workspaces on the same staging-coder.ddev.com
+# box (integration-test.yml, drupal-contrib-integration-test.yml) -- see
+# the matching comment in those files. Running two of these at once starves
+# the box's Docker/Sysbox capacity and causes flaky mid-build SSH drops, not
+# genuine test failures.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
-  cancel-in-progress: true
+  group: staging-coder-integration
+  cancel-in-progress: false
 
 on:
   schedule:
