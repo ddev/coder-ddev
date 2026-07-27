@@ -44,10 +44,8 @@ TEMPLATE_EDIT_freeform         := --display-name "DDEV Freeform" \
 
 # Shared recipe for pushing any template (call with template name as argument)
 define push_template
-	@echo "Syncing VERSION to $(1)..."
-	cp VERSION $(1)/VERSION
-	@echo "Pushing Coder template $(1)..."
-	coder templates push --directory $(1) $(1) --yes --activate=$(ACTIVATE) $(TEMPLATE_VARS_$(1))
+	@echo "Pushing Coder template $(1) (image_version=$(VERSION))..."
+	coder templates push --directory $(1) $(1) --yes --activate=$(ACTIVATE) --variable image_version=$(VERSION) $(TEMPLATE_VARS_$(1))
 	@echo "Setting template metadata for $(1)..."
 	coder templates edit $(1) --yes $(TEMPLATE_EDIT_$(1))
 	@echo "Template $(1) push complete"

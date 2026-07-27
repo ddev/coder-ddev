@@ -98,7 +98,7 @@ data "coder_parameter" "vscode_extensions" {
 locals {
   workspace_home      = "/home/coder"
   selected_extensions = jsondecode(data.coder_parameter.vscode_extensions.value)
-  image_version       = try(trimspace(file("${path.module}/VERSION")), var.image_version)
+  image_version       = var.image_version
 
   registry_without_version      = replace(var.workspace_image_registry, ":${local.image_version}", "")
   workspace_image_registry_base = replace(local.registry_without_version, ":latest", "")

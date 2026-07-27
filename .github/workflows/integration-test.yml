@@ -114,9 +114,6 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
 
-      - name: Copy VERSION into template directory
-        run: cp VERSION ${{ matrix.template }}/VERSION
-
       - name: Push template (inactive)
         run: |
           coder templates push ${{ matrix.template }} \
@@ -124,6 +121,7 @@ jobs:
             --activate=false \
             --name ci-${{ env.CI_TAG }} \
             --yes \
+            --variable image_version="$(cat VERSION)" \
             --variable workspace_image_registry=index.docker.io/ddev/coder-ddev \
             ${{ matrix.extra_vars }}
 
@@ -329,9 +327,6 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
 
-      - name: Copy VERSION into template directory
-        run: cp VERSION ${{ matrix.template }}/VERSION
-
       - name: Push template (inactive)
         run: |
           coder templates push ${{ matrix.template }} \
@@ -339,6 +334,7 @@ jobs:
             --activate=false \
             --name ci-gh-${{ env.CI_TAG }} \
             --yes \
+            --variable image_version="$(cat VERSION)" \
             --variable workspace_image_registry=index.docker.io/ddev/coder-ddev \
             ${{ matrix.extra_vars }}
 
