@@ -2,12 +2,14 @@
 # Notify and delete idle workspaces on coder.ddev.com.
 #
 # Why this exists:
-#   Stopping a workspace does not free its Docker volume — each Sysbox
-#   workspace keeps a multi-GB dind-cache volume until the workspace is
-#   deleted (the destroy provisioner in each template removes it). With no
-#   lifecycle policy, stopped workspaces accumulate forever and slowly fill
-#   /data on the host. This janitor enforces: notify at N days idle, delete
-#   7 days after the notice if the workspace is still untouched.
+#   Stopping a workspace does not free its Docker volumes — each Sysbox
+#   workspace keeps a multi-GB dind-cache volume and a linuxbrew volume until
+#   the workspace is deleted (Terraform destroys them, along with everything
+#   else in the workspace's resource graph, when the workspace itself is
+#   deleted). With no lifecycle policy, stopped workspaces accumulate forever
+#   and slowly fill /data on the host. This janitor enforces: notify at N
+#   days idle, delete 7 days after the notice if the workspace is still
+#   untouched.
 #
 # Policy (state machine per workspace, keyed by workspace id):
 #   - Not yet notified, age(last_used_at) >= NOTIFY_DAYS
