@@ -355,6 +355,7 @@ resource "coder_agent" "main" {
     # Since the volume comes from the host, it might have host permissions.
     # We fix this on every startup.
     sudo chown coder:coder /home/coder
+    sudo chown -R coder:coder /home/linuxbrew
 
     # Copy defaults if empty (first run)
     if [ ! -f "/home/coder/.bashrc" ]; then
@@ -1362,6 +1363,15 @@ resource "docker_volume" "coder_dind_cache" {
   name = "coder-${data.coder_workspace_owner.me.name}-${lower(data.coder_workspace.me.name)}-dind-cache"
 }
 
+# Persists /home/linuxbrew (Homebrew Cellar) across workspace stop/start so
+# `brew upgrade`/`brew install` survives restarts. Not gated by start_count,
+# matching coder_dind_cache above. Docker auto-populates a newly-created
+# named volume from the image's existing directory contents on first mount,
+# so no manual copy-from-image seed step is needed here.
+resource "docker_volume" "coder_linuxbrew" {
+  name = "coder-${data.coder_workspace_owner.me.name}-${lower(data.coder_workspace.me.name)}-linuxbrew"
+}
+
 # VS Code for Web
 module "vscode-web" {
   count          = data.coder_workspace.me.start_count
@@ -1521,6 +1531,12 @@ resource "docker_container" "workspace" {
     type   = "volume"
     source = docker_volume.coder_dind_cache.name
     target = "/var/lib/docker"
+  }
+
+  mounts {
+    type   = "volume"
+    source = docker_volume.coder_linuxbrew.name
+    target = "/home/linuxbrew"
   }
 
   # Environment variables

@@ -82,3 +82,14 @@ run "memory_above_maximum" {
   }
   expect_failures = [var.memory]
 }
+
+run "linuxbrew_volume_created" {
+  command = plan
+  variables {
+    cache_path = "/tmp/mock-cache"
+  }
+  assert {
+    condition     = docker_volume.coder_linuxbrew.name == "coder-testuser-test-workspace-linuxbrew"
+    error_message = "docker_volume.coder_linuxbrew must be named per the coder-<owner>-<workspace>-linuxbrew convention"
+  }
+}
