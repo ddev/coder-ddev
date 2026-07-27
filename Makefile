@@ -103,8 +103,17 @@ test: ## Test the built image by running it
 	docker run --rm $(IMAGE_TAG) node --version
 	@echo "Test complete"
 
+.PHONY: sync-claude-module
+sync-claude-module: ## Vendor modules/claude-remote-control into each template dir (coder templates push only bundles the single --directory given to it, so a shared "../modules" reference doesn't survive the push; each template needs its own copy)
+	@for t in $(TEMPLATES); do \
+		rm -rf $$t/modules/claude-remote-control; \
+		mkdir -p $$t/modules; \
+		cp -r modules/claude-remote-control $$t/modules/claude-remote-control; \
+	done
+	@echo "Synced modules/claude-remote-control into: $(TEMPLATES)"
+
 .PHONY: validate
-validate: ## Validate all Terraform templates (requires terraform in PATH)
+validate: sync-claude-module ## Validate all Terraform templates (requires terraform in PATH)
 	@for t in $(TEMPLATES); do \
 		echo "--- Validating $$t ---"; \
 		(cd $$t && terraform init -backend=false -input=false -no-color && terraform validate -no-color) || exit 1; \
@@ -116,7 +125,7 @@ fmt-check: ## Check Terraform formatting across all templates
 	terraform fmt -check -recursive
 
 .PHONY: test-templates
-test-templates: ## Run Terraform mock unit tests for all templates (requires terraform in PATH)
+test-templates: sync-claude-module ## Run Terraform mock unit tests for all templates (requires terraform in PATH)
 	@for t in $(TEMPLATES); do \
 		echo "--- Testing $$t ---"; \
 		(cd $$t && terraform test) || exit 1; \
@@ -161,15 +170,15 @@ info: ## Show image and template information
 # --- Template push targets ---
 
 .PHONY: push-template-drupal-core
-push-template-drupal-core: ## Push drupal-core template to Coder
+push-template-drupal-core: sync-claude-module ## Push drupal-core template to Coder
 	$(call push_template,drupal-core)
 
 .PHONY: push-template-drupal-contrib
-push-template-drupal-contrib: ## Push drupal-contrib template to Coder
+push-template-drupal-contrib: sync-claude-module ## Push drupal-contrib template to Coder
 	$(call push_template,drupal-contrib)
 
 .PHONY: push-template-freeform
-push-template-freeform: ## Push freeform template to Coder
+push-template-freeform: sync-claude-module ## Push freeform template to Coder
 	$(call push_template,freeform)
 
 .PHONY: push-all-templates

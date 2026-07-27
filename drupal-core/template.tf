@@ -1407,7 +1407,7 @@ module "vscode-web" {
 }
 
 module "claude_remote_control" {
-  source   = "../modules/claude-remote-control"
+  source   = "./modules/claude-remote-control"
   agent_id = coder_agent.main.id
 }
 
