@@ -66,7 +66,11 @@ output "startup_script" {
     esac
 
     tmux respawn-pane -k -t "$CODER_WORKSPACE_NAME:0" -c "$TARGET_DIR" "claude --remote-control $CODER_WORKSPACE_NAME-$DIR_NAME $CLAUDE_EXTRA_FLAGS"
-    CLAUDEHERE
+CLAUDEHERE
+      # ^ must stay at column 0: bash's <<- only strips leading TABS from the
+      # terminator line, not spaces, and this file is space-indented - any
+      # indentation here makes the heredoc unterminated (silently swallows the
+      # rest of the script as its body, a syntax error only bash notices).
       chmod +x ~/.local/bin/claude-here
 
       # claude-ensure: makes sure window 0 of the named tmux session is
@@ -96,7 +100,8 @@ output "startup_script" {
       tmux new-session -d -s "$CODER_WORKSPACE_NAME" -c "$HOME" "$CLAUDE_REMOTE_CMD"
       tmux set-option -t "$CODER_WORKSPACE_NAME" remain-on-exit on
     fi
-    CLAUDEENSURE
+CLAUDEENSURE
+      # ^ column 0 for the same reason as CLAUDEHERE above.
       chmod +x ~/.local/bin/claude-ensure
 
       ~/.local/bin/claude-ensure
