@@ -98,12 +98,21 @@ data "coder_parameter" "vscode_extensions" {
 data "coder_parameter" "enable_claude_code" {
   name         = "enable_claude_code"
   display_name = "Enable Claude Code remote control"
-  description  = "Launch `claude --remote-control` in a named tmux session, controllable from claude.ai/code or the Claude mobile app. Requires a Claude Pro/Max/Team/Enterprise subscription (API-key auth is not supported); does not work with Bedrock/Vertex/a custom gateway."
-  type         = "bool"
-  form_type    = "switch"
-  default      = "false"
-  mutable      = true
-  order        = 10
+  description  = <<-EOT
+    Control Claude Code in this workspace from claude.ai/code or the Claude mobile app.
+
+    **First use:** open the "Claude Code" app button (or SSH into the workspace) and complete the one-time Claude login plus the workspace-trust prompt.
+
+    **Work in a project directory:** Claude starts in `$HOME`. From any terminal, `cd` into your project and run `claude-here` to bring Claude there — no re-login needed, just a one-time trust prompt for that directory. This replaces the current conversation.
+
+    Requires a Claude Pro/Max/Team/Enterprise subscription (API-key auth is not supported); does not work with Bedrock/Vertex/a custom gateway. Remote sessions disconnect after ~10 minutes offline.
+  EOT
+
+  type      = "bool"
+  form_type = "switch"
+  default   = "false"
+  mutable   = true
+  order     = 10
 }
 
 data "coder_parameter" "claude_code_skip_permissions" {
@@ -455,7 +464,7 @@ BASHCOMP
       echo 'export PATH="$HOME/.npm-global/bin:$PATH"' >> ~/.bashrc
     fi
 
-    # Claude Code remote control: launch `claude --remote-control` in a named
+    # Claude Code remote control: this launches `claude --remote-control` in a named
     # tmux session so it's connectable from claude.ai/code or the mobile app.
     CLAUDE_CODE_ENABLED="${local.claude_code_enabled}"
     if [ "$CLAUDE_CODE_ENABLED" = "true" ]; then
