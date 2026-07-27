@@ -95,6 +95,28 @@ data "coder_parameter" "vscode_extensions" {
   }
 }
 
+data "coder_parameter" "enable_claude_code" {
+  name         = "enable_claude_code"
+  display_name = "Enable Claude Code remote control"
+  description  = "Launch `claude --remote-control` in a named tmux session, controllable from claude.ai/code or the Claude mobile app. Requires a Claude Pro/Max/Team/Enterprise subscription (API-key auth is not supported); does not work with Bedrock/Vertex/a custom gateway."
+  type         = "bool"
+  form_type    = "switch"
+  default      = "false"
+  mutable      = true
+  order        = 10
+}
+
+data "coder_parameter" "claude_code_skip_permissions" {
+  name         = "claude_code_skip_permissions"
+  display_name = "Claude Code: skip permission prompts"
+  description  = "Pass --dangerously-skip-permissions. Only takes effect when remote control is enabled."
+  type         = "bool"
+  form_type    = "switch"
+  default      = "false"
+  mutable      = true
+  order        = 11
+}
+
 locals {
   workspace_home      = "/home/coder"
   selected_extensions = jsondecode(data.coder_parameter.vscode_extensions.value)
@@ -111,6 +133,16 @@ locals {
     ? [for s in split(",", local._project_names_raw) : trimspace(s) if trimspace(s) != ""]
     : [data.coder_workspace.me.name]
   )
+
+  # Deliberately compared as strings, not tobool(): the blanket coder_parameter
+  # mock in tests defaults every parameter's value to "[]", which tobool()
+  # would reject outright.
+  claude_code_enabled          = data.coder_parameter.enable_claude_code.value == "true"
+  claude_code_skip_permissions = data.coder_parameter.claude_code_skip_permissions.value == "true"
+  claude_remote_cmd = join(" ", compact([
+    "claude", "--remote-control", "$CODER_WORKSPACE_NAME",
+    local.claude_code_skip_permissions ? "--dangerously-skip-permissions" : "",
+  ]))
 }
 
 variable "vscode_extensions" {
@@ -402,6 +434,28 @@ BASHCOMP
       echo 'export PATH="$HOME/.npm-global/bin:$PATH"' >> ~/.bashrc
     fi
 
+    # Claude Code remote control: launch `claude --remote-control` in a named
+    # tmux session so it's connectable from claude.ai/code or the mobile app.
+    CLAUDE_CODE_ENABLED="${local.claude_code_enabled}"
+    if [ "$CLAUDE_CODE_ENABLED" = "true" ]; then
+      sed -i '/^export CLAUDE_REMOTE_CMD=/d' ~/.bashrc || true
+      echo 'export CLAUDE_REMOTE_CMD="${local.claude_remote_cmd}"' >> ~/.bashrc
+      export CLAUDE_REMOTE_CMD="${local.claude_remote_cmd}"
+
+      mkdir -p ~/.local/bin
+      cat > ~/.local/bin/claude-here <<-'CLAUDEHERE'
+#!/usr/bin/env bash
+set -euo pipefail
+tmux respawn-pane -k -t "$CODER_WORKSPACE_NAME" -c "$(pwd)" "$CLAUDE_REMOTE_CMD"
+CLAUDEHERE
+      chmod +x ~/.local/bin/claude-here
+
+      if ! tmux has-session -t "$CODER_WORKSPACE_NAME" 2>/dev/null; then
+        tmux new-session -d -s "$CODER_WORKSPACE_NAME" -c "$HOME" "$CLAUDE_REMOTE_CMD"
+        echo "✓ Claude Code remote control session started: $CODER_WORKSPACE_NAME"
+      fi
+    fi
+
     echo ""
     echo "=== Setup Complete ==="
     echo ""
@@ -534,6 +588,18 @@ resource "coder_app" "adminer" {
     interval  = 10
     threshold = 30
   }
+}
+
+# Claude Code remote control: terminal-tab fallback for first login/troubleshooting.
+# The primary intended usage is connecting from claude.ai/code or the mobile
+# app to the named tmux session started by the startup script, not this button.
+resource "coder_app" "claude_code" {
+  count        = local.claude_code_enabled ? 1 : 0
+  agent_id     = coder_agent.main.id
+  slug         = "claude-code"
+  display_name = "Claude Code"
+  command      = "tmux attach -t \"$CODER_WORKSPACE_NAME\" || tmux new-session -A -s \"$CODER_WORKSPACE_NAME\""
+  order        = 12
 }
 
 resource "coder_script" "ddev_shutdown" {
