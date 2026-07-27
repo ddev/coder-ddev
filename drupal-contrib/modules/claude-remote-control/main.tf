@@ -6,7 +6,7 @@ data "coder_parameter" "enable_claude_code" {
 
     **First use:** open the "Claude Code" app button (or SSH into the workspace) and complete the one-time Claude login plus the workspace-trust prompt.
 
-    **Work in a project directory:** Claude starts in `$HOME`. From any terminal, `cd` into your project and run `claude-here` to bring Claude there — no re-login needed, just a one-time trust prompt for that directory. This replaces the current conversation.
+    **Work in a project directory:** Claude starts in `$HOME`. From any terminal, `cd` into your project and run `claude-here` to bring Claude there — no re-login needed, just a one-time trust prompt for that directory. This starts a new conversation in a new session (named after the directory) — the old session stops appearing in claude.ai/code once you do this.
 
     Requires a Claude Pro/Max/Team/Enterprise subscription (API-key auth is not supported); does not work with Bedrock/Vertex/a custom gateway. Remote sessions disconnect after ~10 minutes offline.
   EOT
@@ -35,9 +35,9 @@ locals {
   # tobool() would reject outright.
   enabled          = data.coder_parameter.enable_claude_code.value == "true"
   skip_permissions = data.coder_parameter.claude_code_skip_permissions.value == "true"
+  extra_flags      = local.skip_permissions ? "--dangerously-skip-permissions" : ""
   remote_cmd = join(" ", compact([
-    "claude", "--remote-control", "$CODER_WORKSPACE_NAME",
-    local.skip_permissions ? "--dangerously-skip-permissions" : "",
+    "claude", "--remote-control", "$CODER_WORKSPACE_NAME", local.extra_flags,
   ]))
 }
 
@@ -49,6 +49,6 @@ resource "coder_app" "claude_code" {
   agent_id     = var.agent_id
   slug         = "claude-code"
   display_name = "Claude Code"
-  command      = "tmux attach -t \"$CODER_WORKSPACE_NAME:0\" || tmux new-session -A -s \"$CODER_WORKSPACE_NAME\""
+  command      = "~/.local/bin/claude-ensure 2>/dev/null; tmux attach -t \"$CODER_WORKSPACE_NAME:0\""
   order        = var.app_order
 }
