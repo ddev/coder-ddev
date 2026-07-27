@@ -6,7 +6,7 @@ data "coder_parameter" "enable_claude_code" {
 
     **First use:** open the "Claude Code" app button (or SSH into the workspace) and complete the one-time Claude login plus the workspace-trust prompt.
 
-    **Work in a project directory:** Claude starts in `$HOME`. From any terminal, `cd` into your project and run `claude-here` to bring Claude there — no re-login needed, just a one-time trust prompt for that directory. This starts a new conversation in a new session (named after the directory) — the old session stops appearing in claude.ai/code once you do this.
+    **Work in a project directory:** Claude starts in `$HOME`. From any terminal, `cd` into your project and run `claude-here` to bring Claude there — no re-login needed, and directories under `$HOME` are auto-trusted (same trust boundary as `$HOME` itself), so no trust prompt either. This starts a new conversation in a new session (named after the directory) — the old session stops appearing in claude.ai/code once you do this.
 
     Requires a Claude Pro/Max/Team/Enterprise subscription (API-key auth is not supported); does not work with Bedrock/Vertex/a custom gateway. Remote sessions disconnect after ~10 minutes offline.
   EOT

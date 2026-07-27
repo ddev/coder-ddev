@@ -39,8 +39,33 @@ output "startup_script" {
       cat > ~/.local/bin/claude-here <<-'CLAUDEHERE'
     #!/usr/bin/env bash
     set -euo pipefail
-    DIR_NAME=$(basename "$(pwd)")
-    tmux respawn-pane -k -t "$CODER_WORKSPACE_NAME:0" -c "$(pwd)" "claude --remote-control $CODER_WORKSPACE_NAME-$DIR_NAME $CLAUDE_EXTRA_FLAGS"
+    TARGET_DIR="$(pwd)"
+    DIR_NAME=$(basename "$TARGET_DIR")
+
+    case "$TARGET_DIR" in
+      "$HOME"/*)
+        # $HOME itself is already a trusted workspace boundary (accepted once
+        # at first login) - claude's trust store is keyed per exact path, not
+        # inherited by subdirectories, so without this every new project
+        # directory under $HOME would re-prompt for a dialog nobody's there
+        # to answer (this just launches a background tmux pane) - remote
+        # control won't come online until someone manually accepts it.
+        if command -v jq >/dev/null 2>&1 && [ -f "$HOME/.claude.json" ]; then
+          CLAUDE_JSON_TMP=$(mktemp)
+          if jq --arg dir "$TARGET_DIR" '.projects[$dir].hasTrustDialogAccepted = true' "$HOME/.claude.json" > "$CLAUDE_JSON_TMP" 2>/dev/null; then
+            mv "$CLAUDE_JSON_TMP" "$HOME/.claude.json"
+          else
+            rm -f "$CLAUDE_JSON_TMP"
+          fi
+        fi
+        ;;
+      *)
+        echo "Note: $TARGET_DIR is outside \$HOME, so it isn't auto-trusted."
+        echo "Go accept the workspace-trust prompt in the Claude Code session before it starts serving."
+        ;;
+    esac
+
+    tmux respawn-pane -k -t "$CODER_WORKSPACE_NAME:0" -c "$TARGET_DIR" "claude --remote-control $CODER_WORKSPACE_NAME-$DIR_NAME $CLAUDE_EXTRA_FLAGS"
     CLAUDEHERE
       chmod +x ~/.local/bin/claude-here
 
