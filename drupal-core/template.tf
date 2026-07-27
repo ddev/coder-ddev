@@ -1309,7 +1309,8 @@ BASHCOMP
         sudo ln -sf ~/.npm-global/bin/task-master-ai /usr/local/bin/task-master-ai 2>/dev/null || true
       fi
     fi
-    
+
+    ${module.claude_remote_control.startup_script}
 
 
   
@@ -1403,6 +1404,11 @@ module "vscode-web" {
   accept_license = true
   order          = 2
   extensions     = local.selected_extensions
+}
+
+module "claude_remote_control" {
+  source   = "../modules/claude-remote-control"
+  agent_id = coder_agent.main.id
 }
 
 # DDEV Web Server (HTTP) - appears when DDEV project is running

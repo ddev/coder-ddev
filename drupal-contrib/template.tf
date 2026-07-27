@@ -1019,6 +1019,8 @@ BASHPROFILE_WELCOME
       printf '\n# Source system-wide settings (bash_completion etc.) for login shells\nif [ -f /etc/bash.bashrc ]; then\n  . /etc/bash.bashrc\nfi\n' >> ~/.bash_profile
     fi
 
+    ${module.claude_remote_control.startup_script}
+
     # ==========================================
     # Timing summary and final status
     # ==========================================
@@ -1113,6 +1115,11 @@ module "vscode-web" {
   accept_license = true
   order          = 2
   extensions     = local.selected_extensions
+}
+
+module "claude_remote_control" {
+  source   = "../modules/claude-remote-control"
+  agent_id = coder_agent.main.id
 }
 
 resource "coder_app" "ddev-web" {

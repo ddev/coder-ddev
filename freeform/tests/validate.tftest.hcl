@@ -144,22 +144,22 @@ run "linuxbrew_volume_created" {
 run "claude_code_disabled_by_default" {
   command = plan
   assert {
-    condition     = length(coder_app.claude_code) == 0
-    error_message = "coder_app.claude_code must not be created when enable_claude_code=false"
+    condition     = module.claude_remote_control.app_count == 0
+    error_message = "module.claude_remote_control's coder_app.claude_code must not be created when enable_claude_code=false"
   }
 }
 
 run "claude_code_enabled" {
   command = plan
   override_data {
-    target = data.coder_parameter.enable_claude_code
+    target = module.claude_remote_control.data.coder_parameter.enable_claude_code
     values = {
       value = "true"
     }
   }
   assert {
-    condition     = length(coder_app.claude_code) == 1
-    error_message = "coder_app.claude_code must be created when enable_claude_code=true"
+    condition     = module.claude_remote_control.app_count == 1
+    error_message = "module.claude_remote_control's coder_app.claude_code must be created when enable_claude_code=true"
   }
   assert {
     condition     = strcontains(coder_agent.main.startup_script, "claude --remote-control")
@@ -174,13 +174,13 @@ run "claude_code_enabled" {
 run "claude_code_enabled_skip_permissions" {
   command = plan
   override_data {
-    target = data.coder_parameter.enable_claude_code
+    target = module.claude_remote_control.data.coder_parameter.enable_claude_code
     values = {
       value = "true"
     }
   }
   override_data {
-    target = data.coder_parameter.claude_code_skip_permissions
+    target = module.claude_remote_control.data.coder_parameter.claude_code_skip_permissions
     values = {
       value = "true"
     }
