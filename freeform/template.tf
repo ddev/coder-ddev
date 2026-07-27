@@ -442,11 +442,17 @@ BASHCOMP
       echo 'export CLAUDE_REMOTE_CMD="${local.claude_remote_cmd}"' >> ~/.bashrc
       export CLAUDE_REMOTE_CMD="${local.claude_remote_cmd}"
 
+      # Target window 0 explicitly, not just the session: an untargeted
+      # `-t "$CODER_WORKSPACE_NAME"` resolves to the session's current
+      # *active* window, which silently becomes some other window if one
+      # was ever created (e.g. by the user running tmux themselves) and
+      # left focused - respawning the wrong pane instead of the intended
+      # Claude Code session.
       mkdir -p ~/.local/bin
       cat > ~/.local/bin/claude-here <<-'CLAUDEHERE'
 #!/usr/bin/env bash
 set -euo pipefail
-tmux respawn-pane -k -t "$CODER_WORKSPACE_NAME" -c "$(pwd)" "$CLAUDE_REMOTE_CMD"
+tmux respawn-pane -k -t "$CODER_WORKSPACE_NAME:0" -c "$(pwd)" "$CLAUDE_REMOTE_CMD"
 CLAUDEHERE
       chmod +x ~/.local/bin/claude-here
 
@@ -598,7 +604,7 @@ resource "coder_app" "claude_code" {
   agent_id     = coder_agent.main.id
   slug         = "claude-code"
   display_name = "Claude Code"
-  command      = "tmux attach -t \"$CODER_WORKSPACE_NAME\" || tmux new-session -A -s \"$CODER_WORKSPACE_NAME\""
+  command      = "tmux attach -t \"$CODER_WORKSPACE_NAME:0\" || tmux new-session -A -s \"$CODER_WORKSPACE_NAME\""
   order        = 12
 }
 
