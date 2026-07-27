@@ -58,18 +58,38 @@ output "startup_script" {
     #!/usr/bin/env bash
     set -euo pipefail
     if tmux has-session -t "$CODER_WORKSPACE_NAME" 2>/dev/null; then
-      CURRENT_CMD=$(tmux list-panes -t "$CODER_WORKSPACE_NAME:0" -F '#{pane_current_command}' 2>/dev/null | head -1)
-      if [ "$CURRENT_CMD" != "claude" ]; then
+      # remain-on-exit keeps the pane (and so the session/server) around even
+      # after claude exits - e.g. if nobody logs in before its idle timeout.
+      # Without it, an unattended claude exiting takes the whole tmux server
+      # down with it, with no session left for claude-ensure to even detect.
+      tmux set-option -t "$CODER_WORKSPACE_NAME" remain-on-exit on 2>/dev/null || true
+      read -r PANE_DEAD CURRENT_CMD < <(tmux list-panes -t "$CODER_WORKSPACE_NAME:0" -F '#{pane_dead} #{pane_current_command}' 2>/dev/null | head -1)
+      if [ "$PANE_DEAD" = "1" ] || [ "$CURRENT_CMD" != "claude" ]; then
         tmux respawn-pane -k -t "$CODER_WORKSPACE_NAME:0" -c "$HOME" "$CLAUDE_REMOTE_CMD"
       fi
     else
       tmux new-session -d -s "$CODER_WORKSPACE_NAME" -c "$HOME" "$CLAUDE_REMOTE_CMD"
+      tmux set-option -t "$CODER_WORKSPACE_NAME" remain-on-exit on
     fi
     CLAUDEENSURE
       chmod +x ~/.local/bin/claude-ensure
 
       ~/.local/bin/claude-ensure
-      echo "✓ Claude Code remote control session ready: $CODER_WORKSPACE_NAME"
+
+      # Printed to the live build log so it's seen during the build, not
+      # just buried in a one-line status - and appended to WELCOME.txt so
+      # it's seen again on every later login, since the build log usually
+      # isn't scrolled back to.
+      CLAUDE_CODE_BANNER="
+✓ Claude Code remote control session ready: $CODER_WORKSPACE_NAME
+
+  → First time? Open the \"Claude Code\" app button (or SSH in) to finish
+    logging in and accept the workspace-trust prompt - the session won't
+    show up on claude.ai/code or the mobile app until you do.
+  → Working in a project directory? cd there and run: claude-here
+"
+      echo "$CLAUDE_CODE_BANNER"
+      echo "$CLAUDE_CODE_BANNER" >> ~/WELCOME.txt
     fi
   EOT
 }
