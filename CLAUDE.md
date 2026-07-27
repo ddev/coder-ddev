@@ -233,7 +233,8 @@ The startup script is inline in each template's `template.tf` (e.g. `freeform/te
 ### Volume Strategy
 - **Home directory**: Host path `/coder-workspaces/<owner>-<workspace>` → Container `/home/coder`
 - **Docker cache**: Named volume `coder-<owner>-<workspace>-dind-cache` → `/var/lib/docker`
-- **Isolation**: Each workspace gets separate host directory and Docker volume
+- **Homebrew**: Named volume `coder-<owner>-<workspace>-linuxbrew` → `/home/linuxbrew` — persists the Homebrew Cellar across workspace stop/start, so `brew upgrade`/`brew install` done inside a workspace survives restarts. Unlike the `/home/coder` bind mount, a fresh named volume is auto-populated by Docker from the image's existing `/home/linuxbrew` contents on first mount, so no manual copy step is needed — only an ownership fix (`sudo chown -R coder:coder /home/linuxbrew`) in the startup script. `HOMEBREW_CACHE` is set to `/home/linuxbrew/.cache/Homebrew` (via the Dockerfile) so the cache and Cellar always stay on the same filesystem, avoiding cross-device link (`EXDEV`) errors.
+- **Isolation**: Each workspace gets separate host directory and Docker volumes
 
 ### Terraform Variables
 Key template variables (e.g. in `freeform/template.tf`):
