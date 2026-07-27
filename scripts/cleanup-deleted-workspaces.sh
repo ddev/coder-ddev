@@ -88,8 +88,10 @@ echo
 # --- Docker volumes ---
 orphan_volumes=()
 while IFS= read -r vol; do
-  # Volume names look like: coder-<owner>-<workspace>-dind-cache
-  if [[ "$vol" =~ ^coder-(.+)-dind-cache$ ]]; then
+  # Volume names look like: coder-<owner>-<workspace>-dind-cache or
+  # coder-<owner>-<workspace>-linuxbrew. Add any new persistent per-workspace
+  # volume suffix here too, or orphans of that type will go undetected.
+  if [[ "$vol" =~ ^coder-(.+)-(dind-cache|linuxbrew)$ ]]; then
     owner_workspace="${BASH_REMATCH[1]}"
     if [[ -z "${active_dirs[$owner_workspace]+_}" ]]; then
       orphan_volumes+=("$vol")
