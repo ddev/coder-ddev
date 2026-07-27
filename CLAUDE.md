@@ -239,7 +239,7 @@ The startup script is inline in each template's `template.tf` (e.g. `freeform/te
 ### Terraform Variables
 Key template variables (e.g. in `freeform/template.tf`):
 - `workspace_image_registry` - Docker registry URL (default: `index.docker.io/ddev/coder-ddev`)
-- `image_version` - Image tag (default: read from `VERSION` file or `v0.1`)
+- `image_version` - Image tag (default: `v0.1`; the Makefile passes `--variable image_version=$(cat VERSION)` at push time, so the root `VERSION` file is the single source of truth — no per-template copies)
 - `cpu` / `memory` - Resource limits (defaults: 4 cores, 8GB RAM)
 - `node_version` - Node.js version (default: `24`, informational only — Node is pre-installed in image)
 - `docker_gid` - Docker group GID (default: `988`)
@@ -353,6 +353,6 @@ Additional logs in workspace:
 - `scripts/coder-delete-workspace-dir.sh` - Sudo wrapper for workspace host dir cleanup (must be installed on server)
 - `scripts/cleanup-deleted-workspaces.sh` - Manual cleanup for orphaned workspace dirs/volumes
 - `scripts/workspace-lifecycle-cleanup.sh` - Notifies then deletes idle workspaces; runs via systemd timer on coder.ddev.com (production only, see `scripts/workspace-lifecycle-cleanup.service`/`.timer`, must be installed on server)
-- `VERSION` - Image version used by all templates (read automatically by Makefile)
+- `VERSION` - Single source of truth for the image version; read by the Makefile and passed to every template as `--variable image_version=...` at push time (no per-template copies)
 - `openspec/project.md` - Project conventions and constraints
 - `openspec/AGENTS.md` - OpenSpec workflow instructions

@@ -212,8 +212,8 @@ locals {
 }
 
 locals {
-  # Read image version from VERSION file if it exists, otherwise use variable default
-  image_version = try(trimspace(file("${path.module}/VERSION")), var.image_version)
+  # Set via --variable image_version=$(cat VERSION) by the Makefile at push time.
+  image_version = var.image_version
 
   # Remove any tag (including :latest) if present, but preserve port numbers (e.g., :5050)
   # Remove common tags from the end of the registry URL
@@ -252,7 +252,7 @@ variable "vscode_extensions" {
 variable "workspace_image_registry" {
   description = "Docker registry URL for the workspace base image (without tag, version is added automatically)"
   type        = string
-  # The version tag is appended automatically using the image_version variable or VERSION file
+  # The version tag is appended automatically using the image_version variable.
   # DO NOT include :latest or any version tag here - version comes from image_version variable
   # To use a specific version, override the image_version variable when deploying
   default = "index.docker.io/ddev/coder-ddev"
@@ -262,7 +262,7 @@ variable "workspace_image_registry" {
 # The image is built and pushed using the Makefile (see root Makefile and VERSION file)
 # This avoids prevent_destroy issues since the image is not managed by Terraform
 resource "docker_image" "workspace_image" {
-  # Always use version tag (never :latest) from the image_version variable or VERSION file
+  # Always use version tag (never :latest) from the image_version variable.
   # This ensures consistent image versions and prevents using stale images
   name = "${local.workspace_image_registry_base}:${local.image_version}"
 
