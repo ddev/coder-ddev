@@ -99,13 +99,11 @@ coder create --template freeform myworkspace --parameter enable_claude_code=true
 coder update myworkspace --parameter enable_claude_code=true
 ```
 
-At startup, Claude Code is upgraded via Homebrew and a tmux session named after the workspace is started running `claude`. Attach to it either via the **Claude Code** app button in the Coder dashboard, or manually:
+At startup, Claude Code is upgraded via Homebrew and a tmux session named after the workspace is started running `claude --remote-control myworkspace`. **The intended way to use it is not the terminal** — go to [claude.ai/code](https://claude.ai/code) or open the Claude mobile app, and the session shows up by workspace name with a green "online" dot; connect from there. Requires a Claude Pro/Max/Team/Enterprise subscription (API key auth is not supported for Remote Control) and being logged into `api.anthropic.com` (not Bedrock/Vertex/a custom gateway).
 
-```bash
-tmux attach -t myworkspace
-```
+The **Claude Code** app button in the Coder dashboard (and `tmux attach -t myworkspace` manually) is a local fallback — useful for the first interactive login (`/login` inside the session), or for troubleshooting, but not the normal way to interact with the session day-to-day.
 
-The first attach triggers Claude Code's interactive OAuth login — no API key is configured by this template. To skip permission prompts entirely, also pass `--parameter claude_code_skip_permissions=true` (off by default; use with caution).
+The first connection triggers Claude Code's interactive login — no API key is configured by this template. To skip permission prompts entirely, also pass `--parameter claude_code_skip_permissions=true` (off by default; use with caution).
 
 > **Known limitation — shared session state.** `enable_claude_code` starts exactly one tmux session per workspace, named after the workspace, running a single `claude` process. Every device/client that attaches (via the "Claude Code" app button or `tmux attach -t <workspace-name>`) is attaching to the *same* running session — that's what makes multi-device remote control possible in the first place. The tradeoff: there's no per-client context, so `cd`-ing or `git checkout`-ing from inside that shared session changes it for everyone attached. Do routine repo administration (branch switches, directory navigation) from a separate, ordinary terminal (the Coder web terminal or `coder ssh <workspace>`) instead — leave the Claude Code tmux session alone for that.
 

@@ -442,9 +442,9 @@ BASHCOMP
       echo "Warning: brew not found on PATH; skipping claude-code upgrade"
     fi
 
-    CLAUDE_CMD="claude"
+    CLAUDE_CMD="claude --remote-control $CODER_WORKSPACE_NAME"
     %{if local.claude_code_skip_permissions~}
-    CLAUDE_CMD="claude --dangerously-skip-permissions"
+    CLAUDE_CMD="claude --remote-control $CODER_WORKSPACE_NAME --dangerously-skip-permissions"
     %{endif~}
 
     if command -v tmux > /dev/null 2>&1 && command -v claude > /dev/null 2>&1; then
@@ -603,7 +603,7 @@ resource "coder_app" "claude_code" {
   slug         = "claude-code"
   display_name = "Claude Code"
   icon         = "/icon/terminal.svg"
-  command      = "tmux attach -t $CODER_WORKSPACE_NAME || tmux new -s $CODER_WORKSPACE_NAME claude${local.claude_code_skip_permissions ? " --dangerously-skip-permissions" : ""}"
+  command      = "tmux attach -t $CODER_WORKSPACE_NAME || tmux new -s $CODER_WORKSPACE_NAME claude --remote-control $CODER_WORKSPACE_NAME${local.claude_code_skip_permissions ? " --dangerously-skip-permissions" : ""}"
   share        = "owner"
 }
 
