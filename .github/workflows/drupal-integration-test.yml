@@ -31,15 +31,18 @@ name: Drupal Integration Tests
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
-# Shared literal (not ref-scoped) so this queues behind any other workflow
-# that also provisions real workspaces on the same staging-coder.ddev.com
-# box (integration-test.yml, drupal-contrib-integration-test.yml) -- see
-# the matching comment in those files. Running two of these at once starves
-# the box's Docker/Sysbox capacity and causes flaky mid-build SSH drops, not
-# genuine test failures.
+# Ref-scoped so a new commit on the same PR (or the same push-to-main queue)
+# cancels its own stale run, but never touches another PR's or main's run.
+# Serialization against other workflows/refs that provision real workspaces
+# on the shared staging-coder.ddev.com box happens via the job-level
+# `concurrency:` on each box-touching job below (group: staging-coder-integration,
+# cancel-in-progress: false) -- see the matching comment there and in
+# integration-test.yml / drupal-contrib-integration-test.yml. That same job-level
+# group also serializes drupal-plain-gh against drupal-issue-fork-gh, which
+# otherwise run in parallel within a single workflow run.
 concurrency:
-  group: staging-coder-integration
-  cancel-in-progress: false
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
 
 on:
   schedule:
@@ -62,6 +65,13 @@ jobs:
     # To re-enable: restore `if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.owner.login == github.repository_owner }}`
     if: false
     runs-on: [self-hosted, sysbox]
+    timeout-minutes: 30
+    # Same literal group as every other job that provisions real workspaces on
+    # staging-coder.ddev.com, across all three integration-test workflows --
+    # serializes actual box usage without cancelling anyone else's in-flight run.
+    concurrency:
+      group: staging-coder-integration
+      cancel-in-progress: false
     strategy:
       matrix:
         drupal_version: ["12", "11"]
@@ -204,6 +214,10 @@ jobs:
     name: Drupal ${{ matrix.drupal_version }} (plain, GH)
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.owner.login == github.repository_owner }}
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: staging-coder-integration
+      cancel-in-progress: false
     strategy:
       # PRs run a single Drupal version (smoke); push-to-main and nightly run the
       # full matrix. Cuts per-PR workspace load on staging. See ci-reap.yml.
@@ -282,6 +296,10 @@ jobs:
     # To re-enable: restore `if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.owner.login == github.repository_owner }}`
     if: false
     runs-on: [self-hosted, sysbox]
+    timeout-minutes: 30
+    concurrency:
+      group: staging-coder-integration
+      cancel-in-progress: false
     defaults:
       run:
         shell: bash -euo pipefail {0}
@@ -442,6 +460,10 @@ jobs:
     name: Drupal issue fork ${{ vars.DRUPAL_TEST_ISSUE_FORK || '3585397' }} (GH)
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.owner.login == github.repository_owner }}
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: staging-coder-integration
+      cancel-in-progress: false
     defaults:
       run:
         shell: bash -euo pipefail {0}
