@@ -91,11 +91,12 @@ After `ddev restart`, the post-start hook updates `coder-routes.yaml` to include
 
 ### Claude Code (Remote Control)
 
-Enable Claude Code remote control when creating or updating the workspace:
+`Enable Claude Code` and `Claude Code: skip permissions` are workspace parameters (per-workspace, not template-wide) — toggle them in the Coder dashboard when creating or updating a workspace, or from the CLI:
 
 ```bash
-coder create --template freeform myworkspace
-# Select: enable_claude_code = true
+coder create --template freeform myworkspace --parameter enable_claude_code=true
+# or, on an existing workspace:
+coder update myworkspace --parameter enable_claude_code=true
 ```
 
 At startup, Claude Code is upgraded via Homebrew and a tmux session named after the workspace is started running `claude`. Attach to it either via the **Claude Code** app button in the Coder dashboard, or manually:
@@ -104,7 +105,7 @@ At startup, Claude Code is upgraded via Homebrew and a tmux session named after 
 tmux attach -t myworkspace
 ```
 
-The first attach triggers Claude Code's interactive OAuth login — no API key is configured by this template. To skip permission prompts entirely, also set `claude_code_skip_permissions = true` (off by default; use with caution).
+The first attach triggers Claude Code's interactive OAuth login — no API key is configured by this template. To skip permission prompts entirely, also pass `--parameter claude_code_skip_permissions=true` (off by default; use with caution).
 
 > **Known limitation — shared session state.** `enable_claude_code` starts exactly one tmux session per workspace, named after the workspace, running a single `claude` process. Every device/client that attaches (via the "Claude Code" app button or `tmux attach -t <workspace-name>`) is attaching to the *same* running session — that's what makes multi-device remote control possible in the first place. The tradeoff: there's no per-client context, so `cd`-ing or `git checkout`-ing from inside that shared session changes it for everyone attached. Do routine repo administration (branch switches, directory navigation) from a separate, ordinary terminal (the Coder web terminal or `coder ssh <workspace>`) instead — leave the Claude Code tmux session alone for that.
 
@@ -151,8 +152,6 @@ ddev logs -f             # Follow logs
 | `cpu` | 4 | CPU cores (1–32) |
 | `memory` | 8 | Memory in GB (2–128) |
 | `enable_adminer` | false | Show Adminer app button (requires `ddev get ddev/ddev-adminer`) |
-| `enable_claude_code` | false | Enable Claude Code remote control (tmux session + app button) |
-| `claude_code_skip_permissions` | false | Append `--dangerously-skip-permissions` to the Claude Code session (requires `enable_claude_code`) |
 | `workspace_image_registry` | `index.docker.io/ddev/coder-ddev` | Base image registry |
 | `docker_gid` | 988 | Docker group GID on host |
 

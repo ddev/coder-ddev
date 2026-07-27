@@ -95,6 +95,28 @@ data "coder_parameter" "vscode_extensions" {
   }
 }
 
+data "coder_parameter" "enable_claude_code" {
+  name         = "enable_claude_code"
+  display_name = "Enable Claude Code"
+  description  = "Upgrade Claude Code via Homebrew at startup and run it in a tmux session named after the workspace, attachable from the dashboard. Interactive OAuth login is required on first attach (no API key is configured by this template)."
+  type         = "bool"
+  form_type    = "switch"
+  default      = "false"
+  mutable      = true
+  order        = 2
+}
+
+data "coder_parameter" "claude_code_skip_permissions" {
+  name         = "claude_code_skip_permissions"
+  display_name = "Claude Code: skip permissions"
+  description  = "Append --dangerously-skip-permissions to the Claude Code session. No effect unless Enable Claude Code is also on."
+  type         = "bool"
+  form_type    = "switch"
+  default      = "false"
+  mutable      = true
+  order        = 3
+}
+
 locals {
   workspace_home      = "/home/coder"
   selected_extensions = jsondecode(data.coder_parameter.vscode_extensions.value)
@@ -111,6 +133,12 @@ locals {
     ? [for s in split(",", local._project_names_raw) : trimspace(s) if trimspace(s) != ""]
     : [data.coder_workspace.me.name]
   )
+
+  # coder_parameter values are always strings; compare rather than tobool() so an
+  # unrelated mock default (e.g. "[]" in Terraform tests) safely evaluates false
+  # instead of erroring.
+  enable_claude_code           = data.coder_parameter.enable_claude_code.value == "true"
+  claude_code_skip_permissions = data.coder_parameter.claude_code_skip_permissions.value == "true"
 }
 
 variable "vscode_extensions" {
@@ -179,18 +207,6 @@ variable "memory" {
 
 variable "enable_adminer" {
   description = "Show Adminer database UI app button (requires: ddev get ddev/ddev-adminer)"
-  type        = bool
-  default     = false
-}
-
-variable "enable_claude_code" {
-  description = "Enable Claude Code remote control: upgrades Claude Code via Homebrew at workspace startup and starts one persistent tmux session (named after the workspace) running `claude`, attachable from any device. Interactive OAuth login is required on first attach (no API key is configured by this template)."
-  type        = bool
-  default     = false
-}
-
-variable "claude_code_skip_permissions" {
-  description = "Append --dangerously-skip-permissions to the `claude` command started by enable_claude_code. No effect unless enable_claude_code is also true."
   type        = bool
   default     = false
 }
@@ -414,7 +430,7 @@ BASHCOMP
       echo 'export PATH="$HOME/.npm-global/bin:$PATH"' >> ~/.bashrc
     fi
 
-    %{if var.enable_claude_code~}
+    %{if local.enable_claude_code~}
     # --- Claude Code remote control (enable_claude_code) ---------------------
     echo "Setting up Claude Code remote-control session..."
 
@@ -427,7 +443,7 @@ BASHCOMP
     fi
 
     CLAUDE_CMD="claude"
-    %{if var.claude_code_skip_permissions~}
+    %{if local.claude_code_skip_permissions~}
     CLAUDE_CMD="claude --dangerously-skip-permissions"
     %{endif~}
 
@@ -582,12 +598,12 @@ resource "coder_app" "adminer" {
 # running `claude`. Shared by every client that attaches — see README for
 # the cd/git-checkout caveat.
 resource "coder_app" "claude_code" {
-  for_each     = var.enable_claude_code ? toset(["claude-code"]) : toset([])
+  for_each     = local.enable_claude_code ? toset(["claude-code"]) : toset([])
   agent_id     = coder_agent.main.id
   slug         = "claude-code"
   display_name = "Claude Code"
   icon         = "/icon/terminal.svg"
-  command      = "tmux attach -t $CODER_WORKSPACE_NAME || tmux new -s $CODER_WORKSPACE_NAME claude${var.claude_code_skip_permissions ? " --dangerously-skip-permissions" : ""}"
+  command      = "tmux attach -t $CODER_WORKSPACE_NAME || tmux new -s $CODER_WORKSPACE_NAME claude${local.claude_code_skip_permissions ? " --dangerously-skip-permissions" : ""}"
   share        = "owner"
 }
 
