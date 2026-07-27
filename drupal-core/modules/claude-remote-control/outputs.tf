@@ -65,7 +65,7 @@ output "startup_script" {
         ;;
     esac
 
-    tmux respawn-pane -k -t "$CODER_WORKSPACE_NAME:0" -c "$TARGET_DIR" "claude --remote-control $CODER_WORKSPACE_NAME-$DIR_NAME $CLAUDE_EXTRA_FLAGS"
+    tmux respawn-pane -k -t "$CODER_WORKSPACE_NAME:0" -c "$TARGET_DIR" "${local.claude_bin} --remote-control $CODER_WORKSPACE_NAME-$DIR_NAME $CLAUDE_EXTRA_FLAGS"
 CLAUDEHERE
       # ^ must stay at column 0: bash's <<- only strips leading TABS from the
       # terminator line, not spaces, and this file is space-indented - any

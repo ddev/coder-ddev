@@ -36,8 +36,15 @@ locals {
   enabled          = data.coder_parameter.enable_claude_code.value == "true"
   skip_permissions = data.coder_parameter.claude_code_skip_permissions.value == "true"
   extra_flags      = local.skip_permissions ? "--dangerously-skip-permissions" : ""
+
+  # `claude` is installed via Homebrew (linuxbrew), which is only on PATH in
+  # interactive shells (~/.bashrc). tmux new-session/respawn-pane run the
+  # command directly, not through a login/interactive shell, so a bare
+  # "claude" is not found the first time a session is created at boot -
+  # invoke it by absolute path instead of depending on PATH inheritance.
+  claude_bin = "/home/linuxbrew/.linuxbrew/bin/claude"
   remote_cmd = join(" ", compact([
-    "claude", "--remote-control", "$CODER_WORKSPACE_NAME", local.extra_flags,
+    local.claude_bin, "--remote-control", "$CODER_WORKSPACE_NAME", local.extra_flags,
   ]))
 }
 
