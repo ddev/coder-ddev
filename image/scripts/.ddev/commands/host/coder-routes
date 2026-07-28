@@ -81,18 +81,27 @@ while IFS= read -r router; do
   [ ${#entrypoints[@]} -eq 0 ] && continue
 
   # Derive Coder slug from service name: strip {ddev_project}- prefix and -{port} suffix.
+  # The port here is the web *container* port (80/8025/...), not the host-published port.
   # Examples (DDEV_PROJECT=myproject, WORKSPACE=myworkspace):
-  #   myproject-web-8080    → svc=web  port=8080  → slug=PROJECT_SLUG (primary web)
+  #   myproject-web-80      → svc=web  port=80    → slug=PROJECT_SLUG (primary web)
   #   myproject-web-8025    → svc=web  port=8025  → slug=mailpit-PROJECT_SLUG
   #   myproject-xhgui-80    → svc=xhgui          → slug=xhgui-PROJECT_SLUG
   #   myproject-adminer-9100 → svc=adminer         → slug=adminer-PROJECT_SLUG
+  #   myproject-web-4321    → svc=web  port=4321  → falls through to the dynamic
+  #                           add-on branch below (PathPrefix rule), e.g. a
+  #                           web_extra_exposed_ports container_port. Only container
+  #                           port 80 is treated as the primary web app — any other
+  #                           "web" service/port must NOT also claim slug=PROJECT_SLUG,
+  #                           or its router silently clobbers the primary site's router
+  #                           (same map key) since both would compute the same
+  #                           ROUTER_NAME.
   svc_and_port="${service#${DDEV_PROJECT}-}"
   port="${svc_and_port##*-}"
   svc_name="${svc_and_port%-*}"
 
   if [ "$svc_name" = "web" ] && [ "$port" = "8025" ]; then
     slug="mailpit-${PROJECT_SLUG}"
-  elif [ "$svc_name" = "web" ]; then
+  elif [ "$svc_name" = "web" ] && [ "$port" = "80" ]; then
     slug="$PROJECT_SLUG"
   elif [ "$svc_name" = "xhgui" ]; then
     slug="xhgui-${PROJECT_SLUG}"
@@ -145,6 +154,13 @@ while IFS= read -r router; do
     # Dynamic add-on services (no dedicated coder_app): PathPrefix("/") catches any
     # traffic arriving on this entrypoint, enabling Coder port-forwarding URLs:
     # https://{ext_port}--{agent}--{workspace}--{owner}.{domain}
+    #
+    # priority must beat ddev-router's own built-in catch-all fallback router
+    # (ddev-router-fallback-http/-https, baked into every workspace's
+    # default_config.yaml), which also uses PathPrefix(`/`) at priority 1 on
+    # every entrypoint. A tie at priority 1 is resolved in the fallback's
+    # favor, so this router would never actually receive traffic — it silently
+    # loses to DDEV's generic "no route found" page. Any priority > 1 wins.
     AGENT="${CODER_AGENT_NAME:-main}"
     RULE='PathPrefix(`/`)'
     RULE="$RULE" SVC="$service" MW="$MW_NAME" \
@@ -154,7 +170,7 @@ while IFS= read -r router; do
          .http.routers.\"${ROUTER_NAME}\".service = env(SVC) |
          .http.routers.\"${ROUTER_NAME}\".middlewares = [env(MW)] |
          .http.routers.\"${ROUTER_NAME}\".tls = false |
-         .http.routers.\"${ROUTER_NAME}\".priority = 1" \
+         .http.routers.\"${ROUTER_NAME}\".priority = 10" \
       /tmp/coder-routes-raw.yaml
     echo "  + ${slug}: ${entrypoints[*]} → ${service}  (https://${ext_port}--${AGENT}--${WORKSPACE}--${OWNER}.${DOMAIN})"
   fi
