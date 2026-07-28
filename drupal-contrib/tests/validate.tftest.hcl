@@ -86,3 +86,53 @@ run "linuxbrew_volume_created" {
     error_message = "docker_volume.coder_linuxbrew must be named per the coder-<owner>-<workspace>-linuxbrew convention"
   }
 }
+
+run "claude_code_disabled_by_default" {
+  command = plan
+  assert {
+    condition     = module.claude_remote_control.app_count == 0
+    error_message = "module.claude_remote_control's coder_app.claude_code must not be created when enable_claude_code=false"
+  }
+}
+
+run "claude_code_enabled" {
+  command = plan
+  override_data {
+    target = module.claude_remote_control.data.coder_parameter.enable_claude_code
+    values = {
+      value = "true"
+    }
+  }
+  assert {
+    condition     = module.claude_remote_control.app_count == 1
+    error_message = "module.claude_remote_control's coder_app.claude_code must be created when enable_claude_code=true"
+  }
+  assert {
+    condition     = strcontains(coder_agent.main.startup_script, "claude --remote-control")
+    error_message = "startup script must actually launch claude --remote-control"
+  }
+  assert {
+    condition     = !strcontains(coder_agent.main.startup_script, "--dangerously-skip-permissions")
+    error_message = "skip-permissions flag must not appear unless claude_code_skip_permissions is also set"
+  }
+}
+
+run "claude_code_enabled_skip_permissions" {
+  command = plan
+  override_data {
+    target = module.claude_remote_control.data.coder_parameter.enable_claude_code
+    values = {
+      value = "true"
+    }
+  }
+  override_data {
+    target = module.claude_remote_control.data.coder_parameter.claude_code_skip_permissions
+    values = {
+      value = "true"
+    }
+  }
+  assert {
+    condition     = strcontains(coder_agent.main.startup_script, "--dangerously-skip-permissions")
+    error_message = "skip-permissions flag should appear in the generated command when claude_code_skip_permissions=true"
+  }
+}

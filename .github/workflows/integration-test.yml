@@ -149,6 +149,7 @@ jobs:
             --template-version ci-${{ env.CI_TAG }} \
             --parameter "vscode_extensions=[]" \
             ${{ matrix.extra_params }} \
+            --use-parameter-defaults \
             --yes
 
       - name: Create freeform workspace (with project names)
@@ -371,6 +372,7 @@ jobs:
             --template-version ci-gh-${{ env.CI_TAG }} \
             --parameter "vscode_extensions=[]" \
             ${{ matrix.extra_params }} \
+            --use-parameter-defaults \
             --yes
 
       - name: Create freeform workspace (with project names)

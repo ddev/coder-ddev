@@ -132,6 +132,7 @@ jobs:
             --parameter issue_branch= \
             --parameter install_profile=minimal \
             --parameter share_drupal_site=owner \
+            --use-parameter-defaults \
             --yes
 
       - &verify-agent
@@ -279,6 +280,7 @@ jobs:
             --parameter issue_branch= \
             --parameter install_profile=minimal \
             --parameter share_drupal_site=owner \
+            --use-parameter-defaults \
             --yes
 
       - *verify-agent
@@ -383,6 +385,7 @@ jobs:
             --parameter issue_branch=${{ env.ISSUE_BRANCH }} \
             --parameter install_profile=minimal \
             --parameter share_drupal_site=owner \
+            --use-parameter-defaults \
             --yes
 
       - name: Verify workspace — agent connected
@@ -539,6 +542,7 @@ jobs:
             --parameter issue_branch=${{ env.ISSUE_BRANCH }} \
             --parameter install_profile=minimal \
             --parameter share_drupal_site=owner \
+            --use-parameter-defaults \
             --yes
 
       - name: Verify workspace — agent connected
