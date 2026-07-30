@@ -183,6 +183,7 @@ RUN mkdir -p "$HOMEBREW_CACHE" && /home/linuxbrew/.linuxbrew/bin/brew install \
   claude-code \
   go \
   golangci-lint \
+  gopls \
   yq \
   zellij
 
