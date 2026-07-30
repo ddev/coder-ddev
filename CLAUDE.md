@@ -50,6 +50,7 @@ The `freeform` template is unique: it keeps ddev-router running so multiple DDEV
 ## Tool Preferences
 
 - Use `jq` (not `python3 -m json.tool`) for JSON pretty-printing and querying
+- For `git commit -m` and `gh pr create --body`, write the message to a file first (e.g. under the scratchpad directory) and pass it via `git commit -F <file>` / `gh pr create --body-file <file>`, rather than inlining a heredoc on the command line. Multi-paragraph messages containing backticks, apostrophes, or other shell-special characters reliably break inline heredoc quoting.
 
 ## Before Pushing / Pre-push Checklist
 
