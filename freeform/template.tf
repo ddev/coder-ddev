@@ -337,8 +337,18 @@ EOF
       echo "✓ DDEV host commands installed"
     fi
 
-    # Pre-pull DDEV images (uses registry mirror if configured)
-    ddev utility download-images || true
+    # Pre-pull DDEV images (uses registry mirror if configured). Redirect --
+    # non-TTY docker pull progress prints a new line per layer per tick
+    # (often written to stderr), so unredirected this alone was 95% of a
+    # workspace's entire startup log.
+    echo "Pre-pulling DDEV images..."
+    _t_images=$SECONDS
+    if ddev utility download-images > /tmp/ddev-download-images.log 2>&1; then
+      echo "✓ DDEV images ready ($((SECONDS - _t_images))s)"
+    else
+      echo "⚠ ddev utility download-images failed (see /tmp/ddev-download-images.log)"
+      tail -20 /tmp/ddev-download-images.log || true
+    fi
 
     # Ensure yq and linuxbrew are in PATH for this session
     export PATH="$PATH:/home/linuxbrew/.linuxbrew/bin"
@@ -427,6 +437,9 @@ BASHCOMP
     CODER_WORKSPACE_OWNER_EMAIL = data.coder_workspace_owner.me.email
     CODER_PROJECT_NAMES         = join(",", local.project_names)
     HOME                        = "/home/coder"
+    # Silences Node's runtime deprecation warnings (e.g. url.parse()) that
+    # code-server prints once per extension during VS Code Web's install step.
+    NODE_NO_WARNINGS = "1"
   }
 
   metadata {
