@@ -1,11 +1,10 @@
-variable "vscode_extensions" {
-  description = "List of VS Code extensions to offer in the workspace creation UI"
-  type = list(object({
-    id      = string
-    name    = string
-    default = bool
-  }))
-  default = [
+locals {
+  # Deliberately a `locals`, not a `variable`: Coder pins the submitted value of any
+  # root-level `variable` block server-side the first time a template is pushed, and
+  # reuses that pinned value on later pushes instead of re-reading this file's list
+  # unless `--variable vscode_extensions=...` is passed again. `locals` are recomputed
+  # fresh on every plan, so there is nothing for Coder to pin.
+  vscode_extensions = [
     { id = "xdebug.php-debug", name = "PHP Debug", default = true },
     { id = "bmewburn.vscode-intelephense-client", name = "Intelephense", default = true },
     { id = "dbaeumer.vscode-eslint", name = "ESLint", default = true },

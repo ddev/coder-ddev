@@ -190,12 +190,12 @@ data "coder_parameter" "vscode_extensions" {
   description  = "Select extensions to enable in VS Code for Web"
   type         = "list(string)"
   form_type    = "multi-select"
-  default      = jsonencode([for e in var.vscode_extensions : e.id if e.default])
+  default      = jsonencode([for e in local.vscode_extensions : e.id if e.default])
   mutable      = true
   order        = 100
 
   dynamic "option" {
-    for_each = var.vscode_extensions
+    for_each = local.vscode_extensions
     content {
       name  = option.value.name
       value = option.value.id
