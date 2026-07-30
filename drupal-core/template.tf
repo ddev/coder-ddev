@@ -523,12 +523,20 @@ EOF
     # DDEV ships its own mkcert binary; this sets up the local CA trust
     mkcert -install 2>/dev/null || true
 
-    # Pre-pull DDEV images (uses registry mirror if configured)
+    # Pre-pull DDEV images (uses registry mirror if configured). Redirect --
+    # non-TTY docker pull progress prints a new line per layer per tick
+    # (often written to stderr), so unredirected this alone was 95% of a
+    # workspace's entire startup log.
     _t_images=$SECONDS
     echo "Pre-pulling DDEV images..."
-    ddev utility download-images || true
-    IMAGES_TIME=$((SECONDS - _t_images))
-    echo "  ddev utility download-images complete ($${IMAGES_TIME}s)"
+    if ddev utility download-images > /tmp/ddev-download-images.log 2>&1; then
+      IMAGES_TIME=$((SECONDS - _t_images))
+      echo "  ✓ ddev utility download-images complete ($${IMAGES_TIME}s)"
+    else
+      IMAGES_TIME=$((SECONDS - _t_images))
+      echo "  ⚠ ddev utility download-images failed after $${IMAGES_TIME}s (see /tmp/ddev-download-images.log)"
+      tail -20 /tmp/ddev-download-images.log || true
+    fi
 
     # ==========================================
     # DRUPAL CORE AUTOMATIC SETUP
@@ -1345,6 +1353,9 @@ BASHCOMP
     CODER_WORKSPACE_OWNER_EMAIL = data.coder_workspace_owner.me.email
     # Force HOME to /home/coder (Standard Home Strategy)
     HOME = "/home/coder"
+    # Silences Node's runtime deprecation warnings (e.g. url.parse()) that
+    # code-server prints once per extension during VS Code Web's install step.
+    NODE_NO_WARNINGS = "1"
   }
 
   metadata {
