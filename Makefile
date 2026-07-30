@@ -112,8 +112,18 @@ sync-claude-module: ## Vendor modules/claude-remote-control into each template d
 	done
 	@echo "Synced modules/claude-remote-control into: $(TEMPLATES)"
 
+.PHONY: sync-vscode-extensions
+sync-vscode-extensions: ## Vendor shared/vscode-extensions.tf into each template dir (same reason as sync-claude-module: push only bundles the given --directory)
+	@for t in $(TEMPLATES); do \
+		cp shared/vscode-extensions.tf $$t/vscode-extensions.tf; \
+	done
+	@echo "Synced shared/vscode-extensions.tf into: $(TEMPLATES)"
+
+.PHONY: sync-shared
+sync-shared: sync-claude-module sync-vscode-extensions ## Vendor all shared Terraform assets (modules + vscode-extensions.tf) into each template dir
+
 .PHONY: validate
-validate: sync-claude-module ## Validate all Terraform templates (requires terraform in PATH)
+validate: sync-shared ## Validate all Terraform templates (requires terraform in PATH)
 	@for t in $(TEMPLATES); do \
 		echo "--- Validating $$t ---"; \
 		(cd $$t && terraform init -backend=false -input=false -no-color && terraform validate -no-color) || exit 1; \
@@ -125,7 +135,7 @@ fmt-check: ## Check Terraform formatting across all templates
 	terraform fmt -check -recursive
 
 .PHONY: test-templates
-test-templates: sync-claude-module ## Run Terraform mock unit tests for all templates (requires terraform in PATH)
+test-templates: sync-shared ## Run Terraform mock unit tests for all templates (requires terraform in PATH)
 	@for t in $(TEMPLATES); do \
 		echo "--- Testing $$t ---"; \
 		(cd $$t && terraform test) || exit 1; \
@@ -170,15 +180,15 @@ info: ## Show image and template information
 # --- Template push targets ---
 
 .PHONY: push-template-drupal-core
-push-template-drupal-core: sync-claude-module ## Push drupal-core template to Coder
+push-template-drupal-core: sync-shared ## Push drupal-core template to Coder
 	$(call push_template,drupal-core)
 
 .PHONY: push-template-drupal-contrib
-push-template-drupal-contrib: sync-claude-module ## Push drupal-contrib template to Coder
+push-template-drupal-contrib: sync-shared ## Push drupal-contrib template to Coder
 	$(call push_template,drupal-contrib)
 
 .PHONY: push-template-freeform
-push-template-freeform: sync-claude-module ## Push freeform template to Coder
+push-template-freeform: sync-shared ## Push freeform template to Coder
 	$(call push_template,freeform)
 
 .PHONY: push-all-templates

@@ -59,18 +59,22 @@ Run these before every push to avoid CI failures:
 # Terraform formatting (CI runs terraform fmt -check -recursive)
 terraform fmt -recursive
 
-# Terraform validation for each template you touched
-terraform -chdir=drupal-core init -backend=false && terraform -chdir=drupal-core validate
-terraform -chdir=drupal-contrib init -backend=false && terraform -chdir=drupal-contrib validate
-terraform -chdir=freeform init -backend=false && terraform -chdir=freeform validate
-
-# Terraform tests (plan-level, no real infrastructure)
-terraform -chdir=drupal-core test
-terraform -chdir=drupal-contrib test
-terraform -chdir=freeform test
+# Vendor shared assets, then validate + test every template
+make validate
+make test-templates
 ```
 
 `terraform fmt -recursive` must be run from the repo root. It is non-destructive (rewrites in place) and the CI check fails with exit code 3 if any file is not formatted.
+
+**Always use `make validate` / `make test-templates`, not raw `terraform validate`/`terraform test` run directly in a template directory.** Both targets depend on `make sync-shared`, which vendors `modules/claude-remote-control` and `shared/vscode-extensions.tf` into each template directory first (see "Shared Terraform Assets" below). Running `terraform validate`/`test` directly against a template dir will happily validate against a stale vendored copy and miss the fact that it's out of sync with the canonical source.
+
+## Shared Terraform Assets
+
+Some Terraform config (currently `modules/claude-remote-control` and `shared/vscode-extensions.tf`) is shared across all three templates but must exist as a **physical copy inside each template directory** — `coder templates push` and CI's `terraform validate`/`test` only ever operate on a single template directory, so a relative `../modules` or `../shared` reference would not survive the push and would not be visible to CI.
+
+- **Edit only the canonical source**: `modules/claude-remote-control/` or `shared/vscode-extensions.tf` at the repo root. Never hand-edit the vendored copies (`<template>/modules/claude-remote-control/`, `<template>/vscode-extensions.tf`) — they get overwritten the next time anyone runs the sync.
+- **Always resync through `make`**, never by hand-copying: `make sync-shared` (or `make sync-claude-module` / `make sync-vscode-extensions` individually). `make validate`, `make test-templates`, and every `make push-template-*` / `make push-all-templates` target already depend on `sync-shared`, so day-to-day you rarely need to invoke it directly.
+- **Commit the vendored copies.** They are tracked files, not build artifacts — CI validates each template directory standalone with no `make` step, so the vendored copies must already be correct and committed for CI to pass.
 
 ## Working with Coder Workspaces via SSH
 
