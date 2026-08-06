@@ -353,7 +353,6 @@ EOF
     # Install DDEV mkcert CA
     mkcert -install 2>/dev/null || true
 
-
     # Ensure yq and linuxbrew are in PATH for this session
     export PATH="$PATH:/home/linuxbrew/.linuxbrew/bin"
 
