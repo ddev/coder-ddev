@@ -407,27 +407,7 @@ resource "coder_agent" "main" {
 EOF
     fi
 
-    if ! pgrep -x "dockerd" > /dev/null; then
-      echo "Starting Docker Daemon..."
-      sudo dockerd > /tmp/dockerd.log 2>&1 &
-
-      echo "Waiting for Docker Socket..."
-      for i in $(seq 1 30); do
-        if [ -S /var/run/docker.sock ]; then
-          echo "Docker Socket found!"
-          break
-        fi
-        sleep 1
-      done
-
-      if [ -S /var/run/docker.sock ]; then
-        sudo chmod 666 /var/run/docker.sock
-      else
-        echo "Error: Docker Socket not found after 30s!"
-      fi
-    else
-      echo "Docker Daemon already running."
-    fi
+    ${module.docker_daemon.startup_script}
 
     mkdir -p ~/.ddev
     echo "Configuring DDEV to omit ddev-router..."
@@ -1160,26 +1140,9 @@ resource "coder_app" "mailpit" {
   }
 }
 
-resource "coder_script" "ddev_shutdown" {
-  agent_id     = coder_agent.main.id
-  display_name = "Stop DDEV Projects"
-  icon         = "/icon/docker.svg"
-  run_on_stop  = true
-  script       = <<-EOT
-    #!/bin/bash
-    export PATH="$PATH:/home/linuxbrew/.linuxbrew/bin:/usr/local/bin"
-    for i in $(seq 1 10); do
-      [ -S /var/run/docker.sock ] && break
-      sleep 1
-    done
-    if [ ! -S /var/run/docker.sock ]; then
-      echo "Docker socket not available; skipping ddev poweroff"
-      exit 0
-    fi
-    echo "Running ddev poweroff..."
-    ddev poweroff || true
-    echo "ddev poweroff complete"
-  EOT
+module "docker_daemon" {
+  source   = "./modules/docker-daemon"
+  agent_id = coder_agent.main.id
 }
 
 resource "docker_container" "workspace" {
