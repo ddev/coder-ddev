@@ -128,8 +128,15 @@ sync-docker-daemon-module: ## Vendor modules/docker-daemon into each template di
 	done
 	@echo "Synced modules/docker-daemon into: $(TEMPLATES)"
 
+.PHONY: sync-bashrc-guard
+sync-bashrc-guard: ## Vendor shared/bashrc-symlink-guard.sh into each template dir (same reason as sync-vscode-extensions: push only bundles the given --directory)
+	@for t in $(TEMPLATES); do \
+		cp shared/bashrc-symlink-guard.sh $$t/bashrc-symlink-guard.sh; \
+	done
+	@echo "Synced shared/bashrc-symlink-guard.sh into: $(TEMPLATES)"
+
 .PHONY: sync-shared
-sync-shared: sync-claude-module sync-vscode-extensions sync-docker-daemon-module ## Vendor all shared Terraform assets (modules + vscode-extensions.tf) into each template dir
+sync-shared: sync-claude-module sync-vscode-extensions sync-docker-daemon-module sync-bashrc-guard ## Vendor all shared Terraform assets (modules + vscode-extensions.tf) into each template dir
 
 .PHONY: validate
 validate: sync-shared ## Validate all Terraform templates (requires terraform in PATH)
