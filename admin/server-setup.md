@@ -1243,6 +1243,17 @@ coder tokens create --user ci-bot --lifetime 8760h
 
 Store the token in 1Password at `op://test-secrets/TEST_CODER_SESSION_TOKEN/credential`.
 
+#### 3. Push the `ci-lock` template
+
+The integration-test workflows serialize access to this box through `scripts/ci-acquire-staging-lock.sh`, which claims one of a fixed set of lock-slot workspaces provisioned from the `ci-lock` template (see "Tuning how many CI workspaces can run at once" below). That template is CI-only plumbing — no workflow pushes it automatically — so it needs to exist before the first CI run. `make push-all-templates` (already the standard way to push templates to an environment) covers it along with the rest; log in as a template-admin (e.g. `ci-bot`) first:
+
+```bash
+coder login <staging-coder-url>
+make push-all-templates
+```
+
+Without this, every `ci-acquire-staging-lock.sh` invocation fails fast with "no 'ci-lock' template found".
+
 ### GitHub repository configuration
 
 Go to **GitHub → Settings → Secrets and variables → Actions** and add:
@@ -1259,6 +1270,19 @@ Go to **GitHub → Settings → Secrets and variables → Actions** and add:
 |--------------------------|-----------------------------------------|
 | `TEST_CODER_URL`         | `https://staging-coder.ddev.com`        |
 | `DRUPAL_TEST_ISSUE_FORK` | A drupal.org issue number (see below)   |
+| `CI_LOCK_SLOTS`          | Max concurrent CI workspaces on staging (see below) |
+
+### Tuning how many CI workspaces can run at once (`CI_LOCK_SLOTS`)
+
+`integration-test.yml`, `drupal-integration-test.yml`, and `drupal-contrib-integration-test.yml` all create real, resource-heavy (Sysbox + Docker-in-Docker) workspaces on the single shared staging box. Before creating one, each job runs `scripts/ci-acquire-staging-lock.sh`, which claims one of a fixed number of lock-slot workspaces (`ci-slot-1`..`ci-slot-N`) and waits if all are held — see that script's header comment and `openspec/changes/add-ci-staging-lock/design.md` for the full mechanism.
+
+`N` is controlled entirely by the `CI_LOCK_SLOTS` repository variable — no code change needed to retune it:
+
+- **Unset**: defaults to `2`.
+- **Raise it** if staging has spare CPU/RAM headroom and jobs are spending a lot of time queued behind `ci-acquire-staging-lock.sh` waiting for a slot.
+- **Lower it** if jobs are failing with agent-connection errors (e.g. "Agent doesn't exist with that id") that trace back to the box being oversubscribed — each workspace's default request is 4 CPU / 8GB, so pick `N` with that against the box's actual cores/RAM in mind.
+
+Change it in **GitHub → Settings → Secrets and variables → Actions → Variables**; it takes effect on the next workflow run, no restart or redeploy required.
 
 ### Choosing a test issue for `DRUPAL_TEST_ISSUE_FORK`
 

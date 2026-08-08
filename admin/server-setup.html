@@ -1457,6 +1457,16 @@ coder tokens create <span class="nt">--user</span> ci-bot <span class="nt">--lif
 
 <p>Store the token in 1Password at <code class="language-plaintext highlighter-rouge">op://test-secrets/TEST_CODER_SESSION_TOKEN/credential</code>.</p>
 
+<h4 id="3-push-the-ci-lock-template">3. Push the <code class="language-plaintext highlighter-rouge">ci-lock</code> template</h4>
+
+<p>The integration-test workflows serialize access to this box through <code class="language-plaintext highlighter-rouge">scripts/ci-acquire-staging-lock.sh</code>, which claims one of a fixed set of lock-slot workspaces provisioned from the <code class="language-plaintext highlighter-rouge">ci-lock</code> template (see “Tuning how many CI workspaces can run at once” below). That template is CI-only plumbing — no workflow pushes it automatically — so it needs to exist before the first CI run. <code class="language-plaintext highlighter-rouge">make push-all-templates</code> (already the standard way to push templates to an environment) covers it along with the rest; log in as a template-admin (e.g. <code class="language-plaintext highlighter-rouge">ci-bot</code>) first:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>coder login &lt;staging-coder-url&gt;
+make push-all-templates
+</code></pre></div></div>
+
+<p>Without this, every <code class="language-plaintext highlighter-rouge">ci-acquire-staging-lock.sh</code> invocation fails fast with “no ‘ci-lock’ template found”.</p>
+
 <h3 id="github-repository-configuration">GitHub repository configuration</h3>
 
 <p>Go to <strong>GitHub → Settings → Secrets and variables → Actions</strong> and add:</p>
@@ -1496,8 +1506,26 @@ coder tokens create <span class="nt">--user</span> ci-bot <span class="nt">--lif
       <td><code class="language-plaintext highlighter-rouge">DRUPAL_TEST_ISSUE_FORK</code></td>
       <td>A drupal.org issue number (see below)</td>
     </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">CI_LOCK_SLOTS</code></td>
+      <td>Max concurrent CI workspaces on staging (see below)</td>
+    </tr>
   </tbody>
 </table>
+
+<h3 id="tuning-how-many-ci-workspaces-can-run-at-once-ci_lock_slots">Tuning how many CI workspaces can run at once (<code class="language-plaintext highlighter-rouge">CI_LOCK_SLOTS</code>)</h3>
+
+<p><code class="language-plaintext highlighter-rouge">integration-test.yml</code>, <code class="language-plaintext highlighter-rouge">drupal-integration-test.yml</code>, and <code class="language-plaintext highlighter-rouge">drupal-contrib-integration-test.yml</code> all create real, resource-heavy (Sysbox + Docker-in-Docker) workspaces on the single shared staging box. Before creating one, each job runs <code class="language-plaintext highlighter-rouge">scripts/ci-acquire-staging-lock.sh</code>, which claims one of a fixed number of lock-slot workspaces (<code class="language-plaintext highlighter-rouge">ci-slot-1</code>..<code class="language-plaintext highlighter-rouge">ci-slot-N</code>) and waits if all are held — see that script’s header comment and <code class="language-plaintext highlighter-rouge">openspec/changes/add-ci-staging-lock/design.md</code> for the full mechanism.</p>
+
+<p><code class="language-plaintext highlighter-rouge">N</code> is controlled entirely by the <code class="language-plaintext highlighter-rouge">CI_LOCK_SLOTS</code> repository variable — no code change needed to retune it:</p>
+
+<ul>
+  <li><strong>Unset</strong>: defaults to <code class="language-plaintext highlighter-rouge">2</code>.</li>
+  <li><strong>Raise it</strong> if staging has spare CPU/RAM headroom and jobs are spending a lot of time queued behind <code class="language-plaintext highlighter-rouge">ci-acquire-staging-lock.sh</code> waiting for a slot.</li>
+  <li><strong>Lower it</strong> if jobs are failing with agent-connection errors (e.g. “Agent doesn’t exist with that id”) that trace back to the box being oversubscribed — each workspace’s default request is 4 CPU / 8GB, so pick <code class="language-plaintext highlighter-rouge">N</code> with that against the box’s actual cores/RAM in mind.</li>
+</ul>
+
+<p>Change it in <strong>GitHub → Settings → Secrets and variables → Actions → Variables</strong>; it takes effect on the next workflow run, no restart or redeploy required.</p>
 
 <h3 id="choosing-a-test-issue-for-drupal_test_issue_fork">Choosing a test issue for <code class="language-plaintext highlighter-rouge">DRUPAL_TEST_ISSUE_FORK</code></h3>
 
