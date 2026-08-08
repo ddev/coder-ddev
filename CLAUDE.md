@@ -263,6 +263,7 @@ Key template variables (e.g. in `freeform/template.tf`):
 - Use feature branches for changes
 - **Never use the local `main` branch** — always `git fetch upstream` and base branches on `upstream/main`. Use `upstream/main` for comparisons (e.g. `git diff upstream/main...HEAD`), not local `main`.
 - **Never run `git push`, under any circumstances** — not to `main`, not to a feature branch, not to a fork. Commit locally and hand off to the user (or open a PR only if explicitly asked and only via a mechanism that doesn't require you to push, e.g. `gh pr create` from a branch the user has already pushed) — always let the user push.
+- **Branch naming**: `YYYYMMDD_<username>_<short_description>` (standard DDEV convention, matches `../ddev/CLAUDE.md`). Example: `20250108_rfay_fix_networking`. Create with `git fetch upstream && git checkout -b <branch_name> upstream/main --no-track`.
 - Always use OpenSpec for architectural changes (see AGENTS.md)
 
 ### OpenSpec Integration
