@@ -6,25 +6,8 @@
 ## Example: "ddev launch" or "ddev launch /admin" or "ddev launch -m"
 ## Flags: [{"Name":"mailpit","Shorthand":"m","Usage":"ddev launch -m shows the Mailpit URL"}]
 
-# Outside a Coder workspace fall back to a basic URL print (no browser available in DinD)
-if [ -z "${CODER_WORKSPACE_NAME:-}" ] || ([ -z "${VSCODE_PROXY_URI:-}" ] && [ -z "${CODER_AGENT_URL:-}" ]); then
-  echo "Primary URL: ${DDEV_PRIMARY_URL:-unknown}"
-  echo "(Not running in a Coder workspace; cannot open a browser.)"
-  exit 0
-fi
-
-WORKSPACE="${CODER_WORKSPACE_NAME}"
-OWNER="${CODER_WORKSPACE_OWNER_NAME}"
-if [ -n "${VSCODE_PROXY_URI:-}" ]; then
-  DOMAIN=$(echo "${VSCODE_PROXY_URI}" | sed -E 's|https?://[^.]+\.(.+?)(/.*)?$|\1|')
-else
-  DOMAIN=$(echo "${CODER_AGENT_URL}" | sed -E 's|https?://(.+?)(/.*)?$|\1|')
-fi
-
-# DDEV_SITENAME is the DDEV project name (may differ from the Coder workspace name).
-PROJECT="${DDEV_SITENAME}"
-AGENT="${CODER_AGENT_NAME:-main}"
-
+# Parse flags/path before anything else, so both the DDEV_DEBUG branch below
+# and the interactive branches further down agree on the same target.
 MAILPIT=false
 PATH_SUFFIX=""
 
@@ -44,6 +27,78 @@ if [ -n "${1:-}" ]; then
   PATH_SUFFIX="/${1#/}"
 fi
 
+# Tooling (bats tests, `ddev launch | awk '/FULLURL/ {print $2}'`, DDEV's own
+# TestLaunchCommand) sets DDEV_DEBUG/DDEV_VERBOSE to get a single parseable
+# line instead of the interactive URL listing below. Match the stock ddev
+# launch script's contract: FULLURL is DDEV_PRIMARY_URL with the same
+# path/mailpit adjustment the interactive branches apply, since tooling runs
+# inside the workspace where *.ddev.site resolves directly (unlike a human's
+# browser, which needs the external Coder proxy URL built further down).
+if [ "${DDEV_DEBUG:-}" = "true" ] || [ "${DDEV_VERBOSE:-}" = "true" ]; then
+  FULLURL="${DDEV_PRIMARY_URL}"
+  if [ "${MAILPIT}" = "true" ]; then
+    if [ "${FULLURL%://*}" = "https" ]; then
+      FULLURL="${FULLURL%:[0-9]*}:${DDEV_MAILPIT_HTTPS_PORT}"
+    else
+      FULLURL="${FULLURL%:[0-9]*}:${DDEV_MAILPIT_PORT}"
+    fi
+  else
+    FULLURL="${FULLURL%/}${PATH_SUFFIX}"
+  fi
+  echo "FULLURL ${FULLURL}"
+  exit 0
+fi
+
+# Emit an OSC 8 hyperlink when stdout is a terminal that supports it (VS Code's
+# integrated terminal does), so the URL is clickable even though we can't
+# actually launch a browser from inside the workspace container. Terminals
+# that don't understand OSC 8 just show the plain URL text.
+hyperlink() {
+  if [ -t 1 ]; then
+    printf '\033]8;;%s\033\\%s\033]8;;\033\\' "$1" "$1"
+  else
+    printf '%s' "$1"
+  fi
+}
+
+# Outside a Coder workspace fall back to a basic URL print (no browser available in DinD)
+if [ -z "${CODER_WORKSPACE_NAME:-}" ] || ([ -z "${VSCODE_PROXY_URI:-}" ] && [ -z "${CODER_AGENT_URL:-}" ]); then
+  echo "Primary URL: $(hyperlink "${DDEV_PRIMARY_URL:-unknown}")"
+  echo "(Not running in a Coder workspace; cannot open a browser.)"
+  exit 0
+fi
+
+WORKSPACE="${CODER_WORKSPACE_NAME}"
+OWNER="${CODER_WORKSPACE_OWNER_NAME}"
+if [ -n "${VSCODE_PROXY_URI:-}" ]; then
+  DOMAIN=$(echo "${VSCODE_PROXY_URI}" | sed -E 's|https?://[^.]+\.(.+?)(/.*)?$|\1|')
+else
+  DOMAIN=$(echo "${CODER_AGENT_URL}" | sed -E 's|https?://(.+?)(/.*)?$|\1|')
+fi
+
+# DDEV_SITENAME is the DDEV project name (may differ from the Coder workspace name).
+PROJECT="${DDEV_SITENAME}"
+AGENT="${CODER_AGENT_NAME:-main}"
+
+# drupal-core/drupal-contrib omit ddev-router and bind the web container directly
+# to a fixed host port, so there's no Traefik merged config for coder-routes to
+# read. They register fixed `coder_app` slugs (ddev-web, mailpit) instead, whose
+# subdomain URLs follow Coder's named-app pattern (no agent segment, since these
+# templates define a single agent) — see docs/reference/coder-url-patterns.md.
+ROUTER_DISABLED=$(ddev describe -j 2>/dev/null | jq -r '.raw.router_disabled // false')
+
+if [ "$ROUTER_DISABLED" = "true" ]; then
+  if [ "${MAILPIT}" = "true" ]; then
+    echo "$(hyperlink "https://mailpit--${WORKSPACE}--${OWNER}.${DOMAIN}")"
+    exit 0
+  fi
+  echo ""
+  echo "Coder URL for project '${PROJECT}':"
+  echo "  Web: $(hyperlink "https://ddev-web--${WORKSPACE}--${OWNER}.${DOMAIN}${PATH_SUFFIX}")"
+  echo ""
+  exit 0
+fi
+
 # Per-project routes file (written by ddev coder-routes after each ddev start).
 # Falls back to the legacy single-file name for older setups.
 CODER_ROUTES="$HOME/.ddev/traefik/custom-global-config/coder-routes-${PROJECT}.yaml"
@@ -60,12 +115,12 @@ if [ "${MAILPIT}" = "true" ]; then
     mailpit_rule=$(yq e ".http.routers.\"${PROJECT}-coder-mailpit-${PROJECT_SLUG}\".rule // \"\"" "$CODER_ROUTES" 2>/dev/null)
     if [ -n "$mailpit_rule" ] && [ "$mailpit_rule" != "null" ]; then
       host=$(echo "$mailpit_rule" | sed -E 's/Host\(`(.+)`\)/\1/')
-      echo "https://${host}"
+      echo "$(hyperlink "https://${host}")"
       exit 0
     fi
   fi
   # fallback
-  echo "https://mailpit-${PROJECT_SLUG}--${WORKSPACE}--${OWNER}.${DOMAIN}"
+  echo "$(hyperlink "https://mailpit-${PROJECT_SLUG}--${WORKSPACE}--${OWNER}.${DOMAIN}")"
   exit 0
 fi
 
@@ -94,15 +149,15 @@ while IFS= read -r router; do
     # Extract hostname from Host(`...`) — these use Coder subdomain proxy
     host=$(echo "$rule" | sed -E 's/Host\(`(.+)`\)/\1/')
     if [ "$router" = "$WEB_ROUTER" ]; then
-      WEB_LINE="  Web:     https://${host}${PATH_SUFFIX}"
+      WEB_LINE="  Web:     $(hyperlink "https://${host}${PATH_SUFFIX}")"
     elif [ "$slug" = "mailpit" ]; then
-      MAILPIT_LINE="  Mailpit: https://${host}"
+      MAILPIT_LINE="  Mailpit: $(hyperlink "https://${host}")"
     else
-      OTHER_LINES="${OTHER_LINES}  ${slug}: https://${host}\n"
+      OTHER_LINES="${OTHER_LINES}  ${slug}: $(hyperlink "https://${host}")\n"
     fi
   else
     # PathPrefix rule — dynamic add-on, accessible via Coder port-forwarding URL
-    OTHER_LINES="${OTHER_LINES}  ${slug}: https://${ext_port}--${AGENT}--${WORKSPACE}--${OWNER}.${DOMAIN}\n"
+    OTHER_LINES="${OTHER_LINES}  ${slug}: $(hyperlink "https://${ext_port}--${AGENT}--${WORKSPACE}--${OWNER}.${DOMAIN}")\n"
   fi
 done < <(yq e '.http.routers | keys | .[]' "$CODER_ROUTES" 2>/dev/null)
 

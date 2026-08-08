@@ -354,6 +354,7 @@ Additional logs in workspace:
 - `drupal-core/template.tf` - Drupal core development template (most actively developed)
 - `drupal-contrib/template.tf` - Drupal contributed module development template
 - `freeform/template.tf` - Multi-project freeform workspace template (keeps ddev-router)
+- `image/scripts/.ddev/commands/host/launch` - Shared `ddev launch` override for all templates. Honors `DDEV_DEBUG`/`DDEV_VERBOSE` (prints `FULLURL <url>` and exits, matching stock ddev's contract used by tooling). For interactive use, branches on `ddev describe -j`'s `.raw.router_disabled`: freeform (router enabled) reads the per-project `coder-routes` Traefik config; drupal-core/drupal-contrib (router disabled, direct port bind) construct the named-app URL directly from the `ddev-web`/`mailpit` `coder_app` slugs — no Traefik file needed.
 - `image/Dockerfile` - Base image build instructions (shared by all templates)
 - `image/scripts/.ddev/global_config.yaml` - DDEV defaults copied into workspaces
 - `scripts/coder-delete-workspace-dir.sh` - Sudo wrapper for workspace host dir cleanup (must be installed on server)
