@@ -22,7 +22,16 @@
 #                                     $AGE_MINUTES (default 20)
 #   - pending / starting / stopping / canceling / deleting -> left alone
 #                                     (transitional; caught on a later pass)
-# Then archives all unused template versions for each CI template.
+# Then archives unused template versions older than $VERSION_AGE_MINUTES for
+# each CI template.
+#
+# Why the version-age floor matters: a job pushes an inactive template
+# version, then may wait behind ci-acquire-staging-lock.sh for a free slot
+# (up to MAX_WAIT_SECONDS there, currently 45m) before creating a workspace
+# from it. Archiving "unused" versions the instant this janitor runs -- as it
+# used to -- can archive a version that's mid-wait, not abandoned, causing
+# `coder create` to fail with "template version archived". VERSION_AGE_MINUTES
+# must stay comfortably above that worst-case wait.
 #
 # By default runs in dry-run mode (prints what would be deleted).
 # Pass --force (or set DRY_RUN=false) to actually delete/archive.
@@ -30,10 +39,11 @@
 # Requires: coder CLI authenticated as a template-admin who owns the CI workspaces.
 #
 # Environment overrides:
-#   CI_OWNER      Coder username that owns CI workspaces (default: ci-bot)
-#   AGE_MINUTES   Age threshold in minutes for running workspaces (default: 20)
-#   DRY_RUN       true|false (default: true; --force sets false)
-#   TEMPLATES     space-separated template names to archive versions for
+#   CI_OWNER            Coder username that owns CI workspaces (default: ci-bot)
+#   AGE_MINUTES         Age threshold in minutes for running workspaces (default: 20)
+#   VERSION_AGE_MINUTES Age threshold in minutes for unused template versions (default: 60)
+#   DRY_RUN             true|false (default: true; --force sets false)
+#   TEMPLATES           space-separated template names to archive versions for
 #
 # Usage:
 #   ./scripts/ci-reap-staging.sh                 # dry run
@@ -44,6 +54,7 @@ set -euo pipefail
 
 CI_OWNER="${CI_OWNER:-ci-bot}"
 AGE_MINUTES="${AGE_MINUTES:-20}"
+VERSION_AGE_MINUTES="${VERSION_AGE_MINUTES:-60}"
 DRY_RUN="${DRY_RUN:-true}"
 TEMPLATES="${TEMPLATES:-drupal-core drupal-contrib freeform}"
 
@@ -115,15 +126,31 @@ echo "Workspaces: reaped=$reaped kept=$kept (owner=$CI_OWNER, age=${AGE_MINUTES}
 echo
 
 # --- Template versions ---
-# `coder templates archive <t> --all` archives every unused version (never the
-# active one, never one with a live workspace), which is exactly what we want.
-echo "Archiving unused template versions..."
+# `coder templates archive <t> --all` would archive every unused version
+# (never the active one, never one with a live workspace) immediately -- but
+# "unused right now" also matches a version that was just pushed and is still
+# waiting behind ci-acquire-staging-lock.sh for a free slot. Enumerate and
+# filter by age ourselves instead, mirroring the workspace loop above.
+version_cutoff=$((now - VERSION_AGE_MINUTES * 60))
+echo "Archiving unused template versions older than ${VERSION_AGE_MINUTES}m..."
 for t in $TEMPLATES; do
-  if [[ "$DRY_RUN" == "true" ]]; then
-    echo "  would: coder templates archive $t --all --yes"
-  else
-    coder templates archive "$t" --all --yes || echo "  WARN: archive failed for $t" >&2
+  if ! versions_json=$(coder templates versions list "$t" --output json 2>/dev/null); then
+    echo "  WARN: 'coder templates versions list $t' failed; skipping" >&2
+    continue
   fi
+  while IFS=$'\t' read -r name created_at; do
+    [[ -z "$name" ]] && continue
+    version_epoch=$(date -d "$created_at" +%s 2>/dev/null || echo 0)
+    if [[ "$version_epoch" -eq 0 || "$version_epoch" -ge "$version_cutoff" ]]; then
+      continue
+    fi
+    if [[ "$DRY_RUN" == "true" ]]; then
+      echo "  would archive: $t $name"
+    else
+      coder templates versions archive "$t" --yes "$name" || echo "  WARN: archive failed for $t $name" >&2
+    fi
+  done < <(echo "$versions_json" |
+    jq -r '.[] | select(.active == false) | select(.TemplateVersion.archived == false) | [.TemplateVersion.name, .TemplateVersion.created_at] | @tsv')
 done
 
 echo

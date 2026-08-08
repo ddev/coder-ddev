@@ -21,6 +21,12 @@
 #   (see ci-lock/template.tf) that these slots are provisioned from has no
 #   Docker/Sysbox/agent, so claiming a slot is near-instant.
 #
+#   The box can comfortably run several workspaces at once once they're up --
+#   the resource spike is the *start* of each one (Docker image builds,
+#   composer installs). So on top of the slot count, STAGGER_SECONDS enforces
+#   a minimum gap between successive workspace starts even when slots are
+#   free, so simultaneous starts don't all hit their heaviest work together.
+#
 # Usage:
 #   ci-acquire-staging-lock.sh
 #   # on success, prints the acquired slot name and (if $GITHUB_ENV is set)
@@ -32,6 +38,8 @@
 #   MAX_WAIT_SECONDS   Give up and fail after this long (default: 2700 = 45m)
 #   POLL_SECONDS       Delay between full passes over all slots (default: 30)
 #   STALE_MINUTES      Force-reclaim a held slot older than this (default: 30)
+#   STAGGER_SECONDS    Minimum gap enforced between two workspace starts, even
+#                      when slots are available (default: 90)
 
 set -uo pipefail
 
@@ -40,6 +48,7 @@ CI_OWNER="${CI_OWNER:-ci-bot}"
 MAX_WAIT_SECONDS="${MAX_WAIT_SECONDS:-2700}"
 POLL_SECONDS="${POLL_SECONDS:-30}"
 STALE_MINUTES="${STALE_MINUTES:-30}"
+STAGGER_SECONDS="${STAGGER_SECONDS:-90}"
 
 acquired=""
 last_err=""
@@ -87,6 +96,28 @@ reclaim_stale_slots() {
   echo "$reclaimed"
 }
 
+# Sleeps out the remainder of STAGGER_SECONDS since the most recently created
+# *other* lock slot, if any, so this job's workspace create doesn't land in
+# the same CPU spike as one that just started. A no-op when no other slot was
+# created recently (the common case outside a start burst).
+stagger_if_needed() {
+  local slots_json newest_other_created other_epoch now gap sleep_for
+  slots_json=$(coder list --all --output json 2>/dev/null) || return
+  newest_other_created=$(echo "$slots_json" |
+    jq -r --arg owner "$CI_OWNER" --arg mine "$acquired" \
+      '[.[] | select(.owner_name==$owner) | select(.name | startswith("ci-slot-")) | select(.name != $mine) | .latest_build.created_at] | max // empty')
+  [[ -z "$newest_other_created" ]] && return
+  other_epoch=$(date -d "$newest_other_created" +%s 2>/dev/null || echo 0)
+  [[ "$other_epoch" -eq 0 ]] && return
+  now=$(date +%s)
+  gap=$((now - other_epoch))
+  if [[ "$gap" -lt "$STAGGER_SECONDS" ]]; then
+    sleep_for=$((STAGGER_SECONDS - gap))
+    echo "Staggering start: another job's slot started ${gap}s ago; waiting ${sleep_for}s more"
+    sleep "$sleep_for"
+  fi
+}
+
 # Fail fast if the ci-lock template itself is missing (e.g. never pushed to
 # this Coder deployment) rather than retrying a doomed `coder create` for the
 # full MAX_WAIT_SECONDS -- that failure mode wastes 45 minutes per job with no
@@ -111,6 +142,7 @@ waited=0
 while true; do
   if try_acquire_pass; then
     echo "Acquired staging box lock slot: $acquired"
+    stagger_if_needed
     if [[ -n "${GITHUB_ENV:-}" ]]; then
       echo "CI_LOCK_SLOT=$acquired" >>"$GITHUB_ENV"
     fi
