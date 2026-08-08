@@ -1243,6 +1243,17 @@ coder tokens create --user ci-bot --lifetime 8760h
 
 Store the token in 1Password at `op://test-secrets/TEST_CODER_SESSION_TOKEN/credential`.
 
+#### 3. Push the `ci-lock` template
+
+The integration-test workflows serialize access to this box through `scripts/ci-acquire-staging-lock.sh`, which claims one of a fixed set of lock-slot workspaces provisioned from the `ci-lock` template (see "Tuning how many CI workspaces can run at once" below). That template is CI-only plumbing — no workflow pushes it automatically — so it needs to exist before the first CI run. `make push-all-templates` (already the standard way to push templates to an environment) covers it along with the rest; log in as a template-admin (e.g. `ci-bot`) first:
+
+```bash
+coder login <staging-coder-url>
+make push-all-templates
+```
+
+Without this, every `ci-acquire-staging-lock.sh` invocation fails fast with "no 'ci-lock' template found".
+
 ### GitHub repository configuration
 
 Go to **GitHub → Settings → Secrets and variables → Actions** and add:

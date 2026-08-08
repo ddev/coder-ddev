@@ -87,6 +87,22 @@ reclaim_stale_slots() {
   echo "$reclaimed"
 }
 
+# Fail fast if the ci-lock template itself is missing (e.g. never pushed to
+# this Coder deployment) rather than retrying a doomed `coder create` for the
+# full MAX_WAIT_SECONDS -- that failure mode wastes 45 minutes per job with no
+# indication of the real problem. See docs/admin/server-setup.md for the
+# one-time `make push-all-templates` setup step.
+if ! templates_json=$(coder templates list --output json 2>&1); then
+  echo "ERROR: 'coder templates list' failed; cannot verify ci-lock template exists:" >&2
+  echo "$templates_json" >&2
+  exit 1
+fi
+if ! echo "$templates_json" | jq -e '[.[] | select(.name=="ci-lock")] | length > 0' >/dev/null 2>&1; then
+  echo "ERROR: no 'ci-lock' template found on this Coder deployment." >&2
+  echo "Run 'make push-all-templates' against it once (see docs/admin/server-setup.md)." >&2
+  exit 1
+fi
+
 # Jitter so contenders that all started in the same instant don't all sample
 # slot state at the exact same moment.
 sleep "$((RANDOM % 15))"
