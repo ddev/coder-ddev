@@ -6,12 +6,46 @@
 ## Example: "ddev launch" or "ddev launch /admin" or "ddev launch -m"
 ## Flags: [{"Name":"mailpit","Shorthand":"m","Usage":"ddev launch -m shows the Mailpit URL"}]
 
+# Parse flags/path before anything else, so both the DDEV_DEBUG branch below
+# and the interactive branches further down agree on the same target.
+MAILPIT=false
+PATH_SUFFIX=""
+
+while :; do
+  case ${1:-} in
+  -m | --mailpit | --mailhog)
+    MAILPIT=true
+    ;;
+  --) shift; break ;;
+  -?*) printf 'WARN: Unknown option (ignored): %s\n' "$1" >&2 ;;
+  *) break ;;
+  esac
+  shift
+done
+
+if [ -n "${1:-}" ]; then
+  PATH_SUFFIX="/${1#/}"
+fi
+
 # Tooling (bats tests, `ddev launch | awk '/FULLURL/ {print $2}'`, DDEV's own
 # TestLaunchCommand) sets DDEV_DEBUG/DDEV_VERBOSE to get a single parseable
 # line instead of the interactive URL listing below. Match the stock ddev
-# launch script's contract so that tooling works identically here.
+# launch script's contract: FULLURL is DDEV_PRIMARY_URL with the same
+# path/mailpit adjustment the interactive branches apply, since tooling runs
+# inside the workspace where *.ddev.site resolves directly (unlike a human's
+# browser, which needs the external Coder proxy URL built further down).
 if [ "${DDEV_DEBUG:-}" = "true" ] || [ "${DDEV_VERBOSE:-}" = "true" ]; then
-  echo "FULLURL ${DDEV_PRIMARY_URL}"
+  FULLURL="${DDEV_PRIMARY_URL}"
+  if [ "${MAILPIT}" = "true" ]; then
+    if [ "${FULLURL%://*}" = "https" ]; then
+      FULLURL="${FULLURL%:[0-9]*}:${DDEV_MAILPIT_HTTPS_PORT}"
+    else
+      FULLURL="${FULLURL%:[0-9]*}:${DDEV_MAILPIT_PORT}"
+    fi
+  else
+    FULLURL="${FULLURL%/}${PATH_SUFFIX}"
+  fi
+  echo "FULLURL ${FULLURL}"
   exit 0
 fi
 
@@ -45,25 +79,6 @@ fi
 # DDEV_SITENAME is the DDEV project name (may differ from the Coder workspace name).
 PROJECT="${DDEV_SITENAME}"
 AGENT="${CODER_AGENT_NAME:-main}"
-
-MAILPIT=false
-PATH_SUFFIX=""
-
-while :; do
-  case ${1:-} in
-  -m | --mailpit | --mailhog)
-    MAILPIT=true
-    ;;
-  --) shift; break ;;
-  -?*) printf 'WARN: Unknown option (ignored): %s\n' "$1" >&2 ;;
-  *) break ;;
-  esac
-  shift
-done
-
-if [ -n "${1:-}" ]; then
-  PATH_SUFFIX="/${1#/}"
-fi
 
 # drupal-core/drupal-contrib omit ddev-router and bind the web container directly
 # to a fixed host port, so there's no Traefik merged config for coder-routes to
