@@ -37,10 +37,11 @@ env:
 # running plus one pending; every other simultaneous contender gets silently
 # CANCELLED, not queued. Instead, each box-touching job below (including
 # contrib-plain-gh and contrib-issue-fork-gh, which otherwise run in parallel
-# within a single workflow run) calls scripts/ci-wait-for-staging-box.sh right
-# before creating its workspace, which polls the Coder server's actual
-# workspace count and waits its turn -- see that script's header comment for
-# detail.
+# within a single workflow run) calls scripts/ci-acquire-staging-lock.sh right
+# before creating its workspace, which claims one of a fixed number of
+# lock-slot workspaces (an atomic Coder-side compare-and-swap on workspace
+# name) and waits its turn if all slots are held -- see that script's header
+# comment for detail.
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
@@ -67,7 +68,7 @@ jobs:
     if: false
     runs-on: [self-hosted, sysbox]
     # Long enough to cover queued time behind other box-provisioning jobs
-    # (see scripts/ci-wait-for-staging-box.sh) plus this job's own runtime.
+    # (see scripts/ci-acquire-staging-lock.sh) plus this job's own runtime.
     timeout-minutes: 75
     strategy:
       matrix:
@@ -230,7 +231,7 @@ jobs:
     if: false
     runs-on: [self-hosted, sysbox]
     # Long enough to cover queued time behind other box-provisioning jobs
-    # (see scripts/ci-wait-for-staging-box.sh) plus this job's own runtime.
+    # (see scripts/ci-acquire-staging-lock.sh) plus this job's own runtime.
     timeout-minutes: 75
     defaults:
       run:
@@ -410,7 +411,7 @@ jobs:
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.owner.login == github.repository_owner }}
     runs-on: ubuntu-latest
     # Long enough to cover queued time behind other box-provisioning jobs
-    # (see scripts/ci-wait-for-staging-box.sh) plus this job's own runtime.
+    # (see scripts/ci-acquire-staging-lock.sh) plus this job's own runtime.
     timeout-minutes: 75
     strategy:
       # PRs run a single module (smoke); push-to-main and nightly run the full
@@ -460,8 +461,10 @@ jobs:
       - name: Reap predecessor workspaces (cancelled prior runs of this cell)
         run: ./scripts/ci-reap-family.sh "gc-${{ matrix.project }}-d${{ matrix.drupal_version }}-" "${{ env.WORKSPACE_NAME }}"
 
-      - name: Wait for staging box to be free
-        run: ./scripts/ci-wait-for-staging-box.sh
+      - name: Acquire staging box lock
+        run: ./scripts/ci-acquire-staging-lock.sh
+        env:
+          CI_LOCK_SLOTS: ${{ vars.CI_LOCK_SLOTS }}
 
       - name: Create workspace
         run: |
@@ -547,6 +550,10 @@ jobs:
         if: always()
         run: coder delete ${{ env.WORKSPACE_NAME }} --yes || true
 
+      - name: Release staging box lock
+        if: always()
+        run: ./scripts/ci-release-staging-lock.sh
+
       - name: Archive CI template version
         if: always()
         run: coder templates versions archive drupal-contrib ${{ env.WORKSPACE_NAME }} --yes || true
@@ -556,7 +563,7 @@ jobs:
     if: ${{ vars.CONTRIB_TEST_ISSUE_FORK != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.owner.login == github.repository_owner) }}
     runs-on: ubuntu-latest
     # Long enough to cover queued time behind other box-provisioning jobs
-    # (see scripts/ci-wait-for-staging-box.sh) plus this job's own runtime.
+    # (see scripts/ci-acquire-staging-lock.sh) plus this job's own runtime.
     timeout-minutes: 75
     defaults:
       run:
@@ -620,8 +627,10 @@ jobs:
       - name: Reap predecessor workspaces (cancelled prior runs of this cell)
         run: ./scripts/ci-reap-family.sh "gc-fork-" "${{ env.WORKSPACE_NAME }}"
 
-      - name: Wait for staging box to be free
-        run: ./scripts/ci-wait-for-staging-box.sh
+      - name: Acquire staging box lock
+        run: ./scripts/ci-acquire-staging-lock.sh
+        env:
+          CI_LOCK_SLOTS: ${{ vars.CI_LOCK_SLOTS }}
 
       - name: Create workspace
         run: |
@@ -704,6 +713,10 @@ jobs:
       - name: Delete workspace
         if: always()
         run: coder delete ${{ env.WORKSPACE_NAME }} --yes || true
+
+      - name: Release staging box lock
+        if: always()
+        run: ./scripts/ci-release-staging-lock.sh
 
       - name: Archive CI template version
         if: always()

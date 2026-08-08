@@ -6,7 +6,10 @@ VERSION := $(shell cat VERSION 2>/dev/null || echo "1.0.0-beta1")
 DOCKERFILE_DIR := image
 DOCKERFILE := $(DOCKERFILE_DIR)/Dockerfile
 
-# Template directories (name == directory name == Coder template name)
+# Template directories (name == directory name == Coder template name).
+# ci-lock is a separate CI-only mutex template (see ci-lock/template.tf) --
+# deliberately excluded here since it has no shared assets to vendor and no
+# image_version variable; it gets its own validate/push handling below.
 TEMPLATES := drupal-core drupal-contrib freeform
 
 # Host path to the drupal-core seed cache (bind-mounted read-only into workspaces).
@@ -144,6 +147,8 @@ validate: sync-shared ## Validate all Terraform templates (requires terraform in
 		echo "--- Validating $$t ---"; \
 		(cd $$t && terraform init -backend=false -input=false -no-color && terraform validate -no-color) || exit 1; \
 	done
+	@echo "--- Validating ci-lock ---"
+	@(cd ci-lock && terraform init -backend=false -input=false -no-color && terraform validate -no-color) || exit 1
 	@echo "All templates valid."
 
 .PHONY: fmt-check
@@ -207,8 +212,16 @@ push-template-drupal-contrib: sync-shared ## Push drupal-contrib template to Cod
 push-template-freeform: sync-shared ## Push freeform template to Coder
 	$(call push_template,freeform)
 
+.PHONY: push-template-ci-lock
+push-template-ci-lock: ## Push the ci-lock CI-mutex template to Coder (no image, no shared assets -- see ci-lock/template.tf)
+	@echo "Pushing Coder template ci-lock..."
+	coder templates push --directory ci-lock ci-lock --yes --activate=$(ACTIVATE)
+	@echo "Setting template metadata for ci-lock..."
+	coder templates edit ci-lock --yes --display-name "CI Lock (internal)" --description "CI-internal mutex for the staging box. Not a development environment -- do not use."
+	@echo "Template ci-lock push complete"
+
 .PHONY: push-all-templates
-push-all-templates: push-template-drupal-core push-template-drupal-contrib push-template-freeform ## Push all templates to Coder (no image build)
+push-all-templates: push-template-drupal-core push-template-drupal-contrib push-template-freeform push-template-ci-lock ## Push all templates to Coder (no image build)
 	@echo "All templates pushed!"
 
 # --- Deploy targets ---
