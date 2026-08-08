@@ -119,8 +119,17 @@ sync-vscode-extensions: ## Vendor shared/vscode-extensions.tf into each template
 	done
 	@echo "Synced shared/vscode-extensions.tf into: $(TEMPLATES)"
 
+.PHONY: sync-docker-daemon-module
+sync-docker-daemon-module: ## Vendor modules/docker-daemon into each template dir (same reason as sync-claude-module: push only bundles the given --directory)
+	@for t in $(TEMPLATES); do \
+		rm -rf $$t/modules/docker-daemon; \
+		mkdir -p $$t/modules; \
+		cp -r modules/docker-daemon $$t/modules/docker-daemon; \
+	done
+	@echo "Synced modules/docker-daemon into: $(TEMPLATES)"
+
 .PHONY: sync-shared
-sync-shared: sync-claude-module sync-vscode-extensions ## Vendor all shared Terraform assets (modules + vscode-extensions.tf) into each template dir
+sync-shared: sync-claude-module sync-vscode-extensions sync-docker-daemon-module ## Vendor all shared Terraform assets (modules + vscode-extensions.tf) into each template dir
 
 .PHONY: validate
 validate: sync-shared ## Validate all Terraform templates (requires terraform in PATH)
