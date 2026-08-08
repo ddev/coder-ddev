@@ -262,6 +262,7 @@ Key template variables (e.g. in `freeform/template.tf`):
 - This is an **infrastructure repository** managing Coder templates
 - Use feature branches for changes
 - **Never use the local `main` branch** — always `git fetch upstream` and base branches on `upstream/main`. Use `upstream/main` for comparisons (e.g. `git diff upstream/main...HEAD`), not local `main`.
+- **Never run `git push`, under any circumstances** — not to `main`, not to a feature branch, not to a fork. Commit locally and hand off to the user (or open a PR only if explicitly asked and only via a mechanism that doesn't require you to push, e.g. `gh pr create` from a branch the user has already pushed) — always let the user push.
 - Always use OpenSpec for architectural changes (see AGENTS.md)
 
 ### OpenSpec Integration
