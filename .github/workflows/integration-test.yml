@@ -56,7 +56,7 @@ on:
   workflow_dispatch:
     inputs:
       debug_enabled:
-        description: 'Run the build with tmate set "debug_enabled"'
+        description: Enable remote debugging session
         type: boolean
         required: false
         default: false
@@ -125,11 +125,10 @@ jobs:
         if: ${{ env.TEST_CODER_SESSION_TOKEN != '' }}
         run: coder login --token "${{ env.TEST_CODER_SESSION_TOKEN }}" "${{ vars.TEST_CODER_URL }}"
 
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
+      - name: Setup upterm session
+        uses: owenthereal/action-upterm@v1
         with:
           limit-access-to-actor: true
-          github-token: ${{ secrets.GITHUB_TOKEN }}
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
 
       - name: Push template (inactive)
@@ -342,11 +341,10 @@ jobs:
           access_url: ${{ vars.TEST_CODER_URL }}
           coder_session_token: ${{ env.TEST_CODER_SESSION_TOKEN }}
 
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
+      - name: Setup upterm session
+        uses: owenthereal/action-upterm@v1
         with:
           limit-access-to-actor: true
-          github-token: ${{ secrets.GITHUB_TOKEN }}
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
 
       - name: Push template (inactive)
