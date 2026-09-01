@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       debug_enabled:
-        description: 'Run the build with tmate set "debug_enabled"'
+        description: Enable remote debugging session
         type: boolean
         required: false
         default: false
@@ -25,11 +25,10 @@ jobs:
       - uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: "~1.9"
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
+      - name: Setup upterm session
+        uses: owenthereal/action-upterm@v1
         with:
           limit-access-to-actor: true
-          github-token: ${{ secrets.GITHUB_TOKEN }}
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
       - name: Init
         run: terraform init -backend=false -input=false
@@ -49,11 +48,10 @@ jobs:
       - uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: "~1.9"
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
+      - name: Setup upterm session
+        uses: owenthereal/action-upterm@v1
         with:
           limit-access-to-actor: true
-          github-token: ${{ secrets.GITHUB_TOKEN }}
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
       - name: Check formatting
         run: terraform fmt -check -recursive

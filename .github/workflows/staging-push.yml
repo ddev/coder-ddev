@@ -21,7 +21,7 @@ on:
   workflow_dispatch:
     inputs:
       debug_enabled:
-        description: 'Run the build with tmate set "debug_enabled"'
+        description: Enable remote debugging session
         type: boolean
         required: false
         default: false
@@ -55,11 +55,10 @@ jobs:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
           TEST_CODER_SESSION_TOKEN: "op://test-secrets/TEST_CODER_SESSION_TOKEN/credential"
 
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
+      - name: Setup upterm session
+        uses: owenthereal/action-upterm@v1
         with:
           limit-access-to-actor: true
-          github-token: ${{ secrets.GITHUB_TOKEN }}
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
 
       - uses: coder/setup-action@v1
