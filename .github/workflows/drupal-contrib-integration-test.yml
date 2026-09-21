@@ -274,12 +274,25 @@ jobs:
           ISSUE_NUMBER="${ISSUE_FORK#${CONTRIB_PROJECT}-}"
           FORK_SLUG="${CONTRIB_PROJECT}-${ISSUE_NUMBER}"
 
-          # Fetch issue branch from the contrib issue fork GitLab API
+          # The fork project's own `default_branch` just reflects whatever HEAD
+          # pointed to when the fork was created (usually the same default
+          # branch as the parent project, e.g. "8.x-2.x") — it does NOT track
+          # the actual issue branch. Drupal.org's convention is to name that
+          # branch "<issue_number>-description", so look for one of those and
+          # pick the most recently committed match; fall back to the fork's
+          # default branch if none exists yet (e.g. no work pushed so far).
           ISSUE_BRANCH=$(curl -sf \
-            "https://git.drupalcode.org/api/v4/projects/issue%2F${FORK_SLUG}" \
-            | jq -r '.default_branch')
+            "https://git.drupalcode.org/api/v4/projects/issue%2F${FORK_SLUG}/repository/branches?per_page=100" \
+            | jq -r --arg prefix "${ISSUE_NUMBER}-" \
+              '[.[] | select(.name | startswith($prefix))] | sort_by(.commit.committed_date) | last.name // empty')
+          if [[ -z "$ISSUE_BRANCH" ]]; then
+            echo "No '${ISSUE_NUMBER}-*' branch found on ${FORK_SLUG} — falling back to its default branch"
+            ISSUE_BRANCH=$(curl -sf \
+              "https://git.drupalcode.org/api/v4/projects/issue%2F${FORK_SLUG}" \
+              | jq -r '.default_branch')
+          fi
           if [[ -z "$ISSUE_BRANCH" || "$ISSUE_BRANCH" == "null" ]]; then
-            echo "ERROR: Could not resolve default branch for issue fork ${FORK_SLUG}" >&2
+            echo "ERROR: Could not resolve a branch for issue fork ${FORK_SLUG}" >&2
             exit 1
           fi
 
@@ -598,11 +611,24 @@ jobs:
         run: |
           ISSUE_NUMBER="${ISSUE_FORK#${CONTRIB_PROJECT}-}"
           FORK_SLUG="${CONTRIB_PROJECT}-${ISSUE_NUMBER}"
+
+          # See the comment in the sibling "contrib-issue-fork" job: the fork's
+          # own `default_branch` does not track the actual issue branch, so
+          # prefer a "<issue_number>-*" branch (Drupal.org's naming
+          # convention), falling back to the fork's default branch if none
+          # exists yet.
           ISSUE_BRANCH=$(curl -sf \
-            "https://git.drupalcode.org/api/v4/projects/issue%2F${FORK_SLUG}" \
-            | jq -r '.default_branch')
+            "https://git.drupalcode.org/api/v4/projects/issue%2F${FORK_SLUG}/repository/branches?per_page=100" \
+            | jq -r --arg prefix "${ISSUE_NUMBER}-" \
+              '[.[] | select(.name | startswith($prefix))] | sort_by(.commit.committed_date) | last.name // empty')
+          if [[ -z "$ISSUE_BRANCH" ]]; then
+            echo "No '${ISSUE_NUMBER}-*' branch found on ${FORK_SLUG} — falling back to its default branch"
+            ISSUE_BRANCH=$(curl -sf \
+              "https://git.drupalcode.org/api/v4/projects/issue%2F${FORK_SLUG}" \
+              | jq -r '.default_branch')
+          fi
           if [[ -z "$ISSUE_BRANCH" || "$ISSUE_BRANCH" == "null" ]]; then
-            echo "ERROR: Could not resolve default branch for issue fork ${FORK_SLUG}" >&2
+            echo "ERROR: Could not resolve a branch for issue fork ${FORK_SLUG}" >&2
             exit 1
           fi
           DRUPAL_VERSION="${CONTRIB_TEST_DRUPAL_VERSION:-11}"
