@@ -755,3 +755,212 @@ jobs:
       - name: Archive CI template version
         if: always()
         run: coder templates versions archive drupal-contrib gc-${{ github.run_number }}-${{ github.run_attempt }} --yes || true
+
+  # Companion to contrib-issue-fork-gh above, but for a project whose issue
+  # queue has migrated off drupal.org onto GitLab-native issues (see #163
+  # and #203). The fork/branch lookup works the same way either way (it's
+  # always GitLab, project-qualified), but the issue title/link lookup does
+  # not: a drupal.org node ID lookup for a migrated project's issue number
+  # can silently match an unrelated node (old node IDs get reused), so
+  # drupal-contrib/template.tf must fall back to GitLab's own issues API.
+  # This job is what actually exercises that fallback path.
+  contrib-issue-fork-gitlab-gh:
+    name: Contrib ${{ vars.CONTRIB_TEST_GITLAB_PROJECT || 'ui_icons' }} issue fork (GitLab-native, GH)
+    if: ${{ vars.CONTRIB_TEST_GITLAB_ISSUE_FORK != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.owner.login == github.repository_owner) }}
+    runs-on: ubuntu-latest
+    # Long enough to cover queued time behind other box-provisioning jobs
+    # (see scripts/ci-acquire-staging-lock.sh) plus this job's own runtime.
+    timeout-minutes: 75
+    defaults:
+      run:
+        shell: bash -euo pipefail {0}
+    env:
+      WORKSPACE_NAME: gc-glfork-${{ github.run_number }}-${{ github.run_attempt }}
+      CI: "true"
+      DDEV_NONINTERACTIVE: "true"
+      NO_COLOR: "1"
+      CONTRIB_PROJECT: ${{ vars.CONTRIB_TEST_GITLAB_PROJECT || 'ui_icons' }}
+      ISSUE_FORK: ${{ vars.CONTRIB_TEST_GITLAB_ISSUE_FORK }}
+      CONTRIB_TEST_DRUPAL_VERSION: ${{ vars.CONTRIB_TEST_GITLAB_DRUPAL_VERSION || '11' }}
+      ISSUE_BRANCH: ""
+      ISSUE_NUMBER: ""
+      ISSUE_FORK_VERSION: ""
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Load 1Password secrets
+        uses: 1password/load-secrets-action@v4
+        with:
+          export-env: true
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          TEST_CODER_SESSION_TOKEN: "op://test-secrets/TEST_CODER_SESSION_TOKEN/credential"
+
+      - uses: coder/setup-action@v1
+        with:
+          access_url: ${{ vars.TEST_CODER_URL }}
+          coder_session_token: ${{ env.TEST_CODER_SESSION_TOKEN }}
+
+      - name: Resolve issue branch from issue number
+        run: |
+          ISSUE_NUMBER="${ISSUE_FORK#${CONTRIB_PROJECT}-}"
+          FORK_SLUG="${CONTRIB_PROJECT}-${ISSUE_NUMBER}"
+
+          # See the comment in the "contrib-issue-fork" job: the fork's own
+          # `default_branch` does not track the actual issue branch, so
+          # prefer a "<issue_number>-*" branch (Drupal.org's naming
+          # convention), falling back to the fork's default branch if none
+          # exists yet.
+          ISSUE_BRANCH=$(curl -sf \
+            "https://git.drupalcode.org/api/v4/projects/issue%2F${FORK_SLUG}/repository/branches?per_page=100" \
+            | jq -r --arg prefix "${ISSUE_NUMBER}-" \
+              '[.[] | select(.name | startswith($prefix))] | sort_by(.commit.committed_date) | last.name // empty')
+          if [[ -z "$ISSUE_BRANCH" ]]; then
+            echo "No '${ISSUE_NUMBER}-*' branch found on ${FORK_SLUG} — falling back to its default branch"
+            ISSUE_BRANCH=$(curl -sf \
+              "https://git.drupalcode.org/api/v4/projects/issue%2F${FORK_SLUG}" \
+              | jq -r '.default_branch')
+          fi
+          if [[ -z "$ISSUE_BRANCH" || "$ISSUE_BRANCH" == "null" ]]; then
+            echo "ERROR: Could not resolve a branch for issue fork ${FORK_SLUG}" >&2
+            exit 1
+          fi
+          DRUPAL_VERSION="${CONTRIB_TEST_DRUPAL_VERSION:-11}"
+          echo "Resolved: fork=${FORK_SLUG}  branch=$ISSUE_BRANCH  drupal_version=$DRUPAL_VERSION"
+          echo "ISSUE_NUMBER=$ISSUE_NUMBER"         >> "$GITHUB_ENV"
+          echo "ISSUE_BRANCH=$ISSUE_BRANCH"         >> "$GITHUB_ENV"
+          echo "ISSUE_FORK_VERSION=$DRUPAL_VERSION" >> "$GITHUB_ENV"
+
+      - name: Push template (inactive)
+        run: |
+          coder templates push drupal-contrib \
+            --directory drupal-contrib \
+            --activate=false \
+            --name gc-gl-${{ github.run_number }}-${{ github.run_attempt }} \
+            --yes \
+            --variable image_version="$(cat VERSION)" \
+            --variable workspace_image_registry=index.docker.io/ddev/coder-ddev \
+            --variable github_token=${{ secrets.GITHUB_TOKEN }}
+
+      - name: Reap predecessor workspaces (cancelled prior runs of this cell)
+        run: ./scripts/ci-reap-family.sh "gc-glfork-" "${{ env.WORKSPACE_NAME }}"
+
+      - name: Acquire staging box lock
+        run: ./scripts/ci-acquire-staging-lock.sh
+        env:
+          CI_LOCK_SLOTS: ${{ vars.CI_LOCK_SLOTS }}
+
+      - name: Create workspace
+        run: |
+          coder create ${{ env.WORKSPACE_NAME }} \
+            --template drupal-contrib \
+            --template-version gc-gl-${{ github.run_number }}-${{ github.run_attempt }} \
+            --parameter "vscode_extensions=[]" \
+            --parameter project_name=${{ env.CONTRIB_PROJECT }} \
+            --parameter project_type=module \
+            --parameter drupal_version=${{ env.ISSUE_FORK_VERSION }} \
+            --parameter issue_fork=${{ env.ISSUE_NUMBER }} \
+            --parameter issue_branch=${{ env.ISSUE_BRANCH }} \
+            --parameter install_profile=minimal \
+            --parameter share_drupal_site=owner \
+            --use-parameter-defaults \
+            --yes
+
+      - name: Verify workspace — agent connected
+        run: coder ssh ${{ env.WORKSPACE_NAME }} --wait=yes -- echo "Agent connected"
+
+      - name: Verify workspace — Docker daemon running
+        run: coder ssh ${{ env.WORKSPACE_NAME }} -- docker ps
+
+      - name: Verify workspace — DDEV installed
+        run: coder ssh ${{ env.WORKSPACE_NAME }} -- ddev --version
+
+      - name: Verify workspace — project repo cloned
+        run: coder ssh ${{ env.WORKSPACE_NAME }} -- test -d /home/coder/${{ env.CONTRIB_PROJECT }}/.git
+
+      - name: Verify workspace — Drupal web root exists
+        run: coder ssh ${{ env.WORKSPACE_NAME }} -- test -f /home/coder/${{ env.CONTRIB_PROJECT }}/web/index.php
+
+      - name: Verify workspace — Drush DB connected
+        run: |
+          coder ssh ${{ env.WORKSPACE_NAME }} -- env -C /home/coder/${{ env.CONTRIB_PROJECT }} ddev drush status --fields=db-status \
+            | grep -i connected
+
+      - name: Dump setup status
+        if: always()
+        run: |
+          coder ssh ${{ env.WORKSPACE_NAME }} -- cat /home/coder/SETUP_STATUS.txt || true
+          echo "--- last 30 lines of setup log ---"
+          coder ssh ${{ env.WORKSPACE_NAME }} -- tail -30 /tmp/drupal-setup.log || true
+
+      - name: Verify workspace — issue branch checked out
+        run: |
+          CURRENT=$(coder ssh ${{ env.WORKSPACE_NAME }} -- git -C /home/coder/${{ env.CONTRIB_PROJECT }} branch --show-current | tr -d '\r\n')
+          echo "Current branch: $CURRENT  Expected: ${{ env.ISSUE_BRANCH }}"
+          [[ "$CURRENT" == "${{ env.ISSUE_BRANCH }}" ]] || { echo "ERROR: wrong branch" >&2; exit 1; }
+
+      - name: Verify workspace — working tree is clean
+        run: |
+          # Catches scaffold-induced dirt (e.g. a stray .gitattributes rewriting
+          # a tracked file's line endings) that doesn't fail setup but can block
+          # a later branch checkout. composer.json is expected to carry the
+          # drush require-dev / allow-plugins edit, so it's excluded.
+          DIRTY=$(coder ssh ${{ env.WORKSPACE_NAME }} -- git -C /home/coder/${{ env.CONTRIB_PROJECT }} diff --name-only -- . ':!composer.json' | tr -d '\r')
+          echo "Modified tracked files (excluding composer.json): ${DIRTY:-<none>}"
+          [[ -z "$DIRTY" ]] || { echo "ERROR: working tree has unexpected modifications" >&2; exit 1; }
+
+      - name: Verify workspace — issue link points at GitLab, not a stale drupal.org node
+        run: |
+          # This is the regression test for the fix in drupal-contrib/template.tf:
+          # a migrated project's old drupal.org node ID can coincidentally exist
+          # and belong to an unrelated project, so the workspace must not trust
+          # it blindly — it should fall back to GitLab's issues API instead.
+          WELCOME=$(coder ssh ${{ env.WORKSPACE_NAME }} -- cat /home/coder/WELCOME.txt)
+          echo "$WELCOME"
+          echo "$WELCOME" | grep -qF "git.drupalcode.org/project/${{ env.CONTRIB_PROJECT }}/-/issues/${{ env.ISSUE_NUMBER }}" \
+            || { echo "ERROR: WELCOME.txt does not link to the GitLab issue" >&2; exit 1; }
+          echo "$WELCOME" | grep -qi "drupal.org/project" \
+            && { echo "ERROR: WELCOME.txt still links to drupal.org for a GitLab-native issue" >&2; exit 1; }
+          echo "OK: issue link correctly points at GitLab"
+
+      - name: Record owner
+        run: |
+          OWNER=$(coder whoami --output json | jq -r 'if type == "array" then .[0].username else .username end')
+          echo "OWNER=$OWNER" >> "$GITHUB_ENV"
+
+      - name: Verify workspace — Drupal site externally accessible
+        run: |
+          CODER_DOMAIN="${{ vars.TEST_CODER_URL }}"
+          CODER_DOMAIN="${CODER_DOMAIN#https://}"
+          SITE_URL="https://drupal-site--${{ env.WORKSPACE_NAME }}--${OWNER}.${CODER_DOMAIN}"
+          echo "Checking $SITE_URL"
+          HTTP_STATUS=$(curl -sL --max-time 30 --retry 3 --retry-delay 5 \
+            -H "Coder-Session-Token: ${TEST_CODER_SESSION_TOKEN}" \
+            -o /tmp/drupal-response.html \
+            -w "%{http_code}" \
+            "$SITE_URL")
+          echo "HTTP status: $HTTP_STATUS"
+          if [[ ! "$HTTP_STATUS" =~ ^[23] ]]; then
+            echo "ERROR: unexpected HTTP status $HTTP_STATUS" >&2
+            head -50 /tmp/drupal-response.html >&2 || true
+            exit 1
+          fi
+          if ! grep -qi "log in" /tmp/drupal-response.html; then
+            echo "ERROR: response does not contain 'log in' — Drupal may not have started" >&2
+            head -50 /tmp/drupal-response.html >&2
+            exit 1
+          fi
+          echo "OK: Drupal site is accessible and shows login page"
+
+      - name: Delete workspace
+        if: always()
+        run: coder delete ${{ env.WORKSPACE_NAME }} --yes || true
+
+      - name: Release staging box lock
+        if: always()
+        run: ./scripts/ci-release-staging-lock.sh
+
+      - name: Archive CI template version
+        if: always()
+        run: coder templates versions archive drupal-contrib gc-gl-${{ github.run_number }}-${{ github.run_attempt }} --yes || true
