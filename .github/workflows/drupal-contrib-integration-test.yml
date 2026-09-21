@@ -679,6 +679,16 @@ jobs:
           echo "Current branch: $CURRENT  Expected: ${{ env.ISSUE_BRANCH }}"
           [[ "$CURRENT" == "${{ env.ISSUE_BRANCH }}" ]] || { echo "ERROR: wrong branch" >&2; exit 1; }
 
+      - name: Verify workspace — working tree is clean
+        run: |
+          # Catches scaffold-induced dirt (e.g. a stray .gitattributes rewriting
+          # a tracked file's line endings) that doesn't fail setup but can block
+          # a later branch checkout. composer.json is expected to carry the
+          # drush require-dev / allow-plugins edit, so it's excluded.
+          DIRTY=$(coder ssh ${{ env.WORKSPACE_NAME }} -- git -C /home/coder/${{ env.CONTRIB_PROJECT }} diff --name-only -- . ':!composer.json' | tr -d '\r')
+          echo "Modified tracked files (excluding composer.json): ${DIRTY:-<none>}"
+          [[ -z "$DIRTY" ]] || { echo "ERROR: working tree has unexpected modifications" >&2; exit 1; }
+
       - name: Record owner
         run: |
           OWNER=$(coder whoami --output json | jq -r 'if type == "array" then .[0].username else .username end')
