@@ -506,10 +506,33 @@ GIT_ATTRIBUTES_EOF
 
     if [ "$SETUP_FAILED" = "false" ] && [ -n "$ISSUE_FORK" ]; then
       log_setup "Issue fork mode: ISSUE_FORK=$ISSUE_FORK  ISSUE_BRANCH=$ISSUE_BRANCH"
-      log_setup "🔗 Issue: https://www.drupal.org/project/$PROJECT_NAME/issues/$ISSUE_FORK"
 
-      # Fetch issue title for display
-      ISSUE_TITLE=$(curl -sf "https://www.drupal.org/api-d7/node/$${ISSUE_FORK}.json" 2>/dev/null | jq -r '.title // ""' 2>/dev/null || echo "")
+      # Fetch issue title + link for display. drupal.org node IDs are reused
+      # for unrelated content once a project's issue queue migrates to
+      # GitLab (see github.com/ddev/coder-ddev/issues/163) — e.g. node
+      # 3591879 is some unrelated project's release, while GitLab issue
+      # ui_icons#3591879 is a real, different issue. So a "successful"
+      # drupal.org lookup must still be checked against this project before
+      # being trusted; otherwise we can silently show the wrong issue's
+      # title. Fall back to GitLab's own issue API (already project-
+      # qualified, so collision-free) when drupal.org has no matching node.
+      ISSUE_URL="https://www.drupal.org/project/$PROJECT_NAME/issues/$ISSUE_FORK"
+      ISSUE_TITLE=""
+      _do_json=$(curl -sf "https://www.drupal.org/api-d7/node/$ISSUE_FORK.json" 2>/dev/null || echo "")
+      if [ -n "$_do_json" ] && [ "$(echo "$_do_json" | jq -r '.field_project.machine_name // ""' 2>/dev/null)" = "$PROJECT_NAME" ]; then
+        ISSUE_TITLE=$(echo "$_do_json" | jq -r '.title // ""' 2>/dev/null)
+      fi
+      if [ -z "$ISSUE_TITLE" ]; then
+        _gl_json=$(curl -sf "https://git.drupalcode.org/api/v4/projects/project%2F$PROJECT_NAME/issues/$ISSUE_FORK" 2>/dev/null || echo "")
+        if [ -n "$_gl_json" ]; then
+          ISSUE_TITLE=$(echo "$_gl_json" | jq -r '.title // ""' 2>/dev/null)
+          if [ -n "$ISSUE_TITLE" ]; then
+            ISSUE_URL="https://git.drupalcode.org/project/$PROJECT_NAME/-/issues/$ISSUE_FORK"
+          fi
+        fi
+      fi
+
+      log_setup "🔗 Issue: $ISSUE_URL"
       if [ -n "$ISSUE_TITLE" ]; then
         log_setup "   Title: $ISSUE_TITLE"
       fi
@@ -925,7 +948,7 @@ LAUNCH_EOF
         ISSUE_LINE="Issue #$${ISSUE_FORK}"
         [ -n "$ISSUE_TITLE" ] && ISSUE_LINE="$ISSUE_LINE: $ISSUE_TITLE"
         echo "$ISSUE_LINE"
-        echo "  https://www.drupal.org/project/$PROJECT_NAME/issues/$${ISSUE_FORK}"
+        echo "  $ISSUE_URL"
         if [ "$ISSUE_SETUP_OK" = "false" ]; then
           echo ""
           echo "⚠  COULD NOT CHECK OUT THE ISSUE BRANCH"
