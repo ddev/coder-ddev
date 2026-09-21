@@ -23,7 +23,7 @@ Automated Coder workspace for Drupal core development using the [amateescu/ddev-
 **Standard Drupal core workspace:**
 ```bash
 coder create --template drupal-core my-drupal-dev
-# Then access via Coder dashboard "DDEV Web" app
+# Then access via Coder dashboard "Drupal Site" app
 ```
 
 **Working on a specific issue:**
@@ -40,9 +40,13 @@ coder create --template drupal-core my-issue-3568144 \
 
 ## Access
 
-- **Website**: Click "DDEV Web" in Coder dashboard
+- **Website**: Click "Drupal Site" in Coder dashboard
 - **Admin Login**: Username `admin`, Password `admin`
 - **One-time Login**: Run `ddev drush uli` in terminal
+
+### Sharing Your Site
+
+By default the "Drupal Site" URL only works for you (the workspace owner). To share a work-in-progress with someone outside Coder, flip the **Public Sharing** switch in the workspace's parameters and restart the workspace — the change only takes effect on the next build. Turn it back off the same way when you're done.
 
 ## Project Structure
 
@@ -165,7 +169,7 @@ Create scripts in `~/.ddev/commands/host/` or `.ddev/commands/web/`
 
 1. Make changes in VS Code (automatically opens to `/home/coder/drupal-core`)
 2. Edit Drupal core files directly in `~/drupal-core/`
-3. Test changes via DDEV Web app
+3. Test changes via Drupal Site app
 4. Run tests: `ddev phpunit core/modules/...`
 5. Commit: `cd ~/drupal-core && git add . && git commit -m "..."`
 6. Push to fork: `git push issue HEAD`

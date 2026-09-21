@@ -163,25 +163,13 @@ data "coder_parameter" "install_profile" {
 
 data "coder_parameter" "share_drupal_site" {
   name         = "share_drupal_site"
-  display_name = "Drupal Site Sharing"
-  description  = "Who can access the Drupal site URL. Change to 'public' when you want to share a work-in-progress with someone outside Coder."
-  type         = "string"
-  default      = "owner"
+  display_name = "Public Sharing"
+  description  = "Make the Drupal site URL public (anyone with the link, no Coder sign-in) so you can share a work-in-progress with someone outside Coder. Takes effect the next time this workspace restarts."
+  type         = "bool"
+  form_type    = "switch"
+  default      = "false"
   mutable      = true
   order        = 90
-
-  option {
-    name  = "Private (owner only)"
-    value = "owner"
-  }
-  option {
-    name  = "Authenticated (any Coder user)"
-    value = "authenticated"
-  }
-  option {
-    name  = "Public (anyone with the link)"
-    value = "public"
-  }
 }
 
 data "coder_parameter" "vscode_extensions" {
@@ -213,9 +201,10 @@ locals {
   project_dir         = "/home/coder/${data.coder_parameter.project_name.value}"
   issue_fork          = data.coder_parameter.issue_fork.value
   issue_url           = local.issue_fork != "" ? "https://www.drupal.org/project/${local.project_name}/issues/${local.issue_fork}" : ""
-  # Coerce share value — mock_data in tftest returns "[]" for all parameters;
-  # fall back to "owner" if the value is not a valid share level.
-  drupal_site_share = contains(["owner", "authenticated", "public"], data.coder_parameter.share_drupal_site.value) ? data.coder_parameter.share_drupal_site.value : "owner"
+  # mock_data in tftest returns "[]" for all parameters regardless of declared
+  # type; try() catches tobool("[]") failing and falls back to private/"owner".
+  drupal_site_share_public = try(tobool(data.coder_parameter.share_drupal_site.value), false)
+  drupal_site_share        = local.drupal_site_share_public ? "public" : "owner"
 }
 
 locals {
@@ -1125,37 +1114,25 @@ module "claude_remote_control" {
   agent_id = coder_agent.main.id
 }
 
-resource "coder_app" "ddev-web" {
-  agent_id     = coder_agent.main.id
-  slug         = "ddev-web"
-  display_name = "DDEV Web"
-  order        = 1
-  url          = "http://localhost:8080"
-  icon         = "https://raw.githubusercontent.com/ddev/ddev/main/docs/content/developers/logos/SVG/Logo.svg"
-  subdomain    = true
-  share        = "owner"
-
-  healthcheck {
-    url       = "http://localhost:8080"
-    interval  = 10
-    threshold = 30
-  }
-}
-
+# Drupal Site (HTTP) - appears when DDEV project is running.
+# Uses subdomain routing for unique URLs per workspace. Sharing is controlled
+# by data.coder_parameter.share_drupal_site (Public Sharing switch above).
 resource "coder_app" "drupal-site" {
   agent_id     = coder_agent.main.id
   slug         = "drupal-site"
   display_name = "Drupal Site"
-  order        = 2
+  order        = 1
   url          = "http://localhost:8080"
-  icon         = "https://api.iconify.design/heroicons:check-circle.svg?color=white"
+  icon         = "https://raw.githubusercontent.com/ddev/ddev/main/docs/content/developers/logos/SVG/Logo.svg"
   subdomain    = true
   share        = local.drupal_site_share
 
+  # Healthy when ddev is running and the web server responds (any 2xx/3xx).
+  # Lights up as soon as `ddev start` completes, before Drupal is installed.
   healthcheck {
-    url       = "http://localhost:8080/user/login"
+    url       = "http://localhost:8080"
     interval  = 10
-    threshold = 3
+    threshold = 30
   }
 }
 
@@ -1283,5 +1260,9 @@ resource "coder_metadata" "workspace_info" {
   item {
     key   = "issue_url"
     value = local.issue_url
+  }
+  item {
+    key   = "sharing"
+    value = local.drupal_site_share_public ? "Public (anyone with the link)" : "Private (owner only)"
   }
 }

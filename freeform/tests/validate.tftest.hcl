@@ -82,6 +82,46 @@ run "two_projects_with_spaces" {
   }
 }
 
+run "sharing_disabled_by_default" {
+  command = plan
+  assert {
+    condition     = coder_app.ddev_web["test-workspace"].share == "owner"
+    error_message = "coder_app.ddev_web must default to share=owner"
+  }
+}
+
+run "sharing_enabled_for_all_projects" {
+  command = plan
+  override_data {
+    target = data.coder_parameter.project_names
+    values = {
+      value = "drupal,wordpress"
+    }
+  }
+  override_data {
+    target = data.coder_parameter.share_projects
+    values = {
+      value = "true"
+    }
+  }
+  assert {
+    condition     = coder_app.ddev_web["drupal"].share == "public"
+    error_message = "coder_app.ddev_web[\"drupal\"] must be share=public when share_projects=true"
+  }
+  assert {
+    condition     = coder_app.ddev_web["wordpress"].share == "public"
+    error_message = "coder_app.ddev_web[\"wordpress\"] must be share=public when share_projects=true"
+  }
+  assert {
+    condition     = coder_app.mailpit["drupal"].share == "owner"
+    error_message = "coder_app.mailpit must stay share=owner even when share_projects=true"
+  }
+  assert {
+    condition     = coder_app.xhgui["drupal"].share == "owner"
+    error_message = "coder_app.xhgui must stay share=owner even when share_projects=true"
+  }
+}
+
 run "adminer_off_by_default" {
   command = plan
   assert {
