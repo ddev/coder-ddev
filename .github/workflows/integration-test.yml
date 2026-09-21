@@ -480,6 +480,66 @@ jobs:
             "${{ env.CI_TAG }}" "${{ env.WORKSPACE_NAME }}" "${OWNER}" "${CODER_DOMAIN}" \
             < /dev/null
 
+      - name: Verify freeform sharing — private by default
+        if: ${{ matrix.template == 'freeform' }}
+        run: |
+          CODER_DOMAIN="${{ vars.TEST_CODER_URL }}"
+          CODER_DOMAIN="${CODER_DOMAIN#https://}"
+          SITE_URL="https://ci-site1-${{ env.CI_TAG }}--${{ env.WORKSPACE_NAME }}--${OWNER}.${CODER_DOMAIN}"
+          FINAL_URL=$(curl -sL --max-time 30 -o /dev/null -w "%{url_effective}" "$SITE_URL")
+          echo "Anonymous request final URL: $FINAL_URL"
+          if [[ "$FINAL_URL" != *"/login"* ]]; then
+            echo "ERROR: anonymous request was not redirected to Coder login — share_projects=false is not private" >&2
+            exit 1
+          fi
+          echo "OK: anonymous request redirected to Coder login (freeform sites are private by default)"
+
+      - name: Enable public sharing and rebuild (freeform)
+        if: ${{ matrix.template == 'freeform' }}
+        # `coder update`/`coder restart` alone silently ignore --parameter
+        # unless the workspace is otherwise outdated. --always-prompt forces
+        # every rich parameter to be re-resolved (never pulled from the
+        # existing build), so every value from the original `coder create`
+        # (project_names, vscode_extensions) must be repeated here.
+        run: |
+          coder restart ${{ env.WORKSPACE_NAME }} --always-prompt --use-parameter-defaults \
+            --parameter project_names="ci-site1-${{ env.CI_TAG }},ci-site2-${{ env.CI_TAG }}" \
+            --parameter "vscode_extensions=[]" \
+            --parameter share_projects=true \
+            --yes
+
+      - name: Verify workspace — agent reconnected after restart
+        if: ${{ matrix.template == 'freeform' }}
+        run: coder ssh ${{ env.WORKSPACE_NAME }} --wait=yes -- echo "Agent reconnected"
+
+      - name: Recreate freeform test projects after rebuild
+        if: ${{ matrix.template == 'freeform' }}
+        # test-freeform-start.sh puts projects under /tmp, which is wiped
+        # when the container is recreated by the restart above — the DDEV
+        # projects (and ddev-router) must be brought up again from scratch.
+        run: |
+          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+            -o ProxyCommand="coder ssh --stdio ${{ env.WORKSPACE_NAME }}" \
+            freeform/scripts/test-freeform-start.sh \
+            coder@workspace:/tmp/test-freeform-start.sh
+          coder ssh ${{ env.WORKSPACE_NAME }} -- \
+            env CI=${{ env.CI }} DDEV_NONINTERACTIVE=${{ env.DDEV_NONINTERACTIVE }} NO_COLOR=${{ env.NO_COLOR }} \
+            bash /tmp/test-freeform-start.sh "${{ env.CI_TAG }}" < /dev/null
+
+      - name: Verify freeform sharing — public when share_projects=true
+        if: ${{ matrix.template == 'freeform' }}
+        run: |
+          CODER_DOMAIN="${{ vars.TEST_CODER_URL }}"
+          CODER_DOMAIN="${CODER_DOMAIN#https://}"
+          SITE_URL="https://ci-site1-${{ env.CI_TAG }}--${{ env.WORKSPACE_NAME }}--${OWNER}.${CODER_DOMAIN}"
+          FINAL_URL=$(curl -sL --max-time 30 --retry 3 --retry-delay 5 -o /dev/null -w "%{url_effective}" "$SITE_URL")
+          echo "Anonymous request final URL: $FINAL_URL"
+          if [[ "$FINAL_URL" == *"/login"* ]]; then
+            echo "ERROR: anonymous request was redirected to Coder login — share_projects=true did not make the site public" >&2
+            exit 1
+          fi
+          echo "OK: anonymous request was not redirected to Coder login (share_projects=true works)"
+
       - name: Cleanup freeform PHP projects
         if: ${{ always() && matrix.template == 'freeform' }}
         run: |

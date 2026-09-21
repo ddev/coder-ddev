@@ -131,7 +131,7 @@ jobs:
             --parameter issue_fork= \
             --parameter issue_branch= \
             --parameter install_profile=minimal \
-            --parameter share_drupal_site=owner \
+            --parameter share_drupal_site=false \
             --use-parameter-defaults \
             --yes
 
@@ -187,6 +187,17 @@ jobs:
             exit 1
           fi
           echo "OK: Drupal site is accessible and shows login page"
+
+          # share_drupal_site defaults to false: an anonymous request (no
+          # session token) must be bounced to Coder's own login, never reach
+          # Drupal. This is the private-by-default half of issue #204's fix.
+          ANON_FINAL_URL=$(curl -sL --max-time 30 -o /dev/null -w "%{url_effective}" "$SITE_URL")
+          echo "Anonymous request final URL: $ANON_FINAL_URL"
+          if [[ "$ANON_FINAL_URL" != *"/login"* ]]; then
+            echo "ERROR: anonymous request was not redirected to Coder login — share_drupal_site=false is not private" >&2
+            exit 1
+          fi
+          echo "OK: anonymous request redirected to Coder login (site is private by default)"
 
       - &delete-workspace
         name: Delete workspace
@@ -281,7 +292,7 @@ jobs:
             --parameter issue_fork= \
             --parameter issue_branch= \
             --parameter install_profile=minimal \
-            --parameter share_drupal_site=owner \
+            --parameter share_drupal_site=false \
             --use-parameter-defaults \
             --yes
 
@@ -292,6 +303,50 @@ jobs:
       - *verify-drush
       - *record-host-dir
       - *verify-http
+
+      - name: Enable public sharing and rebuild
+        # `coder update`/`coder restart` alone silently ignore --parameter
+        # unless the workspace is otherwise outdated. --always-prompt forces
+        # every rich parameter to be re-resolved (never pulled from the
+        # existing build), so every value from the original `coder create`
+        # must be repeated here — anything left out falls back to the
+        # template default via --use-parameter-defaults, not its prior value.
+        run: |
+          coder restart ${{ env.WORKSPACE_NAME }} --always-prompt --use-parameter-defaults \
+            --parameter "vscode_extensions=[]" \
+            --parameter drupal_version=${{ matrix.drupal_version }} \
+            --parameter issue_fork= \
+            --parameter issue_branch= \
+            --parameter install_profile=minimal \
+            --parameter share_drupal_site=true \
+            --yes
+
+      - name: Verify workspace — agent reconnected after restart
+        run: coder ssh ${{ env.WORKSPACE_NAME }} --wait=yes -- echo "Agent reconnected"
+
+      - name: Verify workspace — Drupal site public when share_drupal_site=true
+        run: |
+          CODER_DOMAIN="${{ vars.TEST_CODER_URL }}"
+          CODER_DOMAIN="${CODER_DOMAIN#https://}"
+          SITE_URL="https://drupal-site--${{ env.WORKSPACE_NAME }}--${OWNER}.${CODER_DOMAIN}"
+          echo "Checking $SITE_URL anonymously"
+          HTTP_STATUS=$(curl -sL --max-time 30 --retry 3 --retry-delay 5 \
+            -o /tmp/drupal-public-response.html \
+            -w "%{http_code}" \
+            "$SITE_URL")
+          echo "HTTP status: $HTTP_STATUS"
+          if [[ ! "$HTTP_STATUS" =~ ^2 ]]; then
+            echo "ERROR: unexpected HTTP status $HTTP_STATUS for a public anonymous request" >&2
+            head -50 /tmp/drupal-public-response.html >&2 || true
+            exit 1
+          fi
+          if ! grep -qi "drupal" /tmp/drupal-public-response.html; then
+            echo "ERROR: anonymous response does not look like the Drupal site — share_drupal_site=true did not make it public" >&2
+            head -50 /tmp/drupal-public-response.html >&2
+            exit 1
+          fi
+          echo "OK: anonymous request reached the public Drupal site (share_drupal_site=true works)"
+
       - *delete-workspace
 
       - name: Release staging box lock
@@ -389,7 +444,7 @@ jobs:
             --parameter issue_fork=${{ env.ISSUE_FORK }} \
             --parameter issue_branch=${{ env.ISSUE_BRANCH }} \
             --parameter install_profile=minimal \
-            --parameter share_drupal_site=owner \
+            --parameter share_drupal_site=false \
             --use-parameter-defaults \
             --yes
 
@@ -444,6 +499,17 @@ jobs:
             exit 1
           fi
           echo "OK: Drupal site is accessible and shows login page"
+
+          # share_drupal_site defaults to false: an anonymous request (no
+          # session token) must be bounced to Coder's own login, never reach
+          # Drupal. This is the private-by-default half of issue #204's fix.
+          ANON_FINAL_URL=$(curl -sL --max-time 30 -o /dev/null -w "%{url_effective}" "$SITE_URL")
+          echo "Anonymous request final URL: $ANON_FINAL_URL"
+          if [[ "$ANON_FINAL_URL" != *"/login"* ]]; then
+            echo "ERROR: anonymous request was not redirected to Coder login — share_drupal_site=false is not private" >&2
+            exit 1
+          fi
+          echo "OK: anonymous request redirected to Coder login (site is private by default)"
 
       - name: Delete workspace
         if: always()
@@ -548,7 +614,7 @@ jobs:
             --parameter issue_fork=${{ env.ISSUE_FORK }} \
             --parameter issue_branch=${{ env.ISSUE_BRANCH }} \
             --parameter install_profile=minimal \
-            --parameter share_drupal_site=owner \
+            --parameter share_drupal_site=false \
             --use-parameter-defaults \
             --yes
 
@@ -611,6 +677,17 @@ jobs:
             exit 1
           fi
           echo "OK: Drupal site is accessible and shows login page"
+
+          # share_drupal_site defaults to false: an anonymous request (no
+          # session token) must be bounced to Coder's own login, never reach
+          # Drupal. This is the private-by-default half of issue #204's fix.
+          ANON_FINAL_URL=$(curl -sL --max-time 30 -o /dev/null -w "%{url_effective}" "$SITE_URL")
+          echo "Anonymous request final URL: $ANON_FINAL_URL"
+          if [[ "$ANON_FINAL_URL" != *"/login"* ]]; then
+            echo "ERROR: anonymous request was not redirected to Coder login — share_drupal_site=false is not private" >&2
+            exit 1
+          fi
+          echo "OK: anonymous request redirected to Coder login (site is private by default)"
 
       - name: Delete workspace
         if: always()
