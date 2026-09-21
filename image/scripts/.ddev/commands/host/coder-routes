@@ -61,6 +61,24 @@ yq e -i \
 
 echo "Building Coder Traefik routes from ${DDEV_PROJECT}_merged.yaml:"
 
+# Collected alongside the Traefik routes below, then written once at the end into
+# .ddev/docker-compose.coder-describe.yaml so 'ddev describe'/'ddev launch' show
+# the same Coder URL every router here actually resolves to. WEB_URL/MAILPIT_URL
+# hold the primary site (svc_name="web" is special-cased out of DESCRIBE_URLS
+# below, since both the primary site and Mailpit share that service name but need
+# their own describe-url-port entries: web's own row, and its "Mailpit: ..." line).
+# DESCRIBE_URLS covers every OTHER real service this project's router config
+# defines — xhgui, adminer, or any future/custom add-on service that gets its own
+# router — generically, with no per-name special-casing. It intentionally excludes
+# web_extra_exposed_ports entries (ddev-playwright's "playwright" row, a VNC
+# add-on's "kasmvnc" row, etc.): those aren't separate compose services, they're
+# extra ports on the "web" service itself, and DDEV's describe-url-port extension
+# is only ever read per compose service name — see the longer explanation in
+# coder-setup.
+WEB_URL=""
+MAILPIT_URL=""
+declare -A DESCRIBE_URLS
+
 # Iterate over every router in the merged config.
 # Each entry has an entrypoints list and a service name like {project}-{svc}-{port}.
 while IFS= read -r router; do
@@ -108,7 +126,17 @@ while IFS= read -r router; do
   elif [ "$svc_name" = "adminer" ]; then
     slug="adminer-${PROJECT_SLUG}"
   else
-    slug="$svc_name"
+    # Dynamic add-on branch (below): a project can define more than one
+    # web_extra_exposed_ports entry (e.g. ddev-playwright's "playwright" port
+    # and a VNC add-on's "kasmvnc" port). Both live on the docker-compose "web"
+    # service, so svc_name is "web" for all of them — slug="$svc_name" alone
+    # would give them the identical ROUTER_NAME and each would silently
+    # clobber whichever was processed before it (same failure mode as the
+    # primary-web collision described above, just between two non-primary
+    # ports instead of with the primary). Including the port keeps every
+    # add-on port's route distinct. The printed URL already disambiguates by
+    # ext_port (below); only this map key needs the same treatment.
+    slug="${svc_name}-${port}"
   fi
 
   ROUTER_NAME="${DDEV_PROJECT}-coder-${slug}"
@@ -135,7 +163,8 @@ while IFS= read -r router; do
          .http.routers.\"${ROUTER_NAME}\".middlewares = [env(MW)] |
          .http.routers.\"${ROUTER_NAME}\".tls = false" \
       /tmp/coder-routes-raw.yaml
-    echo "  + ${slug}: ${entrypoints[*]} → ${service}  (https://${CODER_HOST})"
+    WEB_URL="https://${CODER_HOST}"
+    echo "  + ${slug}: ${entrypoints[*]} → ${service}  (${WEB_URL})"
   elif [ "$slug" = "mailpit-${PROJECT_SLUG}" ] || [ "$slug" = "xhgui-${PROJECT_SLUG}" ] || [ "$slug" = "adminer-${PROJECT_SLUG}" ]; then
     # Known Coder app slugs (defined as coder_app resources in the Terraform template):
     # use Host() rule so the Coder subdomain proxy URL routes correctly.
@@ -149,6 +178,11 @@ while IFS= read -r router; do
          .http.routers.\"${ROUTER_NAME}\".middlewares = [env(MW)] |
          .http.routers.\"${ROUTER_NAME}\".tls = false" \
       /tmp/coder-routes-raw.yaml
+    if [ "$svc_name" = "web" ]; then
+      MAILPIT_URL="https://${CODER_HOST}"
+    else
+      DESCRIBE_URLS["$svc_name"]="https://${CODER_HOST}"
+    fi
     echo "  + ${slug}: ${entrypoints[*]} → ${service}  (https://${CODER_HOST})"
   else
     # Dynamic add-on services (no dedicated coder_app): PathPrefix("/") catches any
@@ -172,7 +206,16 @@ while IFS= read -r router; do
          .http.routers.\"${ROUTER_NAME}\".tls = false |
          .http.routers.\"${ROUTER_NAME}\".priority = 10" \
       /tmp/coder-routes-raw.yaml
-    echo "  + ${slug}: ${entrypoints[*]} → ${service}  (https://${ext_port}--${AGENT}--${WORKSPACE}--${OWNER}.${DOMAIN})"
+    DYNAMIC_URL="https://${ext_port}--${AGENT}--${WORKSPACE}--${OWNER}.${DOMAIN}"
+    # svc_name="web" here means a web_extra_exposed_ports entry (playwright,
+    # kasmvnc, ...) — not a real service, so it's excluded (see comment above
+    # DESCRIBE_URLS). Anything else is a genuine custom/add-on service that
+    # simply doesn't have a dedicated coder_app slug yet; still worth reflecting
+    # in 'ddev describe' via its dynamic port-forwarding URL.
+    if [ "$svc_name" != "web" ]; then
+      DESCRIBE_URLS["$svc_name"]="$DYNAMIC_URL"
+    fi
+    echo "  + ${slug}: ${entrypoints[*]} → ${service}  (${DYNAMIC_URL})"
   fi
 
 done < <(yq e '.http.routers | keys | .[]' "$MERGED" 2>/dev/null)
@@ -189,4 +232,36 @@ if docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^ddev-router$"; then
   echo "✓ Pushed to ddev-router (Traefik reloads within ~1s)"
 else
   echo "Note: ddev-router not running; config will be loaded on next ddev start"
+fi
+
+# Regenerate .ddev/docker-compose.coder-describe.yaml so 'ddev describe'/'ddev launch'
+# reflect exactly what was just routed above — see the DESCRIBE_URLS comment earlier
+# in this script for why this only covers real compose services, not
+# web_extra_exposed_ports rows. DDEV_APPROOT is provided by DDEV for host commands
+# (their cwd is wherever `ddev` was invoked from, not the project root).
+if [ -n "${DDEV_APPROOT:-}" ] && [ -n "$WEB_URL" ]; then
+  DESCRIBE_FILE="${DDEV_APPROOT}/.ddev/docker-compose.coder-describe.yaml"
+  {
+    echo "#ddev-silent-no-warn"
+    echo "# Auto-generated by ddev coder-routes — do not edit."
+    echo "services:"
+    echo "  web:"
+    echo "    x-ddev:"
+    echo "      describe-url-port: |"
+    echo "        ${WEB_URL}"
+    if [ -n "$MAILPIT_URL" ]; then
+      echo "        Mailpit: ${MAILPIT_URL}"
+    fi
+    echo "      describe-info: \"Use: ddev launch\""
+
+    for svc_name in "${!DESCRIBE_URLS[@]}"; do
+      echo "  ${svc_name}:"
+      echo "    x-ddev:"
+      echo "      describe-url-port: |"
+      echo "        ${DESCRIBE_URLS[$svc_name]}"
+    done
+  } > "$DESCRIBE_FILE"
+  echo "✓ Wrote $(basename "$DESCRIBE_FILE") (covers: web ${!DESCRIBE_URLS[*]})"
+else
+  echo "Note: skipping docker-compose.coder-describe.yaml (DDEV_APPROOT unset or no primary web route found)"
 fi
