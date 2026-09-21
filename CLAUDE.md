@@ -29,6 +29,7 @@ When writing or reviewing `coder` CLI commands in documentation, **always verify
 - `coder templates list` has no `--organization` flag — use the global `--org`
 - `coder sharing add` requires `--user <username>:<role>` (role required)
 - `coder update <ws> --parameter X=Y` / `coder restart <ws> --parameter X=Y` **silently no-op** on the parameter unless `--always-prompt` is also passed — without it, Coder just reuses the workspace's existing value and (for `update`) may skip the rebuild entirely if the template version hasn't changed. With `--always-prompt`, every *mutable* parameter must be supplied via `--parameter` or it falls back to the template default via `--use-parameter-defaults` (not the workspace's current value) — and any *immutable* parameter (e.g. drupal-contrib's `project_name`) must be **omitted entirely**, since `--always-prompt` errors trying to "change" it even to its current value. Verified live against staging-coder.ddev.com while building the sharing feature (see PR for #204).
+- `coder create`/`coder update`/`coder restart --parameter name=value` **splits the value on commas** (it's a `string-array` flag) — a parameter whose value legitimately contains a comma (e.g. freeform's `project_names="a,b"`) fails with `unable to parse rich parameters: format key=value expected, but got b`. Use `--rich-parameter-file <yaml>` instead for any comma-containing value; this bit CI on the first attempt at the freeform sharing test (PR #205).
 
 ## DDEV Command Gotchas
 

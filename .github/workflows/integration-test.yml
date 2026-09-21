@@ -500,12 +500,19 @@ jobs:
         # unless the workspace is otherwise outdated. --always-prompt forces
         # every rich parameter to be re-resolved (never pulled from the
         # existing build), so every value from the original `coder create`
-        # (project_names, vscode_extensions) must be repeated here.
+        # (project_names, vscode_extensions) must be repeated here. Uses
+        # --rich-parameter-file, not inline --parameter, because project_names
+        # is a comma-separated value and coder's --parameter flag itself
+        # splits on commas (same reason the original "Create freeform
+        # workspace" step above uses a file instead of --parameter).
         run: |
+          cat > /tmp/freeform-share-gh-${{ env.CI_TAG }}.yaml << EOF
+          project_names: "ci-site1-${{ env.CI_TAG }},ci-site2-${{ env.CI_TAG }}"
+          vscode_extensions: "[]"
+          share_projects: "true"
+          EOF
           coder restart ${{ env.WORKSPACE_NAME }} --always-prompt --use-parameter-defaults \
-            --parameter project_names="ci-site1-${{ env.CI_TAG }},ci-site2-${{ env.CI_TAG }}" \
-            --parameter "vscode_extensions=[]" \
-            --parameter share_projects=true \
+            --rich-parameter-file /tmp/freeform-share-gh-${{ env.CI_TAG }}.yaml \
             --yes
 
       - name: Verify workspace — agent reconnected after restart
