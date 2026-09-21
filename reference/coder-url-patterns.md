@@ -52,6 +52,8 @@ The Coder server terminates TLS and reverse-proxies to the `url` configured on t
 | `"authenticated"` | Any logged-in Coder user |
 | `"public"` | Anyone with the URL |
 
+All three attribute values above are still valid at the Terraform level, but the `drupal-core`, `drupal-contrib`, and `freeform` templates only ever expose a binary Private/Public switch (a `coder_parameter` of `type = "bool"`) through their workspace UI — they never set `share = "authenticated"`.
+
 **Limits:** No documented per-workspace limit on `coder_app` resources. Use the `order` attribute (integer) and `group` attribute (string, max 64 chars) to control dashboard layout.
 
 ---

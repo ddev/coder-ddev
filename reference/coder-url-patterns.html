@@ -116,6 +116,8 @@
   </tbody>
 </table>
 
+<p>All three attribute values above are still valid at the Terraform level, but the <code class="language-plaintext highlighter-rouge">drupal-core</code>, <code class="language-plaintext highlighter-rouge">drupal-contrib</code>, and <code class="language-plaintext highlighter-rouge">freeform</code> templates only ever expose a binary Private/Public switch (a <code class="language-plaintext highlighter-rouge">coder_parameter</code> of <code class="language-plaintext highlighter-rouge">type = "bool"</code>) through their workspace UI — they never set <code class="language-plaintext highlighter-rouge">share = "authenticated"</code>.</p>
+
 <p><strong>Limits:</strong> No documented per-workspace limit on <code class="language-plaintext highlighter-rouge">coder_app</code> resources. Use the <code class="language-plaintext highlighter-rouge">order</code> attribute (integer) and <code class="language-plaintext highlighter-rouge">group</code> attribute (string, max 64 chars) to control dashboard layout.</p>
 
 <hr />
