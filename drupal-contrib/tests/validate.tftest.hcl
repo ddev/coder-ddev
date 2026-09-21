@@ -117,6 +117,28 @@ run "claude_code_enabled" {
   }
 }
 
+run "sharing_disabled_by_default" {
+  command = plan
+  assert {
+    condition     = coder_app.drupal-site.share == "owner"
+    error_message = "coder_app.drupal-site must default to share=owner"
+  }
+}
+
+run "sharing_enabled" {
+  command = plan
+  override_data {
+    target = data.coder_parameter.share_drupal_site
+    values = {
+      value = "true"
+    }
+  }
+  assert {
+    condition     = coder_app.drupal-site.share == "public"
+    error_message = "coder_app.drupal-site must be share=public when share_drupal_site=true"
+  }
+}
+
 run "claude_code_enabled_skip_permissions" {
   command = plan
   override_data {

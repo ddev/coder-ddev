@@ -49,6 +49,10 @@ ddev start
 
 Then click **DDEV Web** or **Mailpit** in the Coder dashboard.
 
+### Sharing Your Site
+
+By default every project's web app URL only works for you (the workspace owner). To share a work-in-progress with someone outside Coder, flip the **Public Sharing** switch in the workspace's parameters and restart the workspace — the change only takes effect on the next build. It applies to every project listed in **DDEV project names** at once (there's no per-project switch); Mailpit, xhgui, and Adminer always stay private regardless. Turn it back off the same way when you're done.
+
 ## Project Structure
 
 - `<yourdir>/` — your project directory (any name, any location)

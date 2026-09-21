@@ -63,6 +63,7 @@ The module/theme repo is the project root. Drupal core is installed as a dev dep
 | `issue_fork` | — | Issue number; empty = plain HEAD |
 | `issue_branch` | — | Branch name; empty = default branch HEAD |
 | `install_profile` | `minimal` | `minimal`, `standard`, or `demo_umami` |
+| `share_drupal_site` | `false` | Public Sharing switch — see [Sharing Your Site](#sharing-your-site) |
 
 ## Access
 
@@ -72,6 +73,10 @@ After setup, access your Drupal site through:
 2. **CLI** — `coder ssh <workspace-name>` then `ddev launch`
 
 **Admin credentials:** admin / admin
+
+### Sharing Your Site
+
+By default the "Drupal Site" URL only works for you (the workspace owner). To share a work-in-progress with someone outside Coder, flip the **Public Sharing** switch in the workspace's parameters and restart the workspace — the change only takes effect on the next build. Turn it back off the same way when you're done.
 
 ## Development Commands
 

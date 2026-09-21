@@ -76,6 +76,17 @@ data "coder_parameter" "project_names" {
   order        = 1
 }
 
+data "coder_parameter" "share_projects" {
+  name         = "share_projects"
+  display_name = "Public Sharing"
+  description  = "Make every listed DDEV project's site public (anyone with the link, no Coder sign-in) so you can share work-in-progress outside Coder. Mailpit, xhgui, and Adminer always stay private. Applies to all projects listed above. Takes effect the next time this workspace restarts."
+  type         = "bool"
+  form_type    = "switch"
+  default      = "false"
+  mutable      = true
+  order        = 2
+}
+
 data "coder_parameter" "vscode_extensions" {
   name         = "vscode_extensions"
   display_name = "VS Code Extensions"
@@ -111,6 +122,11 @@ locals {
     ? [for s in split(",", local._project_names_raw) : trimspace(s) if trimspace(s) != ""]
     : [data.coder_workspace.me.name]
   )
+
+  # mock_data in tftest returns "[]" for all parameters regardless of declared
+  # type; try() catches tobool("[]") failing and falls back to private/"owner".
+  share_projects_public = try(tobool(data.coder_parameter.share_projects.value), false)
+  project_share_level   = local.share_projects_public ? "public" : "owner"
 }
 
 variable "workspace_image_registry" {
@@ -420,6 +436,8 @@ module "claude_remote_control" {
 # One coder_app per project name. All route to ddev-router on port 8080.
 # ddev-router dispatches by Host header: {slug}--{workspace}--{owner}.{domain}
 # The DDEV project name must equal the slug for coder-routes to build the correct rule.
+# Sharing is controlled by data.coder_parameter.share_projects (Public Sharing
+# switch above) and applies to every listed project's primary site alike.
 resource "coder_app" "ddev_web" {
   for_each     = toset(local.project_names)
   agent_id     = coder_agent.main.id
@@ -429,7 +447,7 @@ resource "coder_app" "ddev_web" {
   url          = "http://localhost:8080"
   icon         = "https://raw.githubusercontent.com/ddev/ddev/main/docs/content/developers/logos/SVG/Logo.svg"
   subdomain    = true
-  share        = "owner"
+  share        = local.project_share_level
 
   healthcheck {
     url       = "http://localhost:8080"
@@ -570,6 +588,10 @@ resource "coder_metadata" "workspace_info" {
   item {
     key   = "ddev_projects"
     value = join(", ", local.project_names)
+  }
+  item {
+    key   = "sharing"
+    value = local.share_projects_public ? "Public (anyone with the link)" : "Private (owner only)"
   }
   item {
     key   = "cpu"
