@@ -161,8 +161,16 @@ data "coder_parameter" "install_profile" {
   }
 }
 
-data "coder_parameter" "share_drupal_site" {
-  name         = "share_drupal_site"
+# Renamed from "share_drupal_site" (fixes #206): that name was a type=string,
+# 3-way owner/authenticated/public enum before #205 switched it to type=bool.
+# The coder_parameter data source validates the incoming value against the
+# declared type before any of our locals ever run, so any stale non-bool value
+# still in flight for the old name (a bookmarked deep link, a cached copy of
+# docs/drupal-issue.html, an already-open browser tab) hard-fails `terraform
+# plan` with "Parameter value is not of type \"bool\"". Reusing a parameter
+# name across an incompatible type change is unsafe; always pick a new name.
+data "coder_parameter" "drupal_site_public" {
+  name         = "drupal_site_public"
   display_name = "Public Sharing"
   description  = "Make the Drupal site URL public (anyone with the link, no Coder sign-in) so you can share a work-in-progress with someone outside Coder. Takes effect the next time this workspace restarts."
   type         = "bool"
@@ -203,7 +211,7 @@ locals {
   issue_url           = local.issue_fork != "" ? "https://www.drupal.org/project/${local.project_name}/issues/${local.issue_fork}" : ""
   # mock_data in tftest returns "[]" for all parameters regardless of declared
   # type; try() catches tobool("[]") failing and falls back to private/"owner".
-  drupal_site_share_public = try(tobool(data.coder_parameter.share_drupal_site.value), false)
+  drupal_site_share_public = try(tobool(data.coder_parameter.drupal_site_public.value), false)
   drupal_site_share        = local.drupal_site_share_public ? "public" : "owner"
 }
 
@@ -1116,7 +1124,7 @@ module "claude_remote_control" {
 
 # Drupal Site (HTTP) - appears when DDEV project is running.
 # Uses subdomain routing for unique URLs per workspace. Sharing is controlled
-# by data.coder_parameter.share_drupal_site (Public Sharing switch above).
+# by data.coder_parameter.drupal_site_public (Public Sharing switch above).
 resource "coder_app" "drupal-site" {
   agent_id     = coder_agent.main.id
   slug         = "drupal-site"

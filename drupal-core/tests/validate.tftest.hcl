@@ -28,6 +28,14 @@ mock_provider "docker" {}
 # Terraform variable with a validation block. The Coder API enforces the
 # allowed values (10/11/12) at workspace creation time; there is nothing to
 # test at the terraform test layer.
+#
+# Gap this cannot cover (see #206): `mock_provider "coder"` replaces the real coder_parameter
+# data source entirely, so it never runs the real provider's own validation that a submitted
+# `value` matches the declared `type`. A parameter that changes type (e.g. string -> bool) while
+# keeping the same `name` will pass `terraform test` even though any client still holding an
+# old-typed value for that name (a bookmarked deep link, a cached docs/*.html page) will hard-fail
+# `terraform plan` for real workspaces. There is no terraform-test-layer way to catch that; the
+# real defense is to never reuse a coder_parameter name across an incompatible type change.
 
 run "plan_succeeds_with_defaults" {
   command = plan
@@ -147,14 +155,14 @@ run "sharing_enabled" {
     cache_path = "/tmp/mock-cache"
   }
   override_data {
-    target = data.coder_parameter.share_drupal_site
+    target = data.coder_parameter.drupal_site_public
     values = {
       value = "true"
     }
   }
   assert {
     condition     = coder_app.drupal-site.share == "public"
-    error_message = "coder_app.drupal-site must be share=public when share_drupal_site=true"
+    error_message = "coder_app.drupal-site must be share=public when drupal_site_public=true"
   }
 }
 

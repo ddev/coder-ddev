@@ -63,7 +63,7 @@ The module/theme repo is the project root. Drupal core is installed as a dev dep
 | `issue_fork` | — | Issue number; empty = plain HEAD |
 | `issue_branch` | — | Branch name; empty = default branch HEAD |
 | `install_profile` | `minimal` | `minimal`, `standard`, or `demo_umami` |
-| `share_drupal_site` | `false` | Public Sharing switch — see [Sharing Your Site](#sharing-your-site) |
+| `drupal_site_public` | `false` | Public Sharing switch — see [Sharing Your Site](#sharing-your-site) |
 
 ## Access
 
