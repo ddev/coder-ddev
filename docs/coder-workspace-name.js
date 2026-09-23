@@ -6,7 +6,7 @@
 
   const MAX_WORKSPACE_NAME_LENGTH = 32;
   const WORKSPACE_NAME_TOO_LONG_MESSAGE = 'Workspace Name cannot be longer than 32 characters';
-  const CORE_DISABLE_PARAMS = 'issue_fork,issue_branch,drupal_version,install_profile,share_drupal_site';
+  const CORE_DISABLE_PARAMS = 'issue_fork,issue_branch,drupal_version,install_profile,drupal_site_public';
 
   const PROFILE_SLUG = {
     demo_umami: 'umami',

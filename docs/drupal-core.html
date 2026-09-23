@@ -104,7 +104,7 @@
         <p class="cds-share-intro">Who can open the Drupal site URL. Switch to <strong>Public</strong> in Coder later if you need a shareable link.</p>
         <div class="cds-radio-row" role="radiogroup" aria-labelledby="label-site-visibility">
           <label class="cds-pick-card">
-            <input class="cds-pick-card__input cds-sr-only" type="radio" name="share_drupal_site" value="owner" checked>
+            <input class="cds-pick-card__input cds-sr-only" type="radio" name="drupal_site_public" value="false" checked>
             <span class="cds-pick-card__check" aria-hidden="true">
               <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 12.5L10.5 17 18 8"/></svg>
             </span>
@@ -114,17 +114,7 @@
             </span>
           </label>
           <label class="cds-pick-card">
-            <input class="cds-pick-card__input cds-sr-only" type="radio" name="share_drupal_site" value="authenticated">
-            <span class="cds-pick-card__check" aria-hidden="true">
-              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 12.5L10.5 17 18 8"/></svg>
-            </span>
-            <span class="cds-pick-card__text">
-              <span class="cds-pick-card__title">Authenticated</span>
-              <span class="cds-pick-card__sub">Any Coder user</span>
-            </span>
-          </label>
-          <label class="cds-pick-card">
-            <input class="cds-pick-card__input cds-sr-only" type="radio" name="share_drupal_site" value="public">
+            <input class="cds-pick-card__input cds-sr-only" type="radio" name="drupal_site_public" value="true">
             <span class="cds-pick-card__check" aria-hidden="true">
               <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 12.5L10.5 17 18 8"/></svg>
             </span>
@@ -207,7 +197,7 @@
         'param.issue_branch': '',
         'param.install_profile': installProfile,
         'param.drupal_version': drupalVersion,
-        'param.share_drupal_site': shareDrupalSite,
+        'param.drupal_site_public': shareDrupalSite,
       });
       return base + '?' + params.toString();
     }
@@ -226,9 +216,8 @@
     function openDevEnvironment() {
       const drupalVersion = document.querySelector('input[name="drupal_version"]:checked').value;
       const installProfile = document.querySelector('input[name="install_profile"]:checked').value;
-      const rawShare = document.querySelector('input[name="share_drupal_site"]:checked');
-      const shareVal = rawShare ? rawShare.value : '';
-      const shareDrupalSite = ['owner', 'authenticated', 'public'].includes(shareVal) ? shareVal : 'owner';
+      const rawShare = document.querySelector('input[name="drupal_site_public"]:checked');
+      const shareDrupalSite = (rawShare && rawShare.value === 'true') ? 'true' : 'false';
       const rawName = document.getElementById('workspace-name').value.trim();
       let workspaceName = rawName ? sanitizeWorkspaceName(rawName) : suggestedWorkspaceName();
 
