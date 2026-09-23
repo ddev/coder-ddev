@@ -131,7 +131,7 @@ jobs:
             --parameter issue_fork= \
             --parameter issue_branch= \
             --parameter install_profile=minimal \
-            --parameter share_drupal_site=false \
+            --parameter drupal_site_public=false \
             --use-parameter-defaults \
             --yes
 
@@ -188,13 +188,13 @@ jobs:
           fi
           echo "OK: Drupal site is accessible and shows login page"
 
-          # share_drupal_site defaults to false: an anonymous request (no
+          # drupal_site_public defaults to false: an anonymous request (no
           # session token) must be bounced to Coder's own login, never reach
           # Drupal. This is the private-by-default half of issue #204's fix.
           ANON_FINAL_URL=$(curl -sL --max-time 30 -o /dev/null -w "%{url_effective}" "$SITE_URL")
           echo "Anonymous request final URL: $ANON_FINAL_URL"
           if [[ "$ANON_FINAL_URL" != *"/login"* ]]; then
-            echo "ERROR: anonymous request was not redirected to Coder login — share_drupal_site=false is not private" >&2
+            echo "ERROR: anonymous request was not redirected to Coder login — drupal_site_public=false is not private" >&2
             exit 1
           fi
           echo "OK: anonymous request redirected to Coder login (site is private by default)"
@@ -292,7 +292,7 @@ jobs:
             --parameter issue_fork= \
             --parameter issue_branch= \
             --parameter install_profile=minimal \
-            --parameter share_drupal_site=false \
+            --parameter drupal_site_public=false \
             --use-parameter-defaults \
             --yes
 
@@ -318,13 +318,13 @@ jobs:
             --parameter issue_fork= \
             --parameter issue_branch= \
             --parameter install_profile=minimal \
-            --parameter share_drupal_site=true \
+            --parameter drupal_site_public=true \
             --yes
 
       - name: Verify workspace — agent reconnected after restart
         run: coder ssh ${{ env.WORKSPACE_NAME }} --wait=yes -- echo "Agent reconnected"
 
-      - name: Verify workspace — Drupal site public when share_drupal_site=true
+      - name: Verify workspace — Drupal site public when drupal_site_public=true
         run: |
           CODER_DOMAIN="${{ vars.TEST_CODER_URL }}"
           CODER_DOMAIN="${CODER_DOMAIN#https://}"
@@ -341,11 +341,11 @@ jobs:
             exit 1
           fi
           if ! grep -qi "drupal" /tmp/drupal-public-response.html; then
-            echo "ERROR: anonymous response does not look like the Drupal site — share_drupal_site=true did not make it public" >&2
+            echo "ERROR: anonymous response does not look like the Drupal site — drupal_site_public=true did not make it public" >&2
             head -50 /tmp/drupal-public-response.html >&2
             exit 1
           fi
-          echo "OK: anonymous request reached the public Drupal site (share_drupal_site=true works)"
+          echo "OK: anonymous request reached the public Drupal site (drupal_site_public=true works)"
 
       - *delete-workspace
 
@@ -444,7 +444,7 @@ jobs:
             --parameter issue_fork=${{ env.ISSUE_FORK }} \
             --parameter issue_branch=${{ env.ISSUE_BRANCH }} \
             --parameter install_profile=minimal \
-            --parameter share_drupal_site=false \
+            --parameter drupal_site_public=false \
             --use-parameter-defaults \
             --yes
 
@@ -500,13 +500,13 @@ jobs:
           fi
           echo "OK: Drupal site is accessible and shows login page"
 
-          # share_drupal_site defaults to false: an anonymous request (no
+          # drupal_site_public defaults to false: an anonymous request (no
           # session token) must be bounced to Coder's own login, never reach
           # Drupal. This is the private-by-default half of issue #204's fix.
           ANON_FINAL_URL=$(curl -sL --max-time 30 -o /dev/null -w "%{url_effective}" "$SITE_URL")
           echo "Anonymous request final URL: $ANON_FINAL_URL"
           if [[ "$ANON_FINAL_URL" != *"/login"* ]]; then
-            echo "ERROR: anonymous request was not redirected to Coder login — share_drupal_site=false is not private" >&2
+            echo "ERROR: anonymous request was not redirected to Coder login — drupal_site_public=false is not private" >&2
             exit 1
           fi
           echo "OK: anonymous request redirected to Coder login (site is private by default)"
@@ -614,7 +614,7 @@ jobs:
             --parameter issue_fork=${{ env.ISSUE_FORK }} \
             --parameter issue_branch=${{ env.ISSUE_BRANCH }} \
             --parameter install_profile=minimal \
-            --parameter share_drupal_site=false \
+            --parameter drupal_site_public=false \
             --use-parameter-defaults \
             --yes
 
@@ -678,13 +678,13 @@ jobs:
           fi
           echo "OK: Drupal site is accessible and shows login page"
 
-          # share_drupal_site defaults to false: an anonymous request (no
+          # drupal_site_public defaults to false: an anonymous request (no
           # session token) must be bounced to Coder's own login, never reach
           # Drupal. This is the private-by-default half of issue #204's fix.
           ANON_FINAL_URL=$(curl -sL --max-time 30 -o /dev/null -w "%{url_effective}" "$SITE_URL")
           echo "Anonymous request final URL: $ANON_FINAL_URL"
           if [[ "$ANON_FINAL_URL" != *"/login"* ]]; then
-            echo "ERROR: anonymous request was not redirected to Coder login — share_drupal_site=false is not private" >&2
+            echo "ERROR: anonymous request was not redirected to Coder login — drupal_site_public=false is not private" >&2
             exit 1
           fi
           echo "OK: anonymous request redirected to Coder login (site is private by default)"
