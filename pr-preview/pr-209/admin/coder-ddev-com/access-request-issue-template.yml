@@ -1,0 +1,44 @@
+# operator note: in the coder-ddev-com/access-requests repo, create
+# .github/ISSUE_TEMPLATE/access-request.yml with this content.
+
+name: Access Request
+description: Request access to coder.ddev.com
+title: "Access request: [your GitHub username]"
+labels: ["access-request"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for your interest in coder.ddev.com! Please fill out the form below.
+
+        **Already have access?** If you are a member of the [ddev](https://github.com/ddev) org
+        or a $100+/month DDEV sponsor org, you should already have access — try signing in at
+        [coder.ddev.com](https://coder.ddev.com) first.
+
+  - type: input
+    id: github_username
+    attributes:
+      label: GitHub username
+      description: Your GitHub username (the one you will use to sign in)
+      placeholder: "e.g. octocat"
+    validations:
+      required: true
+
+  - type: textarea
+    id: reason
+    attributes:
+      label: Why do you want access?
+      description: Brief description — DDEV contributor, open-source developer, evaluating DDEV for a project, etc.
+      placeholder: "I maintain a DDEV add-on and want to test it in a cloud workspace..."
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirmation
+      options:
+        - label: I have checked that I do not already have access through the ddev org or a sponsor org
+          required: true
+        - label: I understand this is a shared resource and will use it responsibly
+          required: true
