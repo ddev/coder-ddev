@@ -78,6 +78,25 @@ ddev start
 <span class="c"># 5. Start developing!</span>
 </code></pre></div></div>
 
+<h3 id="running-things-automatically-on-workspace-start">Running Things Automatically on Workspace Start</h3>
+
+<p>If <code class="language-plaintext highlighter-rouge">~/.coder-startup.sh</code> exists and is executable, the workspace startup script runs it every time the workspace starts, after Docker and DDEV are ready. No terminal or SSH session has to be open. Use it for anything you would otherwise start by hand after each restart, such as <code class="language-plaintext highlighter-rouge">ddev start</code> for your projects or a long-running process in <code class="language-plaintext highlighter-rouge">tmux</code>.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cat</span> <span class="o">&gt;</span> ~/.coder-startup.sh <span class="o">&lt;&lt;</span><span class="sh">'</span><span class="no">SCRIPT</span><span class="sh">'
+#!/usr/bin/env bash
+ddev start my-site -y
+tmux new-session -d -s worker 'my-long-running-command'
+</span><span class="no">SCRIPT
+</span><span class="nb">chmod</span> +x ~/.coder-startup.sh
+</code></pre></div></div>
+
+<ul>
+  <li>It runs detached from the Coder agent, so a slow or never-ending hook doesn’t delay the workspace becoming ready. A failing hook doesn’t fail workspace startup.</li>
+  <li>Output goes to <code class="language-plaintext highlighter-rouge">/tmp/coder-startup-user.log</code>.</li>
+  <li>It runs non-interactively, so <code class="language-plaintext highlighter-rouge">~/.bashrc</code> is not sourced. <code class="language-plaintext highlighter-rouge">PATH</code> includes <code class="language-plaintext highlighter-rouge">~/.local/bin</code>, <code class="language-plaintext highlighter-rouge">~/.npm-global/bin</code> and Homebrew (<code class="language-plaintext highlighter-rouge">/home/linuxbrew/.linuxbrew/bin</code>). Export anything else the hook needs inside the script.</li>
+  <li>It runs on every start, so make it safe to run more than once, e.g. check whether a process is already running before starting it.</li>
+</ul>
+
 <h3 id="ending-your-day">Ending Your Day</h3>
 
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 1. Commit your changes</span>

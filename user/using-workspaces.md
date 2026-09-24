@@ -52,6 +52,24 @@ ddev start
 # 5. Start developing!
 ```
 
+### Running Things Automatically on Workspace Start
+
+If `~/.coder-startup.sh` exists and is executable, the workspace startup script runs it every time the workspace starts, after Docker and DDEV are ready. No terminal or SSH session has to be open. Use it for anything you would otherwise start by hand after each restart, such as `ddev start` for your projects or a long-running process in `tmux`.
+
+```bash
+cat > ~/.coder-startup.sh <<'SCRIPT'
+#!/usr/bin/env bash
+ddev start my-site -y
+tmux new-session -d -s worker 'my-long-running-command'
+SCRIPT
+chmod +x ~/.coder-startup.sh
+```
+
+- It runs detached from the Coder agent, so a slow or never-ending hook doesn't delay the workspace becoming ready. A failing hook doesn't fail workspace startup.
+- Output goes to `/tmp/coder-startup-user.log`.
+- It runs non-interactively, so `~/.bashrc` is not sourced. `PATH` includes `~/.local/bin`, `~/.npm-global/bin` and Homebrew (`/home/linuxbrew/.linuxbrew/bin`). Export anything else the hook needs inside the script.
+- It runs on every start, so make it safe to run more than once, e.g. check whether a process is already running before starting it.
+
 ### Ending Your Day
 
 ```bash
