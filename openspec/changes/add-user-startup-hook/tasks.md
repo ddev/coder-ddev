@@ -5,4 +5,8 @@
 
 ## 2. Validation
 - [x] 2.1 `terraform fmt -check -recursive`, `make validate` and `make test-templates` pass <!-- id: 2.1 -->
-- [ ] 2.2 Verify on a real workspace: create `~/.coder-startup.sh`, restart the workspace, confirm it ran with no terminal open <!-- id: 2.2 -->
+- [x] 2.2 Integration test: `freeform/scripts/test-freeform-startup-hook.sh` installs a hook before the GH freeform job's workspace restart and verifies it after <!-- id: 2.2 -->
+- [ ] 2.3 Integration test passes on staging <!-- id: 2.3 -->
+
+## 3. Image
+- [x] 3.1 Install `claude-code@latest` instead of `claude-code` in `image/Dockerfile` (VERSION unchanged) <!-- id: 3.1 -->

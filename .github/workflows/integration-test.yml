@@ -494,6 +494,18 @@ jobs:
           fi
           echo "OK: anonymous request redirected to Coder login (freeform sites are private by default)"
 
+      - name: Install test ~/.coder-startup.sh user hook (freeform)
+        if: ${{ matrix.template == 'freeform' }}
+        # Checked after the restart below: the hook must run on workspace start
+        # without blocking it.
+        run: |
+          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+            -o ProxyCommand="coder ssh --stdio ${{ env.WORKSPACE_NAME }}" \
+            freeform/scripts/test-freeform-startup-hook.sh \
+            coder@workspace:/home/coder/test-freeform-startup-hook.sh
+          coder ssh ${{ env.WORKSPACE_NAME }} -- \
+            bash /home/coder/test-freeform-startup-hook.sh install < /dev/null
+
       - name: Enable public sharing and rebuild (freeform)
         if: ${{ matrix.template == 'freeform' }}
         # `coder update`/`coder restart` alone silently ignore --parameter
@@ -518,6 +530,13 @@ jobs:
       - name: Verify workspace — agent reconnected after restart
         if: ${{ matrix.template == 'freeform' }}
         run: coder ssh ${{ env.WORKSPACE_NAME }} --wait=yes -- echo "Agent reconnected"
+
+      - name: Verify ~/.coder-startup.sh user hook ran on restart (freeform)
+        if: ${{ matrix.template == 'freeform' }}
+        # The script was copied to /home/coder (persistent) before the restart.
+        run: |
+          coder ssh ${{ env.WORKSPACE_NAME }} -- \
+            bash /home/coder/test-freeform-startup-hook.sh verify < /dev/null
 
       - name: Recreate freeform test projects after rebuild
         if: ${{ matrix.template == 'freeform' }}
