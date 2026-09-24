@@ -6,7 +6,8 @@
 ## 2. Validation
 - [x] 2.1 `terraform fmt -check -recursive`, `make validate` and `make test-templates` pass <!-- id: 2.1 -->
 - [x] 2.2 Integration test: `freeform/scripts/test-freeform-startup-hook.sh` installs a hook before the GH freeform job's workspace restart and verifies it after <!-- id: 2.2 -->
-- [ ] 2.3 Integration test passes on staging <!-- id: 2.3 -->
+- [x] 2.3 Integration test passes on staging <!-- id: 2.3 -->
+- [x] 2.4 Manual check on staging: a `~/.coder-startup.sh` that starts a Claude self-hosted runner in tmux brings the runner up after a workspace restart with no terminal open, and a session lands on it <!-- id: 2.4 -->
 
 ## 3. Image
 - [x] 3.1 Install `claude-code@latest` instead of `claude-code` in `image/Dockerfile` (VERSION unchanged) <!-- id: 3.1 -->
