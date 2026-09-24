@@ -1238,8 +1238,11 @@ Get a fresh registration token for each batch from **GitHub → Settings → Act
 ```bash
 coder users create --email ci@staging-coder.ddev.com --username ci-bot --login-type none
 coder users edit-roles ci-bot --roles template-admin --yes
+coder organizations members edit-roles ci-bot organization-template-admin
 coder tokens create --user ci-bot --lifetime 8760h
 ```
+
+The site-wide `template-admin` role lets `ci-bot` push templates and create workspaces. The org role `organization-template-admin` is also needed, so that `ci-bot` can read provisioner jobs. When `coder create` fails in the server-side Terraform step, the CLI often prints only `initialize terraform: exit status 1`. The workflows' "Show provisioner errors if workspace creation failed" step (`scripts/ci-show-provisioner-errors.sh`) then fetches the failed job's logs to show the real Terraform error. Without this role, that step can only print a warning.
 
 Store the token in 1Password at `op://test-secrets/TEST_CODER_SESSION_TOKEN/credential`.
 
