@@ -188,3 +188,14 @@ run "claude_code_enabled_skip_permissions" {
     error_message = "skip-permissions flag should appear in the generated command when claude_code_skip_permissions=true"
   }
 }
+
+run "user_startup_hook" {
+  command = plan
+  variables {
+    cache_path = "/tmp/mock-cache"
+  }
+  assert {
+    condition     = strcontains(coder_agent.main.startup_script, "nohup setsid ~/.coder-startup.sh")
+    error_message = "startup script must run the optional ~/.coder-startup.sh user hook, detached"
+  }
+}

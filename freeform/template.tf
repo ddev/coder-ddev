@@ -363,6 +363,17 @@ BASHCOMP
 
     ${module.claude_remote_control.startup_script}
 
+    # User startup hook: run ~/.coder-startup.sh (persistent home) on every
+    # workspace start, e.g. to start services or long-running processes without
+    # waiting for someone to open a terminal. It is detached from the agent so a
+    # long-running or slow hook never blocks startup, and it gets an explicit
+    # PATH because ~/.bashrc returns early for non-interactive shells.
+    if [ -x ~/.coder-startup.sh ]; then
+      echo "Running user startup hook ~/.coder-startup.sh (log: /tmp/coder-startup-user.log)"
+      PATH="$HOME/.local/bin:$HOME/.npm-global/bin:/home/linuxbrew/.linuxbrew/bin:$PATH" \
+        nohup setsid ~/.coder-startup.sh > /tmp/coder-startup-user.log 2>&1 < /dev/null &
+    fi
+
     echo ""
     echo "=== Setup Complete ==="
     echo ""

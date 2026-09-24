@@ -180,7 +180,7 @@ RUN mkdir -p "$HOMEBREW_CACHE" && /home/linuxbrew/.linuxbrew/bin/brew install \
   bats-core/bats-core/bats-assert \
   bats-core/bats-core/bats-file \
   bats-core/bats-core/bats-support \
-  claude-code \
+  claude-code@latest \
   go \
   golangci-lint \
   gopls \
