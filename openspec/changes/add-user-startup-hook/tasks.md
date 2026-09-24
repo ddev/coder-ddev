@@ -10,3 +10,6 @@
 
 ## 3. Image
 - [x] 3.1 Install `claude-code@latest` instead of `claude-code` in `image/Dockerfile` (VERSION unchanged) <!-- id: 3.1 -->
+
+## 4. CI diagnostics
+- [x] 4.1 Add `scripts/ci-show-provisioner-errors.sh` and an `if: failure()` step after every `coder create` step in the integration workflows, so a failed server-side Terraform init/plan/apply shows its real error (not just `exit status 1`) <!-- id: 4.1 -->

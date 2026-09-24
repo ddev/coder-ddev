@@ -167,6 +167,10 @@ jobs:
             --use-parameter-defaults \
             --yes
 
+      - name: Show provisioner errors if workspace creation failed
+        if: failure()
+        run: ./scripts/ci-show-provisioner-errors.sh "ci-${{ env.CI_TAG }}" "${{ env.WORKSPACE_NAME }}"
+
       - name: Verify workspace — agent connected
         run: coder ssh ${{ env.WORKSPACE_NAME }} --wait=yes -- echo "Agent connected"
 
@@ -390,6 +394,10 @@ jobs:
             --rich-parameter-file /tmp/freeform-params-gh-${{ env.CI_TAG }}.yaml \
             --use-parameter-defaults \
             --yes
+
+      - name: Show provisioner errors if workspace creation failed
+        if: failure()
+        run: ./scripts/ci-show-provisioner-errors.sh "ci-gh-${{ env.CI_TAG }}" "${{ env.WORKSPACE_NAME }}"
 
       - name: Verify workspace — agent connected
         run: coder ssh ${{ env.WORKSPACE_NAME }} --wait=yes -- echo "Agent connected"

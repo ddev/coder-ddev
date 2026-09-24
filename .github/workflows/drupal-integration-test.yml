@@ -135,6 +135,10 @@ jobs:
             --use-parameter-defaults \
             --yes
 
+      - name: Show provisioner errors if workspace creation failed
+        if: failure()
+        run: ./scripts/ci-show-provisioner-errors.sh "${{ env.WORKSPACE_NAME }}" "${{ env.WORKSPACE_NAME }}"
+
       - &verify-agent
         name: Verify workspace — agent connected
         run: coder ssh ${{ env.WORKSPACE_NAME }} --wait=yes -- echo "Agent connected"
@@ -296,6 +300,10 @@ jobs:
             --use-parameter-defaults \
             --yes
 
+      - name: Show provisioner errors if workspace creation failed
+        if: failure()
+        run: ./scripts/ci-show-provisioner-errors.sh "${{ env.WORKSPACE_NAME }}" "${{ env.WORKSPACE_NAME }}"
+
       - *verify-agent
       - *verify-docker
       - *verify-ddev
@@ -447,6 +455,10 @@ jobs:
             --parameter drupal_site_public=false \
             --use-parameter-defaults \
             --yes
+
+      - name: Show provisioner errors if workspace creation failed
+        if: failure()
+        run: ./scripts/ci-show-provisioner-errors.sh "cd-${{ github.run_number }}-${{ github.run_attempt }}" "${{ env.WORKSPACE_NAME }}"
 
       - name: Verify workspace — agent connected
         run: coder ssh ${{ env.WORKSPACE_NAME }} --wait=yes -- echo "Agent connected"
@@ -617,6 +629,10 @@ jobs:
             --parameter drupal_site_public=false \
             --use-parameter-defaults \
             --yes
+
+      - name: Show provisioner errors if workspace creation failed
+        if: failure()
+        run: ./scripts/ci-show-provisioner-errors.sh "gd-${{ github.run_number }}-${{ github.run_attempt }}" "${{ env.WORKSPACE_NAME }}"
 
       - name: Verify workspace — agent connected
         run: coder ssh ${{ env.WORKSPACE_NAME }} --wait=yes -- echo "Agent connected"
