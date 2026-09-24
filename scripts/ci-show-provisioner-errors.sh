@@ -22,6 +22,8 @@ WORKSPACE="${2:-}"
 if ! jobs_json=$(coder provisioner jobs list --status failed --limit 100 --output json 2>&1); then
   echo "WARN: 'coder provisioner jobs list' failed; can't show provisioner errors:" >&2
   echo "$jobs_json" >&2
+  echo "WARN: the CI user needs an org role that can read provisioner jobs, e.g." >&2
+  echo "      coder organizations members edit-roles <ci-user> organization-template-admin" >&2
   exit 0
 fi
 
