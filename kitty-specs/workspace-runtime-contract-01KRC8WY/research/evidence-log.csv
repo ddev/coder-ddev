@@ -1,0 +1,28 @@
+invariant,source_file,line_or_block,observation
+INV-1,user-defined-web/template.tf,docker_container.workspace,runtime = "sysbox-runc" pinned; privileged = false; security_opts = ["apparmor:unconfined","seccomp:unconfined"]
+INV-2,image/Dockerfile,user rename block,usermod -l coder -d /home/coder -m ubuntu; UID 1000 preserved
+INV-2,user-defined-web/template.tf,docker_container.workspace,user = "coder"; group_add = [tostring(var.docker_gid)]; default 988
+INV-2,user-defined-web/template.tf,coder_agent.env,HOME = "/home/coder" forced
+INV-3,image/Dockerfile,sudoers RUN,echo "coder ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/coder; chmod 0440
+INV-3,user-defined-web/template.tf,startup_script,uses sudo for chown/tee/dockerd/chmod without prompts
+INV-4,image/Dockerfile,docker-ce install,docker-ce + docker-ce-cli + containerd.io installed; systemctl enable docker (unused at runtime)
+INV-4,user-defined-web/template.tf,startup_script,sudo dockerd > /tmp/dockerd.log 2>&1 &; polls /var/run/docker.sock; chmod 666 on success
+INV-4,user-defined-web/template.tf,docker_container.workspace,host /var/run/docker.sock is NOT mounted (explicit comment)
+INV-5,user-defined-web/template.tf,docker_container.volumes,host_path /coder-workspaces/<owner>-<ws> -> /home/coder
+INV-5,user-defined-web/template.tf,docker_container.mounts,named volume coder-<owner>-<ws>-dind-cache -> /var/lib/docker
+INV-6,image/Dockerfile,COPY scripts /home/coder-files,stages WELCOME.txt vscode/settings.json gitconfig gitignore_global ddev/commands/host/*
+INV-6,user-defined-web/template.tf,startup_script hydration block,copy-if-missing for WELCOME .vscode .gitconfig .gitignore_global
+INV-7,image/Dockerfile,ddev install,DDEV from pkg.ddev.com (no global config baked)
+INV-7,user-defined-web/template.tf,coder_app.ddev-web,url = http://localhost:80; subdomain = true; healthcheck on /
+INV-7,CLAUDE.md,Template Architecture Overview,user-defined-web direct-bind port 80; ddev-router omitted globally
+INV-8,user-defined-web/template.tf,null_resource.workspace_cleanup,destroy provisioner: sudo /usr/local/bin/coder-delete-workspace-dir '<host_path>'
+INV-8,user-defined-web/template.tf,docker_container.workspace,stop_signal SIGINT; stop_timeout 180; destroy_grace_seconds 60
+INV-8,user-defined-web/template.tf,coder_script.ddev_shutdown,run_on_stop = true; ddev poweroff with docker-socket race guard
+INV-9,user-defined-web/template.tf,coder_agent.env,CODER_WORKSPACE_{ID NAME OWNER_NAME OWNER_EMAIL} injected
+INV-9,user-defined-web/template.tf,docker_container.workspace,name = coder-<id>; hostname = <ws-name>-<owner> (deliberately inverted)
+D-1,CLAUDE.md,Architecture section,references image/scripts/.ddev/global_config.yaml which does not exist on disk
+D-2,user-defined-web/template.tf,startup_script,does not copy /home/coder-files/.ddev/commands/host/* into ~/.ddev/commands/host/
+D-3,image/Dockerfile,chmod block after COPY scripts,coder-setup omitted from explicit chmod 755 list
+D-4,image/Dockerfile,systemd + systemctl enable docker,dual dockerd start models coexist; only manual path used
+D-5,user-defined-web/template.tf,startup_script socket section,chmod 666 broader than necessary given group_add 988
+D-6,VERSION + template.tf locals,image_version single source,no per-template image pinning supported
