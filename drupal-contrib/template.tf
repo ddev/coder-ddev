@@ -672,8 +672,25 @@ COMPOSE_EOF
 
       # Set DRUPAL_CORE so ddev-drupal-contrib's expand-composer-json / ddev poser
       # installs the selected major version instead of defaulting to ^11.
-      ddev dotenv set .ddev/.env.web --drupal-core "^$DRUPAL_VERSION"
-      log_setup "✓ DRUPAL_CORE set to ^$DRUPAL_VERSION"
+      #
+      # Version 12 has no stable release yet (targeted for December 2026), so
+      # a caret constraint like "^12" only matches the single tagged
+      # prerelease (e.g. 12.0.0-alpha1) — a frozen snapshot. Composer's
+      # expand_composer_json.php sets prefer-stable=true, which always picks
+      # that tagged prerelease over the continuously-updated 12.0.x dev
+      # branch, even though the branch is ahead of it. That bit us directly:
+      # drupal.org #3625969 (a Twig 3.30 TypeError) was fixed on 12.0.x after
+      # 12.0.0-alpha1 was tagged, so "^12" kept installing the broken alpha
+      # long after the fix landed upstream. Use an explicit dev branch
+      # constraint instead, which Composer always honors regardless of
+      # prefer-stable/minimum-stability, so this cell actually tracks core
+      # HEAD as the workflow comment above claims.
+      DRUPAL_CORE_CONSTRAINT="^$DRUPAL_VERSION"
+      if [ "$DRUPAL_VERSION" = "12" ]; then
+        DRUPAL_CORE_CONSTRAINT="12.x-dev"
+      fi
+      ddev dotenv set .ddev/.env.web --drupal-core "$DRUPAL_CORE_CONSTRAINT"
+      log_setup "✓ DRUPAL_CORE set to $DRUPAL_CORE_CONSTRAINT"
 
       # Start DDEV
       ddev poweroff 2>&1 | tee -a "$SETUP_LOG" || true
