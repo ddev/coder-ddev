@@ -159,6 +159,17 @@ jobs:
         name: Verify workspace — Drush DB connected
         run: coder ssh ${{ env.WORKSPACE_NAME }} -- ddev drush status --fields=db-status | grep -i connected
 
+      - &verify-phpunit
+        # Regression check for #211: amateescu/ddev-drupal-dev's own
+        # SIMPLETEST_BASE_URL=${DDEV_PRIMARY_URL} is empty because this
+        # template always omits ddev-router, which broke every phpunit
+        # functional test. See the SIMPLETEST_BASE_URL override written in
+        # template.tf's Step 4.
+        name: Verify workspace — PHPUnit functional test runs (#211)
+        run: |
+          coder ssh ${{ env.WORKSPACE_NAME }} -- \
+            ddev phpunit --filter testTitle core/modules/system/tests/src/Functional/System/PageTitleTest.php
+
       - &record-host-dir
         name: Record expected host directory
         run: |
@@ -309,6 +320,7 @@ jobs:
       - *verify-ddev
       - *verify-webroot
       - *verify-drush
+      - *verify-phpunit
       - *record-host-dir
       - *verify-http
 

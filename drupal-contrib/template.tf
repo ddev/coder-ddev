@@ -687,6 +687,17 @@ COMPOSE_EOF
       # HEAD as the workflow comment above claims.
       DRUPAL_CORE_CONSTRAINT="^$DRUPAL_VERSION"
       if [ "$DRUPAL_VERSION" = "12" ]; then
+        # "12.x-dev" isn't a literal branch name -- it's the version string that
+        # drupal/core's composer.json branch-alias (extra.branch-alias) maps its
+        # actual default git branch onto, so this constraint resolves to the
+        # HEAD of that branch (currently "main"; installed packages report as
+        # "dev-main"). People fixing D12 issues normally work against "main"
+        # directly, so this constraint is meant to track exactly that -- it's
+        # just expressed as a version, not a branch name, because that's what
+        # lets other packages' "^12"-style requirements resolve against the
+        # same install (the reason #212 picked this form over "dev-main"
+        # literally). Expect this whole workaround to go away once 12.0.0
+        # ships and a normal tagged release exists to depend on instead.
         DRUPAL_CORE_CONSTRAINT="12.x-dev"
       fi
       ddev dotenv set .ddev/.env.web --drupal-core "$DRUPAL_CORE_CONSTRAINT"
@@ -737,6 +748,22 @@ COMPOSE_EOF
         # unknown plugins by default; modules can pull in arbitrary plugins (e.g.
         # symfony/runtime) that aren't pre-listed in allow-plugins.
         jq 'if .config == null then .config = {} else . end | .config["allow-plugins"] = true' composer.json > composer.json.tmp && mv composer.json.tmp composer.json
+
+        # D12 has no stable tagged release yet, so DRUPAL_CORE_CONSTRAINT below
+        # resolves to the 12.x-dev branch. Composer's default dist install for a
+        # -dev/branch version fetches a GitHub zipball (a git-archive snapshot),
+        # which honors drupal/core's own .gitattributes export-ignore rules and
+        # strips the core/tests directory -- so any test referencing core (e.g.
+        # `ddev phpunit web/core/modules/...`) fails with "Cannot open bootstrap
+        # script core/tests/bootstrap.php". A real `git clone` (source install)
+        # does not apply export-ignore, so force source installs for drupal/core
+        # on D12 only -- D10/D11 use real tagged releases, whose dist packages
+        # already include tests, and forcing source there would just slow down
+        # every install for no benefit.
+        if [ "$DRUPAL_VERSION" = "12" ]; then
+          jq 'if .config == null then .config = {} else . end | .config["preferred-install"]["drupal/core"] = "source"' composer.json > composer.json.tmp && mv composer.json.tmp composer.json
+          log_setup "✓ drupal/core preferred-install set to source (D12 dev branch strips core/tests from dist)"
+        fi
 
         # Obtain a GitHub token for Composer OAuth — routes downloads through the
         # authenticated GitHub API instead of anonymous codeload.github.com

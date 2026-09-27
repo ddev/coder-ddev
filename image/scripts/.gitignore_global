@@ -1,5 +1,6 @@
 # DDEV Coder integration
 config.coder.yaml
+config.zzz-coder-test-env.yaml
 
 # macOS
 .DS_Store

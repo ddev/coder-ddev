@@ -175,6 +175,18 @@ jobs:
           echo "--- end ---"
           echo "$MODULES" | grep -iw "${{ matrix.project }}"
 
+      - name: Verify workspace — PHPUnit functional test runs
+        # Runs a core test (present in every project's web root) rather than
+        # a module-specific one, so this step doesn't need to vary per matrix
+        # entry. Same regression class as drupal-core issue #211: if this
+        # template ever stopped setting SIMPLETEST_BASE_URL to a value
+        # reachable from inside the web container, every functional test
+        # would fail with "You must provide a SIMPLETEST_BASE_URL
+        # environment variable".
+        run: |
+          coder ssh ${{ env.WORKSPACE_NAME }} -- env -C /home/coder/${{ matrix.project }} \
+            ddev phpunit --filter testTitle web/core/modules/system/tests/src/Functional/System/PageTitleTest.php
+
       - name: Record expected host directory
         run: |
           OWNER=$(coder whoami --output json | jq -r 'if type == "array" then .[0].username else .username end')
@@ -561,6 +573,18 @@ jobs:
           echo "$MODULES"
           echo "--- end ---"
           echo "$MODULES" | grep -iw "${{ matrix.project }}"
+
+      - name: Verify workspace — PHPUnit functional test runs
+        # Runs a core test (present in every project's web root) rather than
+        # a module-specific one, so this step doesn't need to vary per matrix
+        # entry. Same regression class as drupal-core issue #211: if this
+        # template ever stopped setting SIMPLETEST_BASE_URL to a value
+        # reachable from inside the web container, every functional test
+        # would fail with "You must provide a SIMPLETEST_BASE_URL
+        # environment variable".
+        run: |
+          coder ssh ${{ env.WORKSPACE_NAME }} -- env -C /home/coder/${{ matrix.project }} \
+            ddev phpunit --filter testTitle web/core/modules/system/tests/src/Functional/System/PageTitleTest.php
 
       - name: Record owner
         run: |
