@@ -798,6 +798,30 @@ WELCOME_STATIC
 
     # Step 4: Install ddev-drupal-dev add-on, composer install, and drush (first run only)
     if [ "$DRUPAL_SETUP_NEEDED" = "true" ] && [ "$SETUP_FAILED" != "true" ]; then
+      # Guard: verify the checked-out branch's PHP requirement is satisfiable by the
+      # DDEV-configured PHP version before touching composer at all. An issue branch
+      # based on a newer Drupal core than the selected drupal_version (e.g. a "main"
+      # branch requiring PHP 8.5 checked out into a drupal_version=11 / PHP 8.4
+      # workspace) fails composer's package-discovery step in a way that poisons
+      # composer.local.lock — all 3 retries below then fail identically in 1-2s each,
+      # hiding the real cause instead of surfacing it. See #217.
+      _core_php_min=""
+      if [ -f "core/composer.json" ]; then
+        _core_php_min=$(jq -r '.require.php // ""' core/composer.json 2>/dev/null | grep -oE '[0-9]+\.[0-9]+' | head -1)
+      fi
+      _configured_php=$(grep -E '^php_version:' .ddev/config.yaml 2>/dev/null | grep -oE '[0-9]+\.[0-9]+' | head -1)
+      if [ -n "$_core_php_min" ] && [ -n "$_configured_php" ] && \
+         awk -v have="$_configured_php" -v need="$_core_php_min" 'BEGIN{exit !(have < need)}'; then
+        log_setup "✗ PHP version mismatch: checked-out branch ($${ISSUE_BRANCH:-$DRUPAL_BRANCH}) requires PHP >=$_core_php_min, but this workspace is configured for PHP $_configured_php ($DDEV_PROJECT_TYPE, from drupal_version=$DRUPAL_VERSION)"
+        log_setup "  Recreate the workspace with a drupal_version matching this branch's actual Drupal core version, then retry."
+        update_status "✗ PHP compatibility check: Failed"
+        update_status "  Branch requires PHP >=$_core_php_min, workspace has PHP $_configured_php (drupal_version=$DRUPAL_VERSION)"
+        update_status "  Recreate the workspace with the drupal_version matching this branch."
+        SETUP_FAILED=true
+      fi
+    fi
+
+    if [ "$DRUPAL_SETUP_NEEDED" = "true" ] && [ "$SETUP_FAILED" != "true" ]; then
       log_setup "Installing amateescu/ddev-drupal-dev add-on..."
       update_status "⏳ DDEV add-on install: In progress..."
       _t=$SECONDS
