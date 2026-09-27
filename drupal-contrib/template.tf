@@ -738,6 +738,22 @@ COMPOSE_EOF
         # symfony/runtime) that aren't pre-listed in allow-plugins.
         jq 'if .config == null then .config = {} else . end | .config["allow-plugins"] = true' composer.json > composer.json.tmp && mv composer.json.tmp composer.json
 
+        # D12 has no stable tagged release yet, so DRUPAL_CORE_CONSTRAINT below
+        # resolves to the 12.x-dev branch. Composer's default dist install for a
+        # -dev/branch version fetches a GitHub zipball (a git-archive snapshot),
+        # which honors drupal/core's own .gitattributes export-ignore rules and
+        # strips the core/tests directory -- so any test referencing core (e.g.
+        # `ddev phpunit web/core/modules/...`) fails with "Cannot open bootstrap
+        # script core/tests/bootstrap.php". A real `git clone` (source install)
+        # does not apply export-ignore, so force source installs for drupal/core
+        # on D12 only -- D10/D11 use real tagged releases, whose dist packages
+        # already include tests, and forcing source there would just slow down
+        # every install for no benefit.
+        if [ "$DRUPAL_VERSION" = "12" ]; then
+          jq 'if .config == null then .config = {} else . end | .config["preferred-install"]["drupal/core"] = "source"' composer.json > composer.json.tmp && mv composer.json.tmp composer.json
+          log_setup "✓ drupal/core preferred-install set to source (D12 dev branch strips core/tests from dist)"
+        fi
+
         # Obtain a GitHub token for Composer OAuth — routes downloads through the
         # authenticated GitHub API instead of anonymous codeload.github.com
         # (which is prone to transient HTTP/2 400s and rate limits).
