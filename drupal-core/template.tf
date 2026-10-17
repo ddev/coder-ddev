@@ -557,31 +557,46 @@ STATUS_HEADER
         # fetch origin and issue fork for only the delta.
         log_setup "Initialising Drupal core repo (bare cache + origin delta)..."
         mkdir -p "$DRUPAL_DIR"
-        git -C "$DRUPAL_DIR" init >> "$SETUP_LOG" 2>&1
+        git -C "$DRUPAL_DIR" init -q >> "$SETUP_LOG" 2>&1
         git -C "$DRUPAL_DIR" remote add drupalcache "$CACHE_SEED"
         git -C "$DRUPAL_DIR" remote add origin "$DRUPAL_REMOTE"
         if [ "$USING_ISSUE_FORK" = "true" ] && [ -n "$ISSUE_FORK" ]; then
-          git -C "$DRUPAL_DIR" remote add issue "https://git.drupalcode.org/issue/drupal-$${ISSUE_FORK}.git"
+          # --no-tags: the fork's tags duplicate core's ~800 tags from origin.
+          git -C "$DRUPAL_DIR" remote add --no-tags issue "https://git.drupalcode.org/issue/drupal-$${ISSUE_FORK}.git"
         fi
-        git -C "$DRUPAL_DIR" fetch drupalcache >> "$SETUP_LOG" 2>&1
+        # Fetches use -q so the log isn't flooded with one line per branch/tag
+        # (core has ~800 refs); errors still go to stderr and land in the log.
+        _f=$SECONDS
+        git -C "$DRUPAL_DIR" fetch -q drupalcache >> "$SETUP_LOG" 2>&1
+        log_setup "  Fetched local cache ($((SECONDS - _f))s)"
         # Remove the local cache remote now — objects are in the local repo and
         # keeping it causes ambiguous-ref errors when checking out branches that
         # exist in both drupalcache and origin.
         git -C "$DRUPAL_DIR" remote remove drupalcache
-        git -C "$DRUPAL_DIR" fetch origin >> "$SETUP_LOG" 2>&1 || true
+        _f=$SECONDS
+        if git -C "$DRUPAL_DIR" fetch -q origin >> "$SETUP_LOG" 2>&1; then
+          log_setup "  Fetched origin ($((SECONDS - _f))s)"
+        else
+          log_setup "  ⚠ Fetch from origin failed — continuing with cached refs"
+        fi
         if [ "$USING_ISSUE_FORK" = "true" ] && [ -n "$ISSUE_FORK" ]; then
-          git -C "$DRUPAL_DIR" fetch issue >> "$SETUP_LOG" 2>&1 || true
+          _f=$SECONDS
+          if git -C "$DRUPAL_DIR" fetch -q issue >> "$SETUP_LOG" 2>&1; then
+            log_setup "  Fetched issue fork ($((SECONDS - _f))s)"
+          else
+            log_setup "  ⚠ Fetch from issue fork failed"
+          fi
         fi
         git -C "$DRUPAL_DIR" checkout -b main --track origin/main >> "$SETUP_LOG" 2>&1
       elif [ -d "$CACHE_SEED/.git" ]; then
         # Non-bare (legacy) cache: use as --reference hint to avoid re-downloading
         # objects that already exist locally.
         log_setup "Cloning Drupal core (with reference from cache seed)..."
-        git clone --reference "$CACHE_SEED" "$DRUPAL_REMOTE" "$DRUPAL_DIR" >> "$SETUP_LOG" 2>&1 || \
-          git clone "$DRUPAL_REMOTE" "$DRUPAL_DIR" >> "$SETUP_LOG" 2>&1
+        git clone -q --reference "$CACHE_SEED" "$DRUPAL_REMOTE" "$DRUPAL_DIR" >> "$SETUP_LOG" 2>&1 || \
+          git clone -q "$DRUPAL_REMOTE" "$DRUPAL_DIR" >> "$SETUP_LOG" 2>&1
       else
         log_setup "Cloning Drupal core..."
-        git clone "$DRUPAL_REMOTE" "$DRUPAL_DIR" >> "$SETUP_LOG" 2>&1
+        git clone -q "$DRUPAL_REMOTE" "$DRUPAL_DIR" >> "$SETUP_LOG" 2>&1
       fi
       if [ -d "$DRUPAL_DIR/.git" ]; then
         log_setup "✓ Drupal core cloned ($((SECONDS - _t))s)"
@@ -597,8 +612,8 @@ STATUS_HEADER
         # Add issue remote and fetch unless already done in the bare-cache setup above.
         if ! git -C "$DRUPAL_DIR" remote get-url issue >> "$SETUP_LOG" 2>&1; then
           log_setup "Adding issue fork remote and fetching: $ISSUE_FORK"
-          git -C "$DRUPAL_DIR" remote add issue "https://git.drupalcode.org/issue/drupal-$${ISSUE_FORK}.git"
-          git -C "$DRUPAL_DIR" fetch issue >> "$SETUP_LOG" 2>&1
+          git -C "$DRUPAL_DIR" remote add --no-tags issue "https://git.drupalcode.org/issue/drupal-$${ISSUE_FORK}.git"
+          git -C "$DRUPAL_DIR" fetch -q issue >> "$SETUP_LOG" 2>&1
         fi
         if git -C "$DRUPAL_DIR" branch -r | grep -q "^  issue/"; then
           log_setup "  ✓ Fetched from issue remote"
@@ -611,7 +626,7 @@ STATUS_HEADER
               # the index but can leave working tree files from those newer main
               # commits behind as modified/untracked.
               git -C "$DRUPAL_DIR" reset --hard HEAD >> "$SETUP_LOG" 2>&1 || true
-              git -C "$DRUPAL_DIR" clean -fd >> "$SETUP_LOG" 2>&1 || true
+              git -C "$DRUPAL_DIR" clean -fdq >> "$SETUP_LOG" 2>&1 || true
               log_setup "  ✓ Working tree reset to match branch"
             else
               log_setup "✗ Failed to check out branch $ISSUE_BRANCH"
@@ -643,7 +658,7 @@ STATUS_HEADER
           _r=$(git -C "$DRUPAL_DIR" branch -r 2>/dev/null | grep -oE "10\.[0-9]+\.x" | sort -V | tail -1 || echo "")
           [ -n "$_r" ] && DRUPAL_BRANCH="$_r"
         fi
-        git -C "$DRUPAL_DIR" fetch --all --prune >> "$SETUP_LOG" 2>&1 || true
+        git -C "$DRUPAL_DIR" fetch -q --all --prune >> "$SETUP_LOG" 2>&1 || true
         git -C "$DRUPAL_DIR" merge --ff-only "origin/$DRUPAL_BRANCH" >> "$SETUP_LOG" 2>&1 || true
         log_setup "  git fetch+merge $DRUPAL_BRANCH complete ($((SECONDS - _t))s)"
       fi

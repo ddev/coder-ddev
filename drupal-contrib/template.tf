@@ -423,7 +423,7 @@ STATUS_HEADER
     if [ ! -d "$PROJ_DIR/.git" ]; then
       log_setup "Cloning $PROJECT_NAME from git.drupalcode.org..."
       update_status "⏳ Clone: In progress..."
-      if git clone "https://git.drupalcode.org/project/$PROJECT_NAME.git" "$PROJ_DIR" >> "$SETUP_LOG" 2>&1; then
+      if git clone -q "https://git.drupalcode.org/project/$PROJECT_NAME.git" "$PROJ_DIR" >> "$SETUP_LOG" 2>&1; then
         log_setup "✓ Cloned $PROJECT_NAME"
         update_status "✓ Clone: Success"
       else
@@ -435,7 +435,7 @@ STATUS_HEADER
       log_setup "✓ $PROJECT_NAME repo already present — skipping clone"
       update_status "✓ Clone: Already present"
       # Keep repo current on restart
-      git -C "$PROJ_DIR" fetch --all --prune >> "$SETUP_LOG" 2>&1 || true
+      git -C "$PROJ_DIR" fetch -q --all --prune >> "$SETUP_LOG" 2>&1 || true
     fi
 
     cd "$PROJ_DIR" || { log_setup "✗ Cannot cd to $PROJ_DIR"; SETUP_FAILED=true; }
@@ -539,10 +539,10 @@ GIT_ATTRIBUTES_EOF
 
       update_status "⏳ Issue fork fetch: In progress..."
       if ! git remote | grep -qx "$REMOTE_NAME"; then
-        git remote add "$REMOTE_NAME" "$FORK_URL" >> "$SETUP_LOG" 2>&1
+        git remote add --no-tags "$REMOTE_NAME" "$FORK_URL" >> "$SETUP_LOG" 2>&1
       fi
 
-      if git fetch "$REMOTE_NAME" >> "$SETUP_LOG" 2>&1; then
+      if git fetch -q "$REMOTE_NAME" >> "$SETUP_LOG" 2>&1; then
         log_setup "✓ Fetched issue fork remote"
         update_status "✓ Issue fork fetch: Success"
       else
