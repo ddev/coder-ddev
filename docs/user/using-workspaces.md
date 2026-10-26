@@ -541,6 +541,28 @@ ssh -T git@gitlab.com
 
 **How it works:** Coder's GitSSH wrapper uses your Coder-managed SSH key automatically. No need to manage keys inside the workspace.
 
+### SSH Keys in DDEV Containers
+
+DDEV's containers can use the same keys, for example for `composer install` with private repositories, `drush` aliases, or `git` in a post-start hook. There's nothing to set up, and `ddev auth ssh` isn't needed:
+
+```bash
+ddev auth ssh                     # lists the keys the containers can use
+ddev exec ssh -T git@github.com   # tests them
+```
+
+The workspace runs an SSH agent relay at `~/.ssh-agent-relay/agent.sock`, and DDEV's `ssh_agent_upstream` points at it. Each time something uses the relay, it connects to the first of these that is available:
+
+1. **Your own agent, if it's forwarded.** VS Code Desktop forwards your local agent (for example 1Password), and so does `coder ssh -A`. Each new terminal or `coder ssh -A` session makes its agent the one the relay uses.
+2. **Your Coder-managed key**, loaded into an agent when the workspace starts.
+
+The relay picks again on every use, so after VS Code reconnects, DDEV containers that are already running keep working, and they fall back to the Coder key when you disconnect. Terminals use the relay too, so plain `ssh` in the workspace works the same way.
+
+Notes:
+
+- The most recent terminal or session with a forwarded agent wins for the whole workspace. If you [share a workspace](#sharing-your-workspace) and a collaborator connects with `coder ssh -A`, your DDEV containers use their keys until you open a new terminal.
+- While an agent is forwarded, any container on the DDEV network can ask it to sign. Agents that confirm each use, like 1Password, limit that exposure.
+- To use only key files instead, run `ddev config global --ssh-agent-upstream=""` and `ddev auth ssh`. The workspace sets the relay again on its next start.
+
 ### Common Workflows
 
 **Clone and start working:**

@@ -138,8 +138,15 @@ sync-bashrc-guard: ## Vendor shared/bashrc-symlink-guard.sh into each template d
 	done
 	@echo "Synced shared/bashrc-symlink-guard.sh into: $(TEMPLATES)"
 
+.PHONY: sync-ssh-agent-setup
+sync-ssh-agent-setup: ## Vendor shared/ssh-agent-setup.sh into each template dir (same reason as sync-vscode-extensions: push only bundles the given --directory)
+	@for t in $(TEMPLATES); do \
+		cp shared/ssh-agent-setup.sh $$t/ssh-agent-setup.sh; \
+	done
+	@echo "Synced shared/ssh-agent-setup.sh into: $(TEMPLATES)"
+
 .PHONY: sync-shared
-sync-shared: sync-claude-module sync-vscode-extensions sync-docker-daemon-module sync-bashrc-guard ## Vendor all shared Terraform assets (modules + vscode-extensions.tf) into each template dir
+sync-shared: sync-claude-module sync-vscode-extensions sync-docker-daemon-module sync-bashrc-guard sync-ssh-agent-setup ## Vendor all shared Terraform assets (modules + vscode-extensions.tf) into each template dir
 
 .PHONY: validate
 validate: sync-shared ## Validate all Terraform templates (requires terraform in PATH)

@@ -367,6 +367,8 @@ resource "coder_agent" "main" {
     mkdir -p ~/.ddev
     echo "Configuring DDEV to omit ddev-router..."
     ddev config global --omit-containers=ddev-router --instrumentation-opt-in=false > /dev/null 2>&1 || true
+
+    ${file("${path.module}/ssh-agent-setup.sh")}
     mkcert -install 2>/dev/null || true
 
     # Pre-pull DDEV images (uses registry mirror if configured). Redirect --

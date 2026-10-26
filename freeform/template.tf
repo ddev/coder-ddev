@@ -282,6 +282,8 @@ resource "coder_agent" "main" {
     ddev config global --instrumentation-opt-in=true > /dev/null 2>&1 || true
     ddev config global --router-http-port=8080 > /dev/null 2>&1 || true
 
+    ${file("${path.module}/ssh-agent-setup.sh")}
+
     # Create .ddev commands directory
     mkdir -p ~/.ddev/commands/host
     if [ -d /home/coder-files/.ddev/commands/host ]; then

@@ -449,6 +449,8 @@ resource "coder_agent" "main" {
     echo "Configuring DDEV to omit ddev-router..."
     ddev config global --omit-containers=ddev-router --instrumentation-opt-in=false > /dev/null 2>&1 || true
 
+    ${file("${path.module}/ssh-agent-setup.sh")}
+
     # Install mkcert CA to suppress DDEV's "mkcert may not be properly installed" warning
     # DDEV ships its own mkcert binary; this sets up the local CA trust
     mkcert -install 2>/dev/null || true

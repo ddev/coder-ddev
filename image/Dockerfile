@@ -15,6 +15,7 @@ RUN apt-get update && \
   direnv \
   dnsutils \
   file \
+  fzf \
   git \
   gnupg \
   htop \
@@ -32,6 +33,7 @@ RUN apt-get update && \
   passwd \
   postgresql-client \
   rsync \
+  socat \
   software-properties-common \
   sudo \
   telnet \
@@ -40,7 +42,8 @@ RUN apt-get update && \
   unzip \
   vim \
   wget \
-  zip && \
+  zip \
+  zstd && \
   # Generate locale
   locale-gen en_US.UTF-8 && \
   rm -rf /var/lib/apt/lists/* && \
@@ -201,7 +204,9 @@ RUN chmod 644 /home/coder-files/WELCOME.txt && \
   chmod 644 /home/coder-files/.gitconfig && \
   chmod 644 /home/coder-files/.gitignore_global && \
   chmod 755 /home/coder-files/.ddev/commands/host/launch && \
-  chmod 755 /home/coder-files/.ddev/commands/host/coder-routes
+  chmod 755 /home/coder-files/.ddev/commands/host/coder-routes && \
+  chmod 755 /home/coder-files/ssh-agent-relay/connect && \
+  chmod 644 /home/coder-files/ssh-agent-relay/bashrc.sh
 
 USER coder
 RUN ddev --version && \
