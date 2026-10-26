@@ -1452,8 +1452,11 @@ coder provisioner start
 
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>coder <span class="nb">users </span>create <span class="nt">--email</span> ci@staging-coder.ddev.com <span class="nt">--username</span> ci-bot <span class="nt">--login-type</span> none
 coder <span class="nb">users </span>edit-roles ci-bot <span class="nt">--roles</span> template-admin <span class="nt">--yes</span>
+coder organizations members edit-roles ci-bot organization-template-admin
 coder tokens create <span class="nt">--user</span> ci-bot <span class="nt">--lifetime</span> 8760h
 </code></pre></div></div>
+
+<p>The site-wide <code class="language-plaintext highlighter-rouge">template-admin</code> role lets <code class="language-plaintext highlighter-rouge">ci-bot</code> push templates and create workspaces. The org role <code class="language-plaintext highlighter-rouge">organization-template-admin</code> is also needed, so that <code class="language-plaintext highlighter-rouge">ci-bot</code> can read provisioner jobs. When <code class="language-plaintext highlighter-rouge">coder create</code> fails in the server-side Terraform step, the CLI often prints only <code class="language-plaintext highlighter-rouge">initialize terraform: exit status 1</code>. The workflows’ “Show provisioner errors if workspace creation failed” step (<code class="language-plaintext highlighter-rouge">scripts/ci-show-provisioner-errors.sh</code>) then fetches the failed job’s logs to show the real Terraform error. Without this role, that step can only print a warning.</p>
 
 <p>Store the token in 1Password at <code class="language-plaintext highlighter-rouge">op://test-secrets/TEST_CODER_SESSION_TOKEN/credential</code>.</p>
 

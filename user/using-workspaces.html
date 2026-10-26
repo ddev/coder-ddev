@@ -683,6 +683,31 @@ ssh <span class="nt">-T</span> git@gitlab.com
 
 <p><strong>How it works:</strong> Coder’s GitSSH wrapper uses your Coder-managed SSH key automatically. No need to manage keys inside the workspace.</p>
 
+<h3 id="ssh-keys-in-ddev-containers">SSH Keys in DDEV Containers</h3>
+
+<p>DDEV’s containers can use the same keys, for example for <code class="language-plaintext highlighter-rouge">composer install</code> with private repositories, <code class="language-plaintext highlighter-rouge">drush</code> aliases, or <code class="language-plaintext highlighter-rouge">git</code> in a post-start hook. There’s nothing to set up, and <code class="language-plaintext highlighter-rouge">ddev auth ssh</code> isn’t needed:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ddev auth ssh                     <span class="c"># lists the keys the containers can use</span>
+ddev <span class="nb">exec </span>ssh <span class="nt">-T</span> git@github.com   <span class="c"># tests them</span>
+</code></pre></div></div>
+
+<p>The workspace runs an SSH agent relay at <code class="language-plaintext highlighter-rouge">~/.ssh-agent-relay/agent.sock</code>, and DDEV’s <code class="language-plaintext highlighter-rouge">ssh_agent_upstream</code> points at it. Each time something uses the relay, it connects to the first of these that is available:</p>
+
+<ol>
+  <li><strong>Your own agent, if it’s forwarded.</strong> VS Code Desktop forwards your local agent (for example 1Password), and so does <code class="language-plaintext highlighter-rouge">coder ssh -A</code>. Each new terminal or <code class="language-plaintext highlighter-rouge">coder ssh -A</code> session makes its agent the one the relay uses.</li>
+  <li><strong>Your Coder-managed key</strong>, loaded into an agent when the workspace starts.</li>
+</ol>
+
+<p>The relay picks again on every use, so after VS Code reconnects, DDEV containers that are already running keep working, and they fall back to the Coder key when you disconnect. Terminals use the relay too, so plain <code class="language-plaintext highlighter-rouge">ssh</code> in the workspace works the same way.</p>
+
+<p>Notes:</p>
+
+<ul>
+  <li>The most recent terminal or session with a forwarded agent wins for the whole workspace. If you <a href="#sharing-your-workspace">share a workspace</a> and a collaborator connects with <code class="language-plaintext highlighter-rouge">coder ssh -A</code>, your DDEV containers use their keys until you open a new terminal.</li>
+  <li>While an agent is forwarded, any container on the DDEV network can ask it to sign. Agents that confirm each use, like 1Password, limit that exposure.</li>
+  <li>To use only key files instead, run <code class="language-plaintext highlighter-rouge">ddev config global --ssh-agent-upstream=""</code> and <code class="language-plaintext highlighter-rouge">ddev auth ssh</code>. The workspace sets the relay again on its next start.</li>
+</ul>
+
 <h3 id="common-workflows">Common Workflows</h3>
 
 <p><strong>Clone and start working:</strong></p>
