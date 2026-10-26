@@ -1,7 +1,6 @@
 # DDEV Coder integration
 config.coder.yaml
 config.zzz-coder-test-env.yaml
-Dockerfile.php2shell
 
 # macOS
 .DS_Store

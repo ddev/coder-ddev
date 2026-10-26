@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Connects one client of the workspace SSH agent relay
+# (~/.ssh-agent-relay/agent.sock) to the best agent that is alive right now.
+# socat runs this once per connection (EXEC:), so the relay follows a VS Code
+# or `coder ssh -A` reconnect without being restarted, and falls back to the
+# Coder-key agent when no forwarded agent is left. Candidates, in order:
+#   1. ~/.ssh-agent-relay/current: the forwarded agent of the most recent
+#      interactive shell that had one (set by bashrc.sh)
+#   2. the newest live forwarded agent, /tmp/auth-agent*/listener.sock
+#   3. ~/.coder-ssh-agent/agent.sock: the Coder workspace key, loaded at startup
+
+relay_dir="${HOME:-/home/coder}/.ssh-agent-relay"
+coder_agent="${HOME:-/home/coder}/.coder-ssh-agent/agent.sock"
+
+# ssh-add -l exits 0 (keys) or 1 (no keys) when it reaches an agent, 2 when it
+# can't, and timeout exits 124 if the agent hangs.
+alive() {
+  [ -S "$1" ] || return 1
+  SSH_AUTH_SOCK="$1" timeout 2 ssh-add -l > /dev/null 2>&1
+  [ $? -le 1 ]
+}
+
+candidates=()
+if [ -L "$relay_dir/current" ]; then
+  candidates+=("$(readlink -f "$relay_dir/current")")
+fi
+while IFS= read -r sock; do
+  candidates+=("$sock")
+done < <(ls -t /tmp/auth-agent*/listener.sock 2> /dev/null)
+candidates+=("$coder_agent")
+
+for sock in "${candidates[@]}"; do
+  if alive "$sock"; then
+    exec socat STDIO UNIX-CONNECT:"$sock"
+  fi
+done
+exit 1

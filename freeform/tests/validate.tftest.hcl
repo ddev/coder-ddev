@@ -238,3 +238,15 @@ run "user_startup_hook" {
     error_message = "startup script must run the optional ~/.coder-startup.sh user hook, detached"
   }
 }
+
+run "ssh_agent_relay" {
+  command = plan
+  assert {
+    condition     = strcontains(coder_agent.main.startup_script, "api/v2/workspaceagents/me/gitsshkey")
+    error_message = "startup script must load the Coder SSH key into an ssh-agent"
+  }
+  assert {
+    condition     = strcontains(coder_agent.main.startup_script, "--ssh-agent-upstream=\"$SSH_RELAY_DIR/agent.sock\"")
+    error_message = "startup script must point DDEV's ssh_agent_upstream at the relay socket"
+  }
+}
