@@ -3,6 +3,7 @@
 # --release-idle-session-min leaves it with no sessions.
 export PATH="$HOME/.local/bin:$HOME/.npm-global/bin:/home/linuxbrew/.linuxbrew/bin:$PATH"
 while true; do
+  started=$(date +%s)
   /home/linuxbrew/.linuxbrew/bin/claude self-hosted-runner \
     --environment-secret-file "${secret_file}" \
     --base-dir "${base_dir}" \
@@ -15,6 +16,9 @@ while true; do
     --health-port 0 \
     --log-file /tmp/claude-runner.log
   rc=$?
-  echo "$(date): runner exited ($rc); restarting in 5s"
-  sleep 5
+  # A runner that fails at once (a revoked secret, no network) would otherwise retry every 5s.
+  delay=5
+  [ $(( $(date +%s) - started )) -lt 60 ] && delay=60
+  echo "$(date): runner exited ($rc); restarting in $${delay}s"
+  sleep "$delay"
 done
