@@ -19,7 +19,7 @@ data "coder_parameter" "enable_claude_runner" {
 data "coder_parameter" "claude_runner_capacity" {
   name         = "claude_runner_capacity"
   display_name = "Claude Code runner: concurrent sessions"
-  description  = "How many sessions the runner hosts at once. They share this workspace's Docker daemon and DDEV; the runner installs a skill telling them how to avoid conflicts. Only takes effect when the runner is enabled."
+  description  = "How many sessions this workspace hosts at once, one runner each. They share this workspace's Docker daemon and DDEV; a skill installed for them says how to avoid conflicts. Only takes effect when the runner is enabled."
   type         = "number"
   default      = "1"
   mutable      = true
@@ -39,6 +39,5 @@ locals {
   loop_script = templatefile("${path.module}/files/claude-runner-loop.sh.tftpl", {
     secret_file = local.secret_file
     base_dir    = var.base_dir
-    capacity    = local.capacity
   })
 }

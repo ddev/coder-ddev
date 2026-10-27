@@ -5,8 +5,7 @@ The `freeform` workspace startup script SHALL start a Claude Code self-hosted ru
 
 #### Scenario: Enabled with a secret
 - **WHEN** a workspace starts with "Run a Claude Code self-hosted runner" on and `~/.claude-runner/environment-secret` is non-empty
-- **THEN** the startup script SHALL start `claude self-hosted-runner` in a restart loop in tmux session `claude-runner`, unless a runner is already running
-- **AND** it SHALL pass the "concurrent sessions" value as `--capacity`
+- **THEN** the startup script SHALL start as many `claude self-hosted-runner` processes as the "concurrent sessions" value, each with `--capacity 1`, its own base directory and its own restart loop in tmux session `claude-runner`, unless a runner is already running
 - **AND** it SHALL install the session git config in `/etc/gitconfig`, the `coder-shared-workspace` skill in `~/.claude/skills`, and `claude-sessions` in `~/.local/bin`
 
 #### Scenario: Enabled without a secret

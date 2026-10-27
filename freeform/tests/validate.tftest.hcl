@@ -282,8 +282,12 @@ run "claude_runner_enabled" {
     error_message = "the runner must see remote control as off when enable_claude_code=false"
   }
   assert {
-    condition     = strcontains(base64decode(regex("echo '([A-Za-z0-9+/=]+)' \\| base64 -d > ~/.local/bin/claude-runner-loop", coder_agent.main.startup_script)[0]), "--capacity 3")
-    error_message = "runner loop script must pass the claude_runner_capacity value as --capacity"
+    condition     = strcontains(coder_agent.main.startup_script, "seq 2 3")
+    error_message = "startup script must start one runner per claude_runner_capacity"
+  }
+  assert {
+    condition     = strcontains(base64decode(regex("echo '([A-Za-z0-9+/=]+)' \\| base64 -d > ~/.local/bin/claude-runner-loop", coder_agent.main.startup_script)[0]), "--capacity 1")
+    error_message = "each runner must use --capacity 1, which --use-anthropic-git-proxy requires"
   }
 }
 

@@ -30,10 +30,13 @@ output "startup_script" {
         mkcert -install >/dev/null 2>&1 || true
         # Anchored on the program name: this script's own bash command line contains the phrase.
         if pgrep -f '^[^ ]*claude self-hosted-runner' >/dev/null || tmux has-session -t claude-runner 2>/dev/null; then
-          CLAUDE_RUNNER_MSG="✓ Claude Code self-hosted runner already running (tmux attach -t claude-runner)"
+          CLAUDE_RUNNER_MSG="✓ Claude Code self-hosted runners already running (tmux attach -t claude-runner)"
         else
-          tmux new-session -d -s claude-runner ~/.local/bin/claude-runner-loop
-          CLAUDE_RUNNER_MSG="✓ Claude Code self-hosted runner started, capacity ${local.capacity} (tmux attach -t claude-runner; log /tmp/claude-runner.log)"
+          tmux new-session -d -s claude-runner -n runner-1 "$HOME/.local/bin/claude-runner-loop 1"
+          for i in $(seq 2 ${local.capacity}); do
+            tmux new-window -t claude-runner -n "runner-$i" "$HOME/.local/bin/claude-runner-loop $i"
+          done
+          CLAUDE_RUNNER_MSG="✓ ${local.capacity} Claude Code self-hosted runner(s) started (tmux attach -t claude-runner; logs /tmp/claude-runner-*.log)"
         fi
       fi
       echo "$CLAUDE_RUNNER_MSG"

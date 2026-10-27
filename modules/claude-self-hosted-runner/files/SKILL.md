@@ -23,20 +23,13 @@ since another session can start at any time.
 
 ## Repositories and checkouts
 
-- Sessions working in different repositories do not interfere with each
-  other's files.
-- Never switch the branch, reset, stash, or clean a checkout another
-  session is using. If your working directory is a checkout another session
-  also has, make your own worktree and work there:
-
-  ```bash
-  repo=~/workspace/<owner>/<repo>
-  git -C "$repo" worktree add ~/workspace/<repo>-worktrees/<your-branch> -b <your-branch> <base>
-  ```
-
-  Keep worktrees under `~/workspace/<repo>-worktrees/`. Remove yours with
-  `git worktree remove` when the session is done. Two worktrees cannot have
-  the same branch checked out.
+- Each runner clones into its own directory, `~/workspace/runner-<n>/`, so
+  your checkout is yours. Never change files, branches or git state under
+  another runner's directory.
+- If you need a second checkout of your own repository, use a worktree
+  next to it, not a new clone:
+  `git worktree add ../<repo>-<your-branch> -b <your-branch> <base>`.
+  Remove it with `git worktree remove` when you are done.
 - Put scratch files in `~/tmp/<your session id>/`, not directly in `~/tmp`.
 
 ## Docker and DDEV
