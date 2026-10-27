@@ -28,7 +28,8 @@ output "startup_script" {
         echo '${base64encode(file("${path.module}/files/claude-sessions"))}' | base64 -d > ~/.local/bin/claude-sessions
         chmod +x ~/.local/bin/claude-sessions
         mkcert -install >/dev/null 2>&1 || true
-        if pgrep -f 'claude self-hosted-runner' >/dev/null || tmux has-session -t claude-runner 2>/dev/null; then
+        # Anchored on the program name: this script's own bash command line contains the phrase.
+        if pgrep -f '^[^ ]*claude self-hosted-runner' >/dev/null || tmux has-session -t claude-runner 2>/dev/null; then
           CLAUDE_RUNNER_MSG="✓ Claude Code self-hosted runner already running (tmux attach -t claude-runner)"
         else
           tmux new-session -d -s claude-runner ~/.local/bin/claude-runner-loop
