@@ -1,8 +1,0 @@
-# Installed by the claude-self-hosted-runner module. The runner deletes
-# ~/.gitconfig and ~/.config/git before every session, so session git
-# settings live here instead.
-[user]
-	name = Claude
-	email = noreply@anthropic.com
-[core]
-	excludesFile = /etc/gitignore-claude-runner

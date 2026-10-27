@@ -72,7 +72,7 @@ chmod +x ~/.coder-startup.sh
 
 ### Running a Claude Code Self-Hosted Runner
 
-Turn on **Run a Claude Code self-hosted runner** when creating or editing a workspace to have it run a Claude Code self-hosted runner. Sessions you start on claude.ai/code in that runner's environment then run in this workspace, with its Docker and DDEV.
+In a `freeform` workspace, turn on **Run a Claude Code self-hosted runner** when creating or editing it to have it run a Claude Code self-hosted runner. Sessions you start on claude.ai/code in that runner's environment then run in this workspace, with its Docker and DDEV.
 
 One-time setup:
 

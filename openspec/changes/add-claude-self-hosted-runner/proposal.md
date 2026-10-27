@@ -4,7 +4,7 @@
 A Coder workspace can serve as a Claude Code self-hosted runner, so sessions started on claude.ai/code run with the workspace's Docker and DDEV. Today that takes a hand-written `~/.coder-startup.sh`, a restart loop in tmux and a hand-maintained `/etc/gitconfig`, and it is easy to get wrong: a startup marker kept in `/tmp` survived a workspace stop/start and silently kept the runner from starting. Several sessions on one runner also share one Docker daemon and one DDEV install, and nothing tells them how to avoid breaking each other's work.
 
 ## What Changes
-- New shared module `modules/claude-self-hosted-runner`, vendored into `drupal-core`, `drupal-contrib` and `freeform` like the other shared modules (`make sync-claude-runner-module`, part of `make sync-shared`).
+- New module `modules/claude-self-hosted-runner`, vendored into `freeform` only (`make sync-claude-runner-module`, part of `make sync-shared`). The Drupal templates set up one project for a person to work on, which is not what a runner workspace needs.
 - Two parameters: "Run a Claude Code self-hosted runner" (switch, default off) and "Claude Code runner: concurrent sessions" (1–4, default 1).
 - When on, and `~/.claude-runner/environment-secret` exists, the startup script starts `claude self-hosted-runner` in a restart loop in tmux session `claude-runner`, with `--use-anthropic-git-proxy` and `--push-outcome-on-release`. The secret never goes through Terraform.
 - Because the runner rewrites `~/.gitconfig` and `~/.config/git` before every session, the session git identity and ignore list are installed in `/etc/gitconfig` on every start.
@@ -15,4 +15,4 @@ A Coder workspace can serve as a Claude Code self-hosted runner, so sessions sta
 
 ## Impact
 - Affected specs: `claude-self-hosted-runner` (new capability)
-- Affected code: `modules/claude-self-hosted-runner/` and its vendored copies, `drupal-core/template.tf`, `drupal-contrib/template.tf`, `freeform/template.tf`, their `tests/validate.tftest.hcl`, `Makefile`, `CLAUDE.md`, `docs/user/using-workspaces.md`
+- Affected code: `modules/claude-self-hosted-runner/` and its vendored copy in `freeform/`, `freeform/template.tf`, `freeform/tests/validate.tftest.hcl`, `Makefile`, `CLAUDE.md`, `docs/user/using-workspaces.md`

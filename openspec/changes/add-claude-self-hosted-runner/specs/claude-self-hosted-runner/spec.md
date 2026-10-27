@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Optional Claude Code Self-Hosted Runner
-The workspace startup script SHALL start a Claude Code self-hosted runner on every workspace start when the user enables it and has saved an environment secret, and SHALL do nothing otherwise.
+The `freeform` workspace startup script SHALL start a Claude Code self-hosted runner on every workspace start when the user enables it and has saved an environment secret, and SHALL do nothing otherwise.
 
 #### Scenario: Enabled with a secret
 - **WHEN** a workspace starts with "Run a Claude Code self-hosted runner" on and `~/.claude-runner/environment-secret` is non-empty

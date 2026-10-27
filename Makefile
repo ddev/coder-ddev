@@ -116,13 +116,11 @@ sync-claude-module: ## Vendor modules/claude-remote-control into each template d
 	@echo "Synced modules/claude-remote-control into: $(TEMPLATES)"
 
 .PHONY: sync-claude-runner-module
-sync-claude-runner-module: ## Vendor modules/claude-self-hosted-runner into each template dir (same reason as sync-claude-module: push only bundles the given --directory)
-	@for t in $(TEMPLATES); do \
-		rm -rf $$t/modules/claude-self-hosted-runner; \
-		mkdir -p $$t/modules; \
-		cp -r modules/claude-self-hosted-runner $$t/modules/claude-self-hosted-runner; \
-	done
-	@echo "Synced modules/claude-self-hosted-runner into: $(TEMPLATES)"
+sync-claude-runner-module: ## Vendor modules/claude-self-hosted-runner into freeform, the only template that offers it (same reason as sync-claude-module: push only bundles the given --directory)
+	@rm -rf freeform/modules/claude-self-hosted-runner
+	@mkdir -p freeform/modules
+	@cp -r modules/claude-self-hosted-runner freeform/modules/claude-self-hosted-runner
+	@echo "Synced modules/claude-self-hosted-runner into: freeform"
 
 .PHONY: sync-vscode-extensions
 sync-vscode-extensions: ## Vendor shared/vscode-extensions.tf into each template dir (same reason as sync-claude-module: push only bundles the given --directory)
