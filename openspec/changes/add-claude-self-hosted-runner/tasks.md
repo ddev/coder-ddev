@@ -6,5 +6,5 @@
 
 ## 2. Validation
 - [x] 2.1 `terraform fmt -check -recursive`, `make validate` and `make test-templates` pass <!-- id: 2.1 -->
-- [ ] 2.2 Manual check on staging: with the switch on and the secret saved, the runner comes up after a workspace restart with no terminal open, and a session lands on it <!-- id: 2.2 -->
-- [ ] 2.3 Manual check on staging: with concurrent sessions set to 2, two sessions run at once and both see the `coder-shared-workspace` skill <!-- id: 2.3 -->
+- [x] 2.2 Manual check on staging: with the switch on and the secret saved, the runner comes up after a workspace restart with no terminal open, and a session lands on it <!-- id: 2.2 -->
+- [x] 2.3 Manual check on staging: with concurrent sessions set to 2, two sessions run at once and both see the `coder-shared-workspace` skill <!-- id: 2.3 -->
