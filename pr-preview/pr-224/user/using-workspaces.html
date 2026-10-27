@@ -109,7 +109,8 @@ tmux new-session -d -s worker 'my-long-running-command'
     <p>In the workspace, save it:</p>
 
     <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">mkdir</span> <span class="nt">-p</span> ~/.claude-runner
-<span class="o">(</span><span class="nb">umask </span>077<span class="p">;</span> <span class="nb">cat</span> <span class="o">&gt;</span> ~/.claude-runner/environment-secret<span class="o">)</span>   <span class="c"># paste, then Ctrl-D</span>
+<span class="nb">cat</span> <span class="o">&gt;</span> ~/.claude-runner/environment-secret   <span class="c"># paste, then Ctrl-D</span>
+<span class="nb">chmod </span>600 ~/.claude-runner/environment-secret
 </code></pre></div>    </div>
   </li>
   <li>Restart the workspace.</li>

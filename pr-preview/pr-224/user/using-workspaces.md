@@ -81,7 +81,8 @@ One-time setup:
 
    ```bash
    mkdir -p ~/.claude-runner
-   (umask 077; cat > ~/.claude-runner/environment-secret)   # paste, then Ctrl-D
+   cat > ~/.claude-runner/environment-secret   # paste, then Ctrl-D
+   chmod 600 ~/.claude-runner/environment-secret
    ```
 
 3. Restart the workspace.
