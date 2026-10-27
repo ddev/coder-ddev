@@ -1,0 +1,15 @@
+source_id,path,kind,role
+S-001,image/Dockerfile,repo file,Base image build; provides UID/GID identity sudo posture daemon binaries hydration staging
+S-002,image/scripts/,repo dir,/home/coder-files staging tree (WELCOME settings gitconfig gitignore_global ddev/commands/host/*)
+S-003,user-defined-web/template.tf,repo file,Terraform HCL: container resource agent script coder_app cleanup
+S-004,user-defined-web/template.tf:startup_script,inline HEREDOC,Agent boot pipeline executed as coder on each start
+S-005,CLAUDE.md,repo file,Authoritative developer/operator prose; source for routing model and conventions
+S-006,openspec/project.md,repo file,Project conventions and constraints (Sysbox requirement diagnostic transparency)
+S-007,.kittify/charter/charter.md,repo file,Project charter; testing standards quality gates risk boundaries
+S-008,scripts/coder-delete-workspace-dir.sh,repo file,Host-side cleanup helper invoked by null_resource on destroy
+S-009,Makefile,repo file,Image build push template push; VERSION propagation
+S-010,drupal-core/template.tf,repo file,Cross-template reference: same runtime + hydration pattern
+S-011,drupal-contrib/template.tf,repo file,Cross-template reference: same runtime + hydration pattern (port 8080)
+S-012,freeform/template.tf,repo file,Deviation from INV-7: keeps ddev-router on 8080 with Host-header dispatch
+S-013,coder-ddev README.md,repo file,Public template descriptions and deployment commands
+S-014,VERSION,repo file,Single image tag source; per-template pinning not supported (D-6)
