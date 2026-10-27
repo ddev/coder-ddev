@@ -1,0 +1,4 @@
+# Installed by the claude-self-hosted-runner module.
+config.coder.yaml
+docker-compose.coder-describe.yaml
+.claude/settings.local.json

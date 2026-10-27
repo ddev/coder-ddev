@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# Keep Claude Code self-hosted runner number $1 running; it exits on its own
+# when --release-idle-session-min leaves it with no sessions.
+# --use-anthropic-git-proxy requires --capacity 1, so concurrent sessions come
+# from several runners, each with its own clones and its own global git config.
+set -u
+n="$1"
+base="${base_dir}/runner-$n"
+mkdir -p "$base"
+export PATH="$HOME/.local/bin:$HOME/.npm-global/bin:/home/linuxbrew/.linuxbrew/bin:$PATH"
+export GIT_CONFIG_GLOBAL="$base/.gitconfig"
+while true; do
+  started=$(date +%s)
+  /home/linuxbrew/.linuxbrew/bin/claude self-hosted-runner \
+    --environment-secret-file "${secret_file}" \
+    --base-dir "$base" \
+    --capacity 1 \
+    --client-label "$CODER_WORKSPACE_NAME-$n" \
+    --use-anthropic-git-proxy \
+    --release-idle-session-min 30 \
+    --kill-session-after-min 480 \
+    --health-port 0 \
+    --log-file "/tmp/claude-runner-$n.log"
+  rc=$?
+  # A runner that fails at once (a revoked secret, no network) would otherwise retry every 5s.
+  delay=5
+  [ $(( $(date +%s) - started )) -lt 60 ] && delay=60
+  echo "$(date): runner $n exited ($rc); restarting in $${delay}s"
+  sleep "$delay"
+done

@@ -70,6 +70,29 @@ chmod +x ~/.coder-startup.sh
 - It runs non-interactively, so `~/.bashrc` is not sourced. `PATH` includes `~/.local/bin`, `~/.npm-global/bin` and Homebrew (`/home/linuxbrew/.linuxbrew/bin`). Export anything else the hook needs inside the script.
 - It runs on every start, so make it safe to run more than once, e.g. check whether a process is already running before starting it.
 
+### Running a Claude Code Self-Hosted Runner
+
+In a `freeform` workspace, turn on **Run a Claude Code self-hosted runner** when creating or editing it to have it run a Claude Code self-hosted runner. Sessions you start on claude.ai/code in that runner's environment then run in this workspace, with its Docker and DDEV.
+
+One-time setup:
+
+1. On claude.ai, create a self-hosted environment and copy its environment secret.
+2. In the workspace, save it:
+
+   ```bash
+   mkdir -p ~/.claude-runner
+   cat > ~/.claude-runner/environment-secret   # paste, then Ctrl-D
+   chmod 600 ~/.claude-runner/environment-secret
+   ```
+
+3. Restart the workspace.
+
+On every start the runners run in the tmux session `claude-runner` (`tmux attach -t claude-runner`), one window per runner, logging to `/tmp/claude-runner-<n>.log`. Runner `<n>` clones session repositories under `~/workspace/runner-<n>`.
+
+- **Use a workspace only for the runner.** The runner deletes and rewrites `~/.gitconfig` and `~/.config/git` before every session, so the template puts the sessions' git identity (`Claude <noreply@anthropic.com>`) and ignore list in `/etc/gitconfig` instead. The option refuses to start the runner when Claude Code remote control is also on.
+- **Finding a session's work.** Run `claude-sessions` in the workspace to list live sessions with their checkout, branch and the number of commits not on any remote.
+- **Concurrent sessions.** "Claude Code runner: concurrent sessions" (1 to 4) sets how many sessions run at once. The template starts one runner per session, because a runner using Anthropic-managed git takes only one session. The sessions share one Docker daemon and one DDEV install, so the template installs the skill `~/.claude/skills/coder-shared-workspace`, which tells sessions how to stay out of each other's way: separate checkouts, a DDEV global directory per session (`DDEV_XDG_CONFIG_HOME`), no `ddev poweroff`, and a lock around test suites that take over Docker. For full isolation, use several workspaces with one session each instead; the same environment secret works in all of them.
+
 ### Ending Your Day
 
 ```bash
