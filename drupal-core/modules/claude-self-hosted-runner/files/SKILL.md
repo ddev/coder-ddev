@@ -49,14 +49,30 @@ every session.
   `ddev clean`, `docker system prune`, `docker volume prune`,
   `docker rm -f $(docker ps -aq)`, or anything that restarts dockerd.
   Stop, restart or delete only projects you started.
-- Do not change the DDEV global configuration (`ddev config global`,
-  `~/.ddev/global_config.yaml`). Put settings in the project's
-  `.ddev/config.*.yaml` instead.
-- Give throwaway projects names no other session will pick, such as
+- Give your session its own DDEV global directory with
+  [`DDEV_XDG_CONFIG_HOME`](https://docs.ddev.com/en/stable/users/usage/architecture/#global-files),
+  seeded from the workspace's, so your project list and global settings
+  are yours:
+
+  ```bash
+  export DDEV_XDG_CONFIG_HOME=~/tmp/<your session id>/config
+  mkdir -p "$DDEV_XDG_CONFIG_HOME/ddev"
+  cp -r ~/.ddev/global_config.yaml ~/.ddev/commands "$DDEV_XDG_CONFIG_HOME/ddev/"
+  ```
+
+  Shell state does not carry over between your commands, so export the
+  variable in every command that runs `ddev`, including test runs. Keep the
+  router settings copied from `~/.ddev` unchanged: the router and
+  `ddev-ssh-agent` containers are shared by every session. Never edit
+  `~/.ddev/global_config.yaml` itself.
+- Project names are still global, because Docker container names are.
+  Give throwaway projects names no other session will pick, such as
   `<purpose>-<first 8 characters of your session id>`, and delete them with
   `ddev delete -Oy <name>` when done. The names registered in the workspace
-  (`$CODER_PROJECT_NAMES`) are the only ones reachable from a browser; check
-  `ddev list` and ask before taking one another session is using.
+  (`$CODER_PROJECT_NAMES`) are the only ones reachable from a browser. Each
+  session's `ddev list` shows only its own projects, so list every running
+  one with `docker ps --format '{{.Label "com.ddev.site-name"}}' | grep . | sort -u`,
+  and ask before taking a name another session is using.
 - Do not set fixed host ports (`host_https_port`, `host_webserver_port`,
   `host_db_port`) in a project. Let DDEV choose, so two projects never
   collide. Pick free ports for any other server you run.

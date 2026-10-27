@@ -9,7 +9,7 @@ A Coder workspace can serve as a Claude Code self-hosted runner, so sessions sta
 - When on, and `~/.claude-runner/environment-secret` exists, the startup script starts `claude self-hosted-runner` in a restart loop in tmux session `claude-runner`, with `--use-anthropic-git-proxy` and `--push-outcome-on-release`. The secret never goes through Terraform.
 - Because the runner rewrites `~/.gitconfig` and `~/.config/git` before every session, the session git identity and ignore list are installed in `/etc/gitconfig` on every start.
 - The runner refuses to start when Claude Code remote control is also on, and says why in the build log and `~/WELCOME.txt`.
-- Installs the skill `~/.claude/skills/coder-shared-workspace`, which the runner copies into every session: worktrees instead of shared checkouts, no workspace-wide Docker/DDEV commands, a `flock` around test suites that power off DDEV, and disk cleanup limited to a session's own files.
+- Installs the skill `~/.claude/skills/coder-shared-workspace`, which the runner copies into every session: worktrees instead of shared checkouts, a DDEV global directory per session via `DDEV_XDG_CONFIG_HOME`, no workspace-wide Docker/DDEV commands, a `flock` around test suites that power off DDEV, and disk cleanup limited to a session's own files.
 - Installs `claude-sessions`, which lists live sessions with their checkout, branch and unpushed commit count.
 - Documented in `docs/user/using-workspaces.md`.
 
