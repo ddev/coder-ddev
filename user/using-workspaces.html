@@ -97,6 +97,33 @@ tmux new-session -d -s worker 'my-long-running-command'
   <li>It runs on every start, so make it safe to run more than once, e.g. check whether a process is already running before starting it.</li>
 </ul>
 
+<h3 id="running-a-claude-code-self-hosted-runner">Running a Claude Code Self-Hosted Runner</h3>
+
+<p>In a <code class="language-plaintext highlighter-rouge">freeform</code> workspace, turn on <strong>Run a Claude Code self-hosted runner</strong> when creating or editing it to have it run a Claude Code self-hosted runner. Sessions you start on claude.ai/code in that runner’s environment then run in this workspace, with its Docker and DDEV.</p>
+
+<p>One-time setup:</p>
+
+<ol>
+  <li>On claude.ai, create a self-hosted environment and copy its environment secret.</li>
+  <li>
+    <p>In the workspace, save it:</p>
+
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">mkdir</span> <span class="nt">-p</span> ~/.claude-runner
+<span class="nb">cat</span> <span class="o">&gt;</span> ~/.claude-runner/environment-secret   <span class="c"># paste, then Ctrl-D</span>
+<span class="nb">chmod </span>600 ~/.claude-runner/environment-secret
+</code></pre></div>    </div>
+  </li>
+  <li>Restart the workspace.</li>
+</ol>
+
+<p>On every start the runners run in the tmux session <code class="language-plaintext highlighter-rouge">claude-runner</code> (<code class="language-plaintext highlighter-rouge">tmux attach -t claude-runner</code>), one window per runner, logging to <code class="language-plaintext highlighter-rouge">/tmp/claude-runner-&lt;n&gt;.log</code>. Runner <code class="language-plaintext highlighter-rouge">&lt;n&gt;</code> clones session repositories under <code class="language-plaintext highlighter-rouge">~/workspace/runner-&lt;n&gt;</code>.</p>
+
+<ul>
+  <li><strong>Use a workspace only for the runner.</strong> The runner deletes and rewrites <code class="language-plaintext highlighter-rouge">~/.gitconfig</code> and <code class="language-plaintext highlighter-rouge">~/.config/git</code> before every session, so the template puts the sessions’ git identity (<code class="language-plaintext highlighter-rouge">Claude &lt;noreply@anthropic.com&gt;</code>) and ignore list in <code class="language-plaintext highlighter-rouge">/etc/gitconfig</code> instead. The option refuses to start the runner when Claude Code remote control is also on.</li>
+  <li><strong>Finding a session’s work.</strong> Run <code class="language-plaintext highlighter-rouge">claude-sessions</code> in the workspace to list live sessions with their checkout, branch and the number of commits not on any remote.</li>
+  <li><strong>Concurrent sessions.</strong> “Claude Code runner: concurrent sessions” (1 to 4) sets how many sessions run at once. The template starts one runner per session, because a runner using Anthropic-managed git takes only one session. The sessions share one Docker daemon and one DDEV install, so the template installs the skill <code class="language-plaintext highlighter-rouge">~/.claude/skills/coder-shared-workspace</code>, which tells sessions how to stay out of each other’s way: separate checkouts, a DDEV global directory per session (<code class="language-plaintext highlighter-rouge">DDEV_XDG_CONFIG_HOME</code>), no <code class="language-plaintext highlighter-rouge">ddev poweroff</code>, and a lock around test suites that take over Docker. For full isolation, use several workspaces with one session each instead; the same environment secret works in all of them.</li>
+</ul>
+
 <h3 id="ending-your-day">Ending Your Day</h3>
 
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 1. Commit your changes</span>
