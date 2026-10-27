@@ -115,6 +115,15 @@ sync-claude-module: ## Vendor modules/claude-remote-control into each template d
 	done
 	@echo "Synced modules/claude-remote-control into: $(TEMPLATES)"
 
+.PHONY: sync-claude-runner-module
+sync-claude-runner-module: ## Vendor modules/claude-self-hosted-runner into each template dir (same reason as sync-claude-module: push only bundles the given --directory)
+	@for t in $(TEMPLATES); do \
+		rm -rf $$t/modules/claude-self-hosted-runner; \
+		mkdir -p $$t/modules; \
+		cp -r modules/claude-self-hosted-runner $$t/modules/claude-self-hosted-runner; \
+	done
+	@echo "Synced modules/claude-self-hosted-runner into: $(TEMPLATES)"
+
 .PHONY: sync-vscode-extensions
 sync-vscode-extensions: ## Vendor shared/vscode-extensions.tf into each template dir (same reason as sync-claude-module: push only bundles the given --directory)
 	@for t in $(TEMPLATES); do \
@@ -146,7 +155,7 @@ sync-ssh-agent-setup: ## Vendor shared/ssh-agent-setup.sh into each template dir
 	@echo "Synced shared/ssh-agent-setup.sh into: $(TEMPLATES)"
 
 .PHONY: sync-shared
-sync-shared: sync-claude-module sync-vscode-extensions sync-docker-daemon-module sync-bashrc-guard sync-ssh-agent-setup ## Vendor all shared Terraform assets (modules + vscode-extensions.tf) into each template dir
+sync-shared: sync-claude-module sync-claude-runner-module sync-vscode-extensions sync-docker-daemon-module sync-bashrc-guard sync-ssh-agent-setup ## Vendor all shared Terraform assets (modules + vscode-extensions.tf) into each template dir
 
 .PHONY: validate
 validate: sync-shared ## Validate all Terraform templates (requires terraform in PATH)

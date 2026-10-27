@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Keep the Claude Code self-hosted runner running; it exits on its own when
+# --release-idle-session-min leaves it with no sessions.
+export PATH="$HOME/.local/bin:$HOME/.npm-global/bin:/home/linuxbrew/.linuxbrew/bin:$PATH"
+while true; do
+  /home/linuxbrew/.linuxbrew/bin/claude self-hosted-runner \
+    --environment-secret-file "${secret_file}" \
+    --base-dir "${base_dir}" \
+    --capacity ${capacity} \
+    --client-label "$CODER_WORKSPACE_NAME" \
+    --use-anthropic-git-proxy \
+    --push-outcome-on-release \
+    --release-idle-session-min 30 \
+    --kill-session-after-min 480 \
+    --health-port 0 \
+    --log-file /tmp/claude-runner.log
+  rc=$?
+  echo "$(date): runner exited ($rc); restarting in 5s"
+  sleep 5
+done

@@ -79,7 +79,7 @@ make test-templates
 
 ## Shared Terraform Assets
 
-Some Terraform config (currently `modules/claude-remote-control`, `modules/docker-daemon`, `shared/vscode-extensions.tf`, `shared/bashrc-symlink-guard.sh` and `shared/ssh-agent-setup.sh`) is shared across all three templates but must exist as a **physical copy inside each template directory** — `coder templates push` and CI's `terraform validate`/`test` only ever operate on a single template directory, so a relative `../modules` or `../shared` reference would not survive the push and would not be visible to CI.
+Some Terraform config (currently `modules/claude-remote-control`, `modules/claude-self-hosted-runner`, `modules/docker-daemon`, `shared/vscode-extensions.tf`, `shared/bashrc-symlink-guard.sh` and `shared/ssh-agent-setup.sh`) is shared across all three templates but must exist as a **physical copy inside each template directory** — `coder templates push` and CI's `terraform validate`/`test` only ever operate on a single template directory, so a relative `../modules` or `../shared` reference would not survive the push and would not be visible to CI.
 
 - **Edit only the canonical source**: `modules/claude-remote-control/` or `shared/vscode-extensions.tf` at the repo root. Never hand-edit the vendored copies (`<template>/modules/claude-remote-control/`, `<template>/vscode-extensions.tf`) — they get overwritten the next time anyone runs the sync.
 - **Always resync through `make`**, never by hand-copying: `make sync-shared` (or `make sync-claude-module` / `make sync-vscode-extensions` individually). `make validate`, `make test-templates`, and every `make push-template-*` / `make push-all-templates` target already depend on `sync-shared`, so day-to-day you rarely need to invoke it directly.

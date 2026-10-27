@@ -1297,6 +1297,8 @@ BASHCOMP
 
     ${module.claude_remote_control.startup_script}
 
+    ${module.claude_self_hosted_runner.startup_script}
+
     # User startup hook: run ~/.coder-startup.sh (persistent home) on every
     # workspace start, e.g. to start services or long-running processes without
     # waiting for someone to open a terminal. It is detached from the agent so a
@@ -1408,6 +1410,11 @@ module "vscode-web" {
 module "claude_remote_control" {
   source   = "./modules/claude-remote-control"
   agent_id = coder_agent.main.id
+}
+
+module "claude_self_hosted_runner" {
+  source                 = "./modules/claude-self-hosted-runner"
+  remote_control_enabled = module.claude_remote_control.enabled
 }
 
 # Drupal Site (HTTP) - appears when DDEV project is running.
