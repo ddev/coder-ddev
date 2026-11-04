@@ -155,6 +155,9 @@ for SPEC in "${TESTS[@]}"; do
       continue
     fi
 
+    # A web request during `drush si` can cache a half-installed container.
+    ddev drush cr 2>&1 | tail -2
+
     log "Enabling $PROJECT..."
     if ! ddev drush en "$PROJECT" -y 2>&1; then
       log "WARNING: could not enable $PROJECT (may need manual enable)"

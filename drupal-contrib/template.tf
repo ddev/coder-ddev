@@ -873,6 +873,10 @@ COMPOSE_EOF
           fi
 
           if [ "$SETUP_FAILED" = "false" ]; then
+            # A healthcheck request during `drush si` can cache a half-installed
+            # container, which breaks the next `drush en`.
+            ddev drush cr >> "$SETUP_LOG" 2>&1 || true
+
             # Enable the module or theme.
             # ddev drush en can exit non-zero even when the module ends up enabled
             # (e.g. a post-install hook in another module throws a fatal), so verify
