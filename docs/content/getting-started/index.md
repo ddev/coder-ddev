@@ -22,7 +22,7 @@ DDEV Coder Workspaces are cloud development environments hosted at [coder.ddev.c
 
 - A web browser. Everything else is optional.
 - A GitHub account that has access. See [Getting access](access.md).
-- Optional: the [Coder CLI](https://coder.com/docs/install/cli) if you want to use SSH, `scp` or desktop editors. See [Editors, SSH and files](../workspaces/editors-and-ssh.md).
+- Optional: the [Coder CLI](../workspaces/coder-cli.md) if you want to use SSH, `scp` or desktop editors.
 
 ## Next steps
 

@@ -4,27 +4,13 @@
 
 Click **VS Code** on the workspace page. It opens in the directory named after the workspace (`~/<workspace>`), with a built-in terminal (**Terminal → New Terminal**). Extensions you install from the Extensions view persist across restarts. The extensions installed by default are chosen with the **VS Code Extensions** setting; see [Creating a workspace](../freeform/create.md#vs-code-extensions).
 
-## Set up the Coder CLI
+## SSH from your computer
 
-Everything else on this page uses the [Coder CLI](https://coder.com/docs/install/cli) on your computer:
-
-```bash
-coder login https://coder.ddev.com
-coder config-ssh --yes
-```
-
-`coder config-ssh` adds an entry to your `~/.ssh/config` for each of your workspaces, named `<workspace>.coder`. Run it again after creating a new workspace.
-
-## SSH
-
-```bash
-coder ssh my-workspace          # or: ssh my-workspace.coder
-coder ssh -A my-workspace       # forward your local SSH agent (see below)
-```
+Install the Coder CLI and run `coder config-ssh` once; then `coder ssh my-workspace` or plain `ssh my-workspace.coder` opens a shell. See [Using the Coder CLI](coder-cli.md) for installation, logging in, and the other commands.
 
 ## Desktop editors
 
-- **VS Code**: install the [Coder extension](https://marketplace.visualstudio.com/items?itemName=coder.coder-remote), or use the Remote - SSH extension and connect to `my-workspace.coder`.
+- **VS Code**: install the [Coder extension](https://marketplace.visualstudio.com/items?itemName=coder.coder-remote) and run `coder open vscode my-workspace`, or use the Remote - SSH extension and connect to `my-workspace.coder`. See [Coder's VS Code docs](https://coder.com/docs/user-guides/workspace-access/vscode).
 - **JetBrains IDEs** (PhpStorm and others): use [JetBrains Toolbox with the Coder plugin](https://coder.com/docs/user-guides/workspace-access/jetbrains), or JetBrains Gateway over SSH to `my-workspace.coder`.
 - **Any SSH-capable editor** works the same way, with `my-workspace.coder` as the host.
 
@@ -48,11 +34,7 @@ For small files, you can also drag them into the VS Code for Web file explorer, 
 
 ## Forwarding ports to your computer
 
-```bash
-coder port-forward my-workspace --tcp 3306:<port>
-```
-
-This makes a port in the workspace available as `localhost` on your computer, for example for a desktop database client. See [Database tools](../freeform/services.md#database-tools).
+`coder port-forward my-workspace --tcp <local>:<workspace>` makes a port in the workspace available on your computer, for example for a desktop database client. See [Using the Coder CLI](coder-cli.md#forward-ports-to-your-computer) and [Database tools](../freeform/services.md#database-tools).
 
 ## Git and SSH keys
 

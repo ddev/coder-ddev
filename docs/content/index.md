@@ -26,7 +26,7 @@
 
     ---
 
-    What persists, VS Code and SSH, Claude Code, and fixing common problems.
+    What persists, the Coder CLI, editors and SSH, Claude Code, and fixing common problems.
 
 </div>
 

@@ -72,13 +72,14 @@ plugins:
         - fonts.gstatic.com/*
   - redirects:
       redirect_maps:
+        'workspaces/guide.md': 'workspaces/lifecycle.md'
   - minify:
       minify_html: true
 
-# Operational drafts for the coder-ddev-com GitHub org; kept with the docs but
-# not part of the published navigation.
-not_in_nav: |
-  self-hosting/coder-ddev-com/*
+# Message templates for the coder-ddev-com GitHub org. They live next to the
+# self-hosting docs for the operators who send them, but aren't published.
+exclude_docs: |
+  self-hosting/coder-ddev-com/
 
 # Validation
 validation:
@@ -141,6 +142,7 @@ markdown_extensions:
 nav:
   - Home:
       - index.md
+      - Start a workspace: https://start.coder.ddev.com/
   - Getting Started:
       - getting-started/index.md
       - getting-started/access.md
@@ -158,10 +160,10 @@ nav:
       - drupal/quickstart.md
   - Working in a Workspace:
       - workspaces/lifecycle.md
+      - workspaces/coder-cli.md
       - workspaces/editors-and-ssh.md
       - workspaces/ai-tools.md
       - workspaces/troubleshooting.md
-      - workspaces/guide.md
   - Reference:
       - reference/comparison-to-local.md
       - reference/coder-url-patterns.md

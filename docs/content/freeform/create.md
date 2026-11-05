@@ -42,7 +42,7 @@ Off by default. Turn it on to have this workspace run sessions you start on clau
 
 ## From the command line
 
-With the [Coder CLI](https://coder.com/docs/install/cli) logged in to coder.ddev.com:
+With the [Coder CLI](../workspaces/coder-cli.md) logged in to coder.ddev.com:
 
 ```bash
 coder create --template freeform my-workspace
