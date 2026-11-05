@@ -142,7 +142,6 @@ markdown_extensions:
 nav:
   - Home:
       - index.md
-      - Start a workspace: https://start.coder.ddev.com/
   - Getting Started:
       - getting-started/index.md
       - getting-started/access.md
@@ -173,3 +172,4 @@ nav:
       - self-hosting/operations-guide.md
       - self-hosting/user-management.md
       - self-hosting/troubleshooting.md
+  - Start a workspace: https://start.coder.ddev.com/

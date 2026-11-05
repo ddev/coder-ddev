@@ -28,7 +28,7 @@ Paste this into the terminal:
 
 ```bash
 mkdir -p ~/hello/public && cd ~/hello
-echo '<?php echo "Hello from DDEV on coder.ddev.com"; phpinfo();' > public/index.php
+echo '<?php echo "Hello from coder.ddev.com"; phpinfo();' > public/index.php
 ddev config --project-name=hello --project-type=php --docroot=public
 ddev coder-setup
 ddev start
