@@ -17,6 +17,7 @@ Before deploying this template, ensure the following are in place:
 ### Docker Host Infrastructure
 
 - **Sysbox runtime installed** on all Coder agent nodes:
+
   ```bash
   # Install prerequisites
   sudo apt-get install -y jq
@@ -32,6 +33,7 @@ Before deploying this template, ensure the following are in place:
   sudo systemctl status sysbox -n20
   sysbox-runc --version
   ```
+
   **Note:** Docker must be installed (not via snap) before installing Sysbox. The installer will restart Docker. See [Sysbox install docs](https://github.com/nestybox/sysbox/blob/master/docs/user-guide/install-package.md) for details.
 
 - Docker configured to use Sysbox runtime for appropriate containers
@@ -194,6 +196,7 @@ make build-and-push-no-cache && make push-template-freeform
 ### Creating Workspaces
 
 **Via Web UI:**
+
 1. Log into Coder dashboard
 2. Click "Create Workspace"
 3. Select "freeform" template
@@ -202,6 +205,7 @@ make build-and-push-no-cache && make push-template-freeform
 6. Click "Create Workspace"
 
 **Via CLI:**
+
 ```bash
 # Create with defaults
 coder create --template freeform my-workspace --yes
@@ -253,6 +257,7 @@ coder update my-workspace
 ```
 
 **Notes:**
+
 - Updates template configuration but NOT the Docker image
 - To update Docker image, workspace must be rebuilt (delete and recreate)
 - Updating preserves `/home/coder` volume
@@ -347,6 +352,7 @@ coder templates push --directory freeform freeform --yes
 ### Workspace Data Backup
 
 Each workspace stores persistent data in:
+
 - **Home directory**: `/coder-workspaces/<owner>-<workspace>` on host
 - **Docker volume**: Named volume `coder-<owner>-<workspace>-dind-cache`
 
@@ -528,6 +534,7 @@ git log --oneline freeform/template.tf
 ### Monitoring
 
 **Check workspace health:**
+
 ```bash
 # View workspace logs
 coder ssh my-workspace -- journalctl -u coder-agent -f
@@ -541,6 +548,7 @@ coder ssh my-workspace -- ddev list
 ```
 
 **Resource usage:**
+
 ```bash
 # Check workspace container resources
 docker stats coder-<workspace-id>
@@ -575,11 +583,13 @@ coder ssh my-workspace -- systemctl status docker
 ### Sysbox Runtime
 
 Sysbox provides **secure nested containers** without privileged mode:
+
 - No `--privileged` flag required
 - Isolated Docker daemon per workspace
 - AppArmor and seccomp profiles configured
 
 **Security profiles in template.tf:**
+
 ```hcl
 security_opt = ["apparmor:unconfined", "seccomp:unconfined"]
 ```
@@ -636,7 +646,7 @@ Monitor resource usage and adjust template defaults accordingly.
 ### Documentation
 
 - Keep `AGENTS.md` updated for AI-assisted development
-- Update user docs in `/docs/user/` when template changes
+- Update the user docs in `docs/content/` when a template changes
 - Document breaking changes in git tags and release notes
 
 ## Additional Resources

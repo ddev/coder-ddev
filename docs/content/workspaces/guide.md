@@ -1,6 +1,9 @@
-# Using DDEV Coder Workspaces
+# Detailed Workspace Guide
 
-This guide covers daily workflows, tips, and best practices for working with DDEV in Coder workspaces.
+This guide covers daily workflows, tips, and best practices for working with DDEV in Coder workspaces in more depth than the other pages in this section.
+
+!!! note "Being reorganized"
+    Parts of this guide are being moved into the shorter pages in this section: [Workspace lifecycle](lifecycle.md), [Editors, SSH and files](editors-and-ssh.md), [Claude Code](ai-tools.md) and [Troubleshooting](troubleshooting.md). Where they disagree, those pages are current.
 
 ## Table of Contents
 
@@ -21,15 +24,18 @@ This guide covers daily workflows, tips, and best practices for working with DDE
 Your workspace has two types of storage:
 
 **Persistent (survives stop/restart):**
+
 - `/home/coder` directory (all your files)
 - Docker volumes (DDEV databases, images, containers)
 
 **Non-persistent (reset on restart):**
+
 - Running processes
 - Temporary files in `/tmp`
 - System packages installed with `apt-get` (unless in Docker image)
 
 **What this means:**
+
 - Your code, databases, and DDEV projects are safe when stopping workspace
 - You need to restart DDEV projects after workspace restart
 - System-level changes (installed packages) are lost unless in Docker image
@@ -140,6 +146,7 @@ for ws in my-first-workspace my-second-workspace; do coder stop "$ws"; done
 ```
 
 **Use cases for multiple workspaces:**
+
 - Different projects with different requirements
 - Testing configurations without affecting main workspace
 - Separate staging and development environments
@@ -150,11 +157,13 @@ for ws in my-first-workspace my-second-workspace; do coder stop "$ws"; done
 ### Accessing VS Code
 
 **From Coder dashboard:**
+
 1. Find your workspace
 2. Click **VS Code** under "Apps"
 3. VS Code opens in new tab
 
 **Direct URL** (bookmark this):
+
 ```
 https://coder.example.com/@me/my-workspace/apps/code
 ```
@@ -180,6 +189,7 @@ All workspaces come with these extensions automatically installed at workspace s
 Extensions are installed from the **[Open VSX Registry](https://open-vsx.org/)** — the open-source alternative to the Microsoft Marketplace used by VS Code Server and other non-Microsoft VS Code deployments.
 
 **To install an extension manually:**
+
 1. Open Extensions panel (`Ctrl+Shift+X`)
 2. Search for the extension by name
 3. Click Install
@@ -190,7 +200,7 @@ If an extension you need is missing, check if it exists on [open-vsx.org](https:
 
 ### Adding Extensions to All Workspaces
 
-Admins can pre-install additional extensions for all users by adding extension IDs to the `extensions` list in the template's `vscode-web` module. See the [server setup guide](../admin/server-setup.md) for details.
+Admins can pre-install additional extensions for all users by adding extension IDs to the `extensions` list in the template's `vscode-web` module. See the [server setup guide](../self-hosting/server-setup.md) for details.
 
 ### Future IDE Possibilities
 
@@ -203,15 +213,18 @@ The current setup uses **VS Code for Web** (browser-based VS Code Server). Other
 ### Terminal in VS Code
 
 **Open terminal:**
+
 - Menu: Terminal → New Terminal
 - Keyboard: Ctrl+` (backtick)
 
 **Multiple terminals:**
+
 - Click `+` to add terminal
 - Split terminal with split button
 - Switch between terminals with dropdown
 
 **Terminal tips:**
+
 ```bash
 # Terminal opens in /home/coder by default
 # Navigate to project
@@ -229,15 +242,18 @@ ddev npm run dev
 ### File Management
 
 **Opening projects:**
+
 1. File → Open Folder
 2. Navigate to `~/projects/my-site`
 3. Click **OK**
 
 **Drag and drop:**
+
 - Drag files from your computer into VS Code to upload
 - Works for single files and folders (up to reasonable size)
 
 **File search:**
+
 - **Ctrl+P** (Cmd+P): Quick file open
 - **Ctrl+Shift+F** (Cmd+Shift+F): Search in files
 - **Ctrl+Shift+E** (Cmd+Shift+E): File explorer
@@ -245,6 +261,7 @@ ddev npm run dev
 ### Git Integration
 
 **Built-in Git features:**
+
 - **Source Control** panel (Ctrl+Shift+G)
 - Stage changes (click `+` next to file)
 - Commit (type message, click ✓)
@@ -252,6 +269,7 @@ ddev npm run dev
 - View diff (click modified file)
 
 **GitLens extension features:**
+
 - Blame annotations (who changed each line)
 - Commit history
 - Repository explorer
@@ -271,12 +289,14 @@ ddev xdebug off  # Disable when done (improves performance)
 ```
 
 Then in VS Code:
+
 1. Add a breakpoint (click left of line number — should appear solid red)
 2. Press **F5** → select "Listen for Xdebug"
 3. Refresh your browser to trigger the breakpoint
 4. The bottom bar turns orange when the debug session is active
 
 **Node.js:**
+
 ```json
 // .vscode/launch.json
 {
@@ -294,15 +314,19 @@ Press **F5** to start debugging.
 Beyond the pre-installed set, these are useful additions for specific project types (search Open VSX by name):
 
 **Drupal:**
+
 - Drupal Smart Snippets
 
 **WordPress:**
+
 - WordPress Snippets
 
 **Laravel:**
+
 - Laravel Blade Snippets
 
 **Node.js:**
+
 - npm Intellisense
 - ES7+ React/Redux/React-Native snippets
 
@@ -326,6 +350,7 @@ Beyond the pre-installed set, these are useful additions for specific project ty
 DDEV supports 20+ project types. Common examples:
 
 **WordPress:**
+
 ```bash
 mkdir ~/projects/my-wordpress
 cd ~/projects/my-wordpress
@@ -335,6 +360,7 @@ ddev composer create roots/bedrock
 ```
 
 **Drupal:**
+
 ```bash
 mkdir ~/projects/my-drupal
 cd ~/projects/my-drupal
@@ -344,6 +370,7 @@ ddev drush site:install --account-name=admin --account-pass=admin -y
 ```
 
 **Laravel:**
+
 ```bash
 mkdir ~/projects/my-laravel
 cd ~/projects/my-laravel
@@ -353,6 +380,7 @@ ddev exec php artisan key:generate
 ```
 
 **Generic PHP:**
+
 ```bash
 mkdir ~/projects/my-php-site
 cd ~/projects/my-php-site
@@ -363,6 +391,7 @@ ddev start
 ```
 
 **Node.js:**
+
 ```bash
 mkdir ~/projects/my-node-app
 cd ~/projects/my-node-app
@@ -377,6 +406,7 @@ ddev exec node server.js
 ### Database Management
 
 **Import database:**
+
 ```bash
 # From SQL file
 ddev import-db --file=dump.sql
@@ -389,6 +419,7 @@ ddev import-db --url=https://example.com/dump.sql.gz
 ```
 
 **Export database:**
+
 ```bash
 # Export to file
 ddev export-db --file=dump.sql.gz
@@ -398,6 +429,7 @@ ddev export-db > dump.sql
 ```
 
 **Direct MySQL access:**
+
 ```bash
 # MySQL CLI
 ddev mysql
@@ -410,6 +442,7 @@ ddev mysql -e "SELECT * FROM users LIMIT 10;"
 ```
 
 **Database GUI** (via browser):
+
 ```bash
 # phpMyAdmin (if configured in .ddev/config.yaml)
 ddev launch -p
@@ -422,6 +455,7 @@ coder port-forward my-workspace --tcp 3306:3306
 ### Running Commands
 
 **Execute commands in web container:**
+
 ```bash
 # Generic command
 ddev exec <command>
@@ -436,6 +470,7 @@ ddev exec sudo <command>
 ```
 
 **SSH into web container:**
+
 ```bash
 ddev ssh
 
@@ -447,6 +482,7 @@ exit
 ```
 
 **Composer commands:**
+
 ```bash
 ddev composer install
 ddev composer require vendor/package
@@ -455,6 +491,7 @@ ddev composer dump-autoload
 ```
 
 **npm/yarn commands:**
+
 ```bash
 ddev npm install
 ddev npm run dev
@@ -466,6 +503,7 @@ ddev yarn build
 ### Custom Commands
 
 **Create custom DDEV commands:**
+
 ```bash
 # Create .ddev/commands/web/ directory
 mkdir -p .ddev/commands/web
@@ -488,6 +526,7 @@ ddev mycommand
 ### Multiple Projects
 
 **Running multiple DDEV projects:**
+
 ```bash
 # Start all projects
 cd ~/projects/project1 && ddev start
@@ -510,6 +549,7 @@ ddev poweroff
 
 **Port conflicts:**
 If you run multiple projects simultaneously, they'll use different ports automatically. Check with:
+
 ```bash
 ddev describe
 # Shows URLs and ports for each project
@@ -539,6 +579,7 @@ git config --global alias.ci commit
 **Your SSH key is managed by Coder** and automatically available in workspaces.
 
 **Get your Coder public key:**
+
 ```bash
 # Inside workspace
 coder publickey
@@ -547,11 +588,13 @@ coder publickey
 ```
 
 **Add key to your Git host:**
-1. **GitHub**: https://github.com/settings/keys → New SSH key
-2. **GitLab**: https://gitlab.com/-/profile/keys → Add key
-3. **Bitbucket**: https://bitbucket.org/account/settings/ssh-keys/ → Add key
+
+1. **GitHub**: <https://github.com/settings/keys> → New SSH key
+2. **GitLab**: <https://gitlab.com/-/profile/keys> → Add key
+3. **Bitbucket**: <https://bitbucket.org/account/settings/ssh-keys/> → Add key
 
 **Test SSH:**
+
 ```bash
 # Test GitHub
 ssh -T git@github.com
@@ -589,6 +632,7 @@ Notes:
 ### Common Workflows
 
 **Clone and start working:**
+
 ```bash
 cd ~/projects
 git clone git@github.com:username/repo.git
@@ -598,6 +642,7 @@ ddev start
 ```
 
 **Daily workflow:**
+
 ```bash
 # Pull latest changes
 git pull
@@ -622,6 +667,7 @@ git push origin feature/my-feature
 ```
 
 **Stash changes:**
+
 ```bash
 # Stash uncommitted changes
 git stash
@@ -634,6 +680,7 @@ git stash pop
 ```
 
 **Merge conflicts:**
+
 ```bash
 # If pull creates conflicts
 git pull
@@ -678,11 +725,13 @@ In Coder, you **don't** access services via direct URLs. Instead:
 3. You access via Coder's secure URL
 
 **Traditional DDEV:**
+
 ```
 https://my-site.ddev.site  ← Doesn't work in Coder
 ```
 
 **Coder DDEV:**
+
 ```
 https://ddev-web--workspace-name--owner.coder.example.com/  ← Use DDEV Web app URL
 ```
@@ -690,6 +739,7 @@ https://ddev-web--workspace-name--owner.coder.example.com/  ← Use DDEV Web app
 ### Accessing DDEV Projects
 
 **Via Coder UI (Recommended):**
+
 1. Go to workspace in Coder dashboard
 2. Under **Apps**, click **DDEV Web**
 3. Your DDEV project loads in a new tab
@@ -697,6 +747,7 @@ https://ddev-web--workspace-name--owner.coder.example.com/  ← Use DDEV Web app
 The URL follows the pattern: `https://ddev-web--workspace-name--owner.domain/`
 
 **Common DDEV ports:**
+
 - **80**: HTTP web server
 - **443**: HTTPS web server
 - **8025**: Mailpit web UI (email testing)
@@ -737,18 +788,20 @@ coder port-forward my-workspace --tcp 3000:3000
 You can share a running workspace with another user for pair programming or review. The recipient gets a live view of your workspace in their browser — same URL, same running site.
 
 **Via the web UI:**
+
 1. Open your workspace in the Coder dashboard
 2. Click **Share** in the top-right corner
 3. Enter the Coder username to share with and set the permission level
 4. Send them the workspace URL
 
 **Via the CLI:**
+
 ```bash
-# Share with another user (specify role: view or admin)
+# Share with another user (specify role: use or admin)
 coder sharing add <owner>/<workspace> --user <username>:<role>
 
 # Example
-coder sharing add rfay/issue-3453474 --user stasadev:view
+coder sharing add rfay/issue-3453474 --user stasadev:use
 
 # List current shares
 coder sharing status rfay/issue-3453474
@@ -768,12 +821,14 @@ Admins can access any workspace on the server — useful for debugging or suppor
 You can share a specific port (e.g., a site you're working on) without sharing the full workspace:
 
 **Via the web UI:**
+
 1. Open your workspace
 2. Click **Open ports** (top right of the agent section)
 3. Click the share icon next to the port you want to expose
 4. Set visibility: **Owner** (private), **Authenticated** (any logged-in user), or **Public** (anyone with the URL)
 
 **Via the CLI** (forward a port to your local machine):
+
 ```bash
 coder port-forward <workspace> --tcp 8080:8080
 ```
@@ -785,6 +840,7 @@ Port visibility (public/authenticated/owner) is managed via the Coder web UI das
 ### Importing Existing Projects
 
 **From Git repository:**
+
 ```bash
 cd ~/projects
 git clone git@github.com:username/existing-project.git
@@ -796,6 +852,7 @@ ddev import-db --file=backup.sql.gz
 ```
 
 **From local machine:**
+
 ```bash
 # Option 1: Via VS Code drag-and-drop
 # Open VS Code, drag project folder into file explorer
@@ -826,6 +883,7 @@ ddev snapshot --cleanup
 ```
 
 **Use case:** Before risky database changes:
+
 ```bash
 ddev snapshot
 # Try risky migration
@@ -837,6 +895,7 @@ ddev snapshot restore
 ### File Sync and Backup
 
 **Download files from workspace** (requires `coder config-ssh`):
+
 ```bash
 # Via SCP
 scp -r my-workspace.coder:~/projects/my-site ./local-backup/
@@ -846,6 +905,7 @@ scp -r my-workspace.coder:~/projects/my-site ./local-backup/
 ```
 
 **Upload files to workspace** (requires `coder config-ssh`):
+
 ```bash
 # Via SCP
 scp -r ./local-files my-workspace.coder:~/projects/my-site/
@@ -854,6 +914,7 @@ scp -r ./local-files my-workspace.coder:~/projects/my-site/
 ```
 
 **Backup entire project:**
+
 ```bash
 # Inside workspace
 cd ~/projects
@@ -867,6 +928,7 @@ scp my-workspace.coder:~/projects/my-site-backup.tar.gz ./
 ### Package Management
 
 **Composer (PHP):**
+
 ```bash
 ddev composer install          # Install dependencies
 ddev composer require pkg/name # Add package
@@ -875,6 +937,7 @@ ddev composer dump-autoload    # Rebuild autoloader
 ```
 
 **npm (Node.js):**
+
 ```bash
 ddev npm install           # Install dependencies
 ddev npm install package   # Add package
@@ -883,6 +946,7 @@ ddev npm run <script>      # Run package.json script
 ```
 
 **System packages** (not persistent):
+
 ```bash
 # Install system tool (temporary)
 sudo apt-get update
@@ -894,6 +958,7 @@ sudo apt-get install <package>
 ### Logs and Debugging
 
 **DDEV logs:**
+
 ```bash
 # All containers
 ddev logs
@@ -907,6 +972,7 @@ ddev logs -f
 ```
 
 **Docker logs:**
+
 ```bash
 # List containers
 docker ps
@@ -919,6 +985,7 @@ docker logs -f <container-id>
 ```
 
 **System logs:**
+
 ```bash
 # Coder agent logs
 journalctl -u coder-agent -f
@@ -931,6 +998,7 @@ cat /tmp/dockerd.log
 ```
 
 **Debug DDEV:**
+
 ```bash
 # Verbose output
 ddev start --debug
@@ -950,6 +1018,7 @@ ddev version
 ### Aliases and Shortcuts
 
 Add to `~/.bashrc`:
+
 ```bash
 # DDEV aliases
 alias dl='ddev list'
@@ -975,6 +1044,7 @@ source ~/.bashrc
 ### VS Code Workspace Settings
 
 **Per-project settings** (`.vscode/settings.json`):
+
 ```json
 {
   "php.validate.executablePath": "/usr/bin/php",
@@ -992,6 +1062,7 @@ Commit this file to Git for team consistency.
 ### Performance Shortcuts
 
 **Skip DDEV router** (for simple projects):
+
 ```yaml
 # .ddev/config.yaml
 router_disabled: true
@@ -1000,12 +1071,14 @@ router_disabled: true
 ```
 
 **Disable unnecessary services:**
+
 ```yaml
 # .ddev/config.yaml
 omit_containers: ["ddev-ssh-agent"]
 ```
 
 **Use shallow Git clones:**
+
 ```bash
 git clone --depth 1 git@github.com:user/repo.git
 ```
@@ -1013,6 +1086,7 @@ git clone --depth 1 git@github.com:user/repo.git
 ### Multi-tab Workflows
 
 **Typical setup:**
+
 1. **Tab 1**: VS Code (editing)
 2. **Tab 2**: Coder dashboard (port forwarding)
 3. **Tab 3**: DDEV project (browser)
@@ -1023,6 +1097,7 @@ Use browser bookmarks for quick access.
 ### Keyboard-driven Development
 
 **Fast workflow:**
+
 ```bash
 # Terminal-only workflow (no clicking)
 coder ssh my-workspace
@@ -1039,6 +1114,7 @@ ddev describe  # Get ports, open in browser
 ### Workspace Resources
 
 **Check current resources:**
+
 ```bash
 # CPU cores
 nproc
@@ -1051,6 +1127,7 @@ df -h
 ```
 
 **If workspace is slow, increase resources:**
+
 ```bash
 # Stop workspace
 coder stop my-workspace
@@ -1070,17 +1147,20 @@ git clone git@github.com:user/repo.git
 ### DDEV Performance
 
 **Disable Xdebug** (when not debugging):
+
 ```bash
 ddev xdebug off
 ```
 
 **Use NFS** (if file operations are slow):
+
 ```yaml
 # .ddev/config.yaml
 nfs_mount_enabled: true
 ```
 
 **Reduce container memory:**
+
 ```yaml
 # .ddev/config.yaml
 resources:
@@ -1104,11 +1184,13 @@ docker system df
 ### Git Performance
 
 **Shallow clones** (for large repos):
+
 ```bash
 git clone --depth 1 --single-branch git@github.com:user/repo.git
 ```
 
 **Sparse checkout** (for monorepos):
+
 ```bash
 git clone --filter=blob:none --sparse git@github.com:user/repo.git
 cd repo
@@ -1119,8 +1201,8 @@ git sparse-checkout set path/to/needed/directory
 
 ### Documentation
 
-- [Getting Started Guide](./getting-started.md) - First-time setup
-- [Troubleshooting Guide](../admin/troubleshooting.md) - Debugging
+- [Getting Started Guide](../getting-started/first-workspace.md) - First-time setup
+- [Troubleshooting Guide](troubleshooting.md) - Debugging
 - [DDEV Documentation](https://docs.ddev.com/) - DDEV reference
 - [Coder Documentation](https://coder.com/docs) - Coder platform docs
 
@@ -1143,4 +1225,4 @@ git sparse-checkout set path/to/needed/directory
 
 ---
 
-**Happy coding!** For more help, see [Getting Started](./getting-started.md) or [Troubleshooting Guide](../admin/troubleshooting.md).
+**Happy coding!** For more help, see [Getting Started](../getting-started/first-workspace.md) or [Troubleshooting Guide](troubleshooting.md).

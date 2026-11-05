@@ -1,0 +1,30 @@
+dirs:
+  - docs/content
+# Message templates for the coder-ddev-com GitHub org; they contain
+# [PLACEHOLDER] URLs that operators fill in before sending
+excludedDirs:
+  - docs/content/self-hosting/coder-ddev-com
+ignorePatterns:
+  # Internal anchors are already checked by `zensical build --strict`
+  - pattern: ".md#"
+  # Behind GitHub sign-in or org membership, so linkspector can't load them
+  - pattern: "^https://coder.ddev.com"
+  - pattern: "^https://staging-coder.ddev.com"
+  - pattern: "^https://github.com/orgs/"
+  - pattern: "^https://github.com/settings/"
+  - pattern: "^https://gitlab.com/-/"
+  - pattern: "^https://www.drupal.org/user"
+  - pattern: "^https://claude.ai"
+  # Example hostnames used in docs
+  - pattern: "coder.example.com"
+  - pattern: "localhost"
+  - pattern: "127.0.0.1"
+  # Private to DDEV maintainers
+  - pattern: "^https://github.com/ddev/maintainer-info"
+  - pattern: "^https://monitor.ddev.com"
+  # Rate-limits automated requests
+  - pattern: "^https://robot.hetzner.com"
+aliveStatusCodes:
+  - 200
+  - 206
+  - 301

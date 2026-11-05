@@ -14,26 +14,25 @@ Go to **[coder.ddev.com](https://coder.ddev.com)** and sign in with GitHub. You 
 
 Pick one of the following two guided forms to either load a clean Drupal install, or work on an issue or contrib project.
 
-<div class="cds-tile-grid cds-tile-grid--2">
-  <article class="cds-tile cds-tile--featured">
-    <div class="cds-tile__eyebrow">Recommended</div>
-    <h2 class="cds-tile__title">Guided Drupal Issue picker</h2>
-    <p class="cds-tile__desc">Get started from an issue fork or contrib project using <a href="https://github.com/amateescu/ddev-drupal-contrib"><code>ddev-drupal-contrib</code></a> (or <a href="https://github.com/amateescu/ddev-drupal-dev"><code>ddev-drupal-dev</code></a> for core issues).</p>
-    <div class="cds-tile__actions">
-      <a class="cds-btn cds-btn--primary" href="/drupal-issue">Drupal issue picker</a>
-    </div>
-  </article>
+<div class="grid cards" markdown>
 
-  <article class="cds-tile">
-    <h2 class="cds-tile__title">Vanilla Drupal Core</h2>
-    <p class="cds-tile__desc">Launch into Drupal core on a mainline 10.x, 11.x, or 12.x branch (no contrib modules or issue fork) using <a href="https://github.com/amateescu/ddev-drupal-dev"><code>ddev-drupal-dev</code> </a>conventional project structure.</p>
-    <div class="cds-tile__actions">
-      <a class="cds-btn cds-btn--secondary" href="/drupal-core">Drupal core picker</a>
-    </div>
-  </article>
+- **Guided Drupal Issue picker** (recommended)
+
+    ---
+
+    Get started from an issue fork or contrib project using [`ddev-drupal-contrib`](https://github.com/ddev/ddev-drupal-contrib) (or [`ddev-drupal-dev`](https://github.com/amateescu/ddev-drupal-dev) for core issues).
+
+    [Drupal issue picker](https://start.coder.ddev.com/drupal-issue){ .md-button .md-button--primary }
+
+- **Vanilla Drupal Core**
+
+    ---
+
+    Launch into Drupal core on a mainline 10.x, 11.x, or 12.x branch (no contrib modules or issue fork) using the [`ddev-drupal-dev`](https://github.com/amateescu/ddev-drupal-dev) conventional project structure.
+
+    [Drupal core picker](https://start.coder.ddev.com/drupal-core){ .md-button }
+
 </div>
-
-<br>
 
 On the form, select the appropriate Drupal version and install profile, then launch your workspace in Coder.
 
@@ -54,7 +53,6 @@ Admin credentials: `admin` / `admin`  (<em>Please modify if site is shared publi
 ---
 
 ## Code layout
-
 
 ### Drupal core development
 
@@ -115,7 +113,7 @@ ddev ssh
 
 ## Working on a Drupal issue
 
-On the [Guided Drupal Issue Picker](/drupal-issue), paste a drupal.org issue URL, issue number, or project URL — it auto-detects whether the issue is for Drupal core or a contrib module/theme, fetches the available branches, and opens a pre-configured workspace with the issue branch already checked out. Entering a project URL (e.g. `drupal.org/project/token`) or bare machine name launches a plain contrib dev workspace without a specific issue.
+On the [Guided Drupal Issue Picker](https://start.coder.ddev.com/drupal-issue), paste a drupal.org issue URL, issue number, or project URL — it auto-detects whether the issue is for Drupal core or a contrib module/theme, fetches the available branches, and opens a pre-configured workspace with the issue branch already checked out. Entering a project URL (e.g. `drupal.org/project/token`) or bare machine name launches a plain contrib dev workspace without a specific issue.
 
 When working on an issue, the workspace surfaces issue info in several places:
 
@@ -181,4 +179,4 @@ tail -50 /tmp/drupal-setup.log
 ddev describe
 ```
 
-See also: [full getting-started guide](getting-started.md) · [DDEV docs](https://docs.ddev.com/) · [Drupal core contribution guide](https://www.drupal.org/contribute/development) · [ddev-drupal-dev add-on](https://github.com/amateescu/ddev-drupal-dev)
+See also: [full getting-started guide](../getting-started/first-workspace.md) · [DDEV docs](https://docs.ddev.com/) · [Drupal core contribution guide](https://www.drupal.org/contribute/development) · [ddev-drupal-dev add-on](https://github.com/amateescu/ddev-drupal-dev)

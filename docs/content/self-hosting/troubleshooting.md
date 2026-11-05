@@ -21,6 +21,7 @@ This guide covers common issues with the DDEV Coder template and their solutions
 **Symptom:** `coder templates push` fails with validation error
 
 **Check:**
+
 ```bash
 # Validate Terraform syntax
 cd freeform
@@ -32,12 +33,14 @@ terraform fmt -check
 ```
 
 **Common causes:**
+
 - Invalid HCL syntax in `template.tf`
 - Missing required variables
 - Invalid Docker image reference
 - Registry authentication issues
 
 **Solution:**
+
 ```bash
 # Fix syntax errors
 terraform fmt freeform/template.tf
@@ -56,6 +59,7 @@ coder templates push --directory freeform freeform --yes --verbose
 **Symptom:** Users don't see template in Coder UI
 
 **Check:**
+
 ```bash
 # List templates
 coder templates list
@@ -68,6 +72,7 @@ coder users show <username> --json | grep organization
 ```
 
 **Solution:**
+
 - Ensure template is deployed to user's organization
 - Verify user has "Member" role or higher
 - Check template access restrictions (Enterprise only)
@@ -77,6 +82,7 @@ coder users show <username> --json | grep organization
 **Symptom:** Workspace creation fails with "image pull error"
 
 **Check:**
+
 ```bash
 # Test image pull locally
 docker pull ddev/coder-ddev:v0.1
@@ -89,6 +95,7 @@ grep workspace_image_registry freeform/template.tf
 ```
 
 **Solution:**
+
 ```bash
 # For private registries, configure template variables:
 coder create --template freeform my-workspace \
@@ -106,6 +113,7 @@ coder create --template freeform my-workspace \
 **Symptom:** Workspace creation hangs, never reaches "Running"
 
 **Check:**
+
 ```bash
 # View workspace logs
 coder logs my-workspace
@@ -118,12 +126,14 @@ coder ssh my-workspace -- journalctl -u coder-agent -f
 ```
 
 **Common causes:**
+
 1. **Startup script failure** - Check Coder agent logs: `coder logs my-workspace`
 2. **Docker daemon not starting** - Check `/tmp/dockerd.log`
 3. **Sysbox runtime missing** - Verify host has Sysbox installed
 4. **Resource exhaustion** - Check host has available CPU/RAM
 
 **Solution:**
+
 ```bash
 # Check startup logs (output goes to Coder agent logs)
 coder logs my-workspace
@@ -147,11 +157,14 @@ df -h /coder-workspaces/
 
 **Common issues:**
 
-**Issue 1: chown fails**
+#### Issue 1: chown fails
+
 ```bash
 # Error: chown: cannot access '/home/coder': Permission denied
 ```
+
 **Solution:** Check volume mount in `template.tf`:
+
 ```hcl
 volume {
   container_path = "/home/coder"
@@ -159,21 +172,27 @@ volume {
 }
 ```
 
-**Issue 2: Docker daemon won't start**
+## Issue 2: Docker daemon won't start
+
 ```bash
 # Error: failed to start dockerd
 ```
+
 **Solution:** Check Sysbox runtime and security options:
+
 ```hcl
 runtime = "sysbox-runc"
 security_opt = ["apparmor:unconfined", "seccomp:unconfined"]
 ```
 
-**Issue 3: DDEV not found**
+## Issue 3: DDEV not found
+
 ```bash
 # Error: ddev: command not found
 ```
+
 **Solution:** Rebuild Docker image with DDEV installed:
+
 ```bash
 cd image
 docker build --no-cache -t ddev/coder-ddev:v0.1 .
@@ -185,6 +204,7 @@ docker push ddev/coder-ddev:v0.1
 **Symptom:** Previously working workspace fails to restart
 
 **Check:**
+
 ```bash
 # Check workspace status
 coder show my-workspace
@@ -197,6 +217,7 @@ docker ps -a | grep coder
 ```
 
 **Solution:**
+
 ```bash
 # Delete and recreate workspace
 coder delete my-workspace --yes
@@ -213,6 +234,7 @@ docker restart coder-<workspace-id>
 **Symptom:** `docker ps` fails inside workspace with "Cannot connect to Docker daemon"
 
 **Check:**
+
 ```bash
 # Inside workspace
 coder ssh my-workspace
@@ -232,7 +254,8 @@ systemctl status docker
 
 **Common causes:**
 
-**Cause 1: Sysbox not installed on host**
+## Cause 1: Sysbox not installed on host
+
 ```bash
 # On Coder host
 sysbox-runc --version
@@ -245,14 +268,16 @@ apt-get install -y jq ./sysbox-ce_${SYSBOX_VERSION}-0.linux_amd64.deb
 # Note: installer automatically restarts Docker
 ```
 
-**Cause 2: Container not using Sysbox runtime**
+## Cause 2: Container not using Sysbox runtime
+
 ```bash
 # Check template.tf
 grep runtime freeform/template.tf
 # Should be: runtime = "sysbox-runc"
 ```
 
-**Cause 3: Missing security profiles**
+## Cause 3: Missing security profiles
+
 ```bash
 # Check template.tf
 grep security_opt freeform/template.tf
@@ -260,7 +285,8 @@ grep security_opt freeform/template.tf
 # security_opt = ["apparmor:unconfined", "seccomp:unconfined"]
 ```
 
-**Cause 4: Docker volume not mounted**
+## Cause 4: Docker volume not mounted
+
 ```bash
 # Check volume mount
 docker inspect coder-<workspace-id> | grep "Destination.*docker"
@@ -271,6 +297,7 @@ docker volume ls | grep dind-cache
 ```
 
 **Solution:**
+
 ```bash
 # Fix template.tf and redeploy
 coder templates push --directory freeform freeform --yes
@@ -285,6 +312,7 @@ coder create --template freeform my-workspace --yes
 **Symptom:** Docker works initially but stops responding
 
 **Check:**
+
 ```bash
 # Inside workspace
 journalctl -u docker -f
@@ -300,6 +328,7 @@ cat /tmp/dockerd.log
 ```
 
 **Solution:**
+
 ```bash
 # To increase resources, delete and recreate workspace with higher memory
 # (Back up data first: coder ssh my-workspace -- tar -czf ~/backup.tar.gz ~/projects)
@@ -318,6 +347,7 @@ sudo systemctl restart docker
 **Symptom:** `permission denied while trying to connect to Docker daemon`
 
 **Check:**
+
 ```bash
 # Inside workspace
 groups  # Should include "docker"
@@ -326,6 +356,7 @@ getent group docker  # Check GID
 ```
 
 **Solution:**
+
 ```bash
 # Check docker_gid in template.tf matches host
 # Default is 988
@@ -344,6 +375,7 @@ sudo usermod -aG docker $USER
 **Symptom:** `ddev start` fails or containers exit immediately
 
 **Check:**
+
 ```bash
 # Inside workspace
 ddev start --debug
@@ -361,20 +393,23 @@ docker ps -a | grep ddev
 
 **Common causes:**
 
-**Cause 1: Docker daemon not running**
+## Cause 1: Docker daemon not running
+
 ```bash
 docker ps
 # If fails: systemctl status docker
 ```
 
-**Cause 2: Insufficient resources**
+## Cause 2: Insufficient resources
+
 ```bash
 docker stats
 free -h
 # Increase workspace memory/CPU if needed
 ```
 
-**Cause 3: Port conflicts**
+## Cause 3: Port conflicts
+
 ```bash
 ddev describe
 # Check for conflicting projects
@@ -382,7 +417,8 @@ ddev list
 ddev stop --all
 ```
 
-**Cause 4: Corrupt DDEV project**
+## Cause 4: Corrupt DDEV project
+
 ```bash
 ddev delete --omit-snapshot
 rm -rf .ddev
@@ -391,6 +427,7 @@ ddev start
 ```
 
 **Solution:**
+
 ```bash
 # Clean restart
 ddev poweroff
@@ -407,6 +444,7 @@ ddev start
 **Symptom:** `ddev import-db` fails with memory or timeout errors
 
 **Check:**
+
 ```bash
 # Check workspace resources
 docker stats
@@ -419,6 +457,7 @@ df -h
 ```
 
 **Solution:**
+
 ```bash
 # To increase memory, delete and recreate workspace with higher memory
 # (Back up data first: ddev export-db --file=dump.sql.gz)
@@ -438,6 +477,7 @@ ddev mysql < dump.sql
 **Symptom:** DDEV project URLs don't work
 
 **Check:**
+
 ```bash
 # Check DDEV status
 ddev describe
@@ -450,6 +490,7 @@ curl localhost:80
 ```
 
 **Solution:**
+
 - Access via Coder port forwarding UI (not direct URLs)
 - Click on port links in Coder dashboard under "Apps"
 - DDEV URLs shown by `ddev describe` won't work directly
@@ -462,6 +503,7 @@ curl localhost:80
 **Symptom:** Files owned by root or wrong UID
 
 **Check:**
+
 ```bash
 # Inside workspace
 ls -la /home/coder
@@ -472,6 +514,7 @@ ls -la /coder-workspaces/<owner>-<workspace>
 ```
 
 **Solution:**
+
 ```bash
 # Startup script should fix this automatically
 # If not, run manually:
@@ -486,6 +529,7 @@ chown -R 1000:1000 /coder-workspaces/<owner>-<workspace>
 **Symptom:** `sudo: command not found` or permission denied
 
 **Check:**
+
 ```bash
 # Inside workspace
 which sudo
@@ -495,6 +539,7 @@ groups
 
 **Solution:**
 Rebuild image with sudo configured:
+
 ```dockerfile
 # In image/Dockerfile
 RUN echo "coder ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/coder
@@ -505,12 +550,14 @@ RUN echo "coder ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/coder
 **Symptom:** Permission denied writing to `/home/coder`
 
 **Check:**
+
 ```bash
 ls -la /home/coder
 df /home/coder  # Check if volume mounted
 ```
 
 **Solution:**
+
 ```bash
 # Fix ownership
 sudo chown -R coder:coder /home/coder
@@ -530,6 +577,7 @@ sudo chown -R coder:coder /home/coder
 **Symptom:** Coder port forwarding shows ports but URLs don't work
 
 **Check:**
+
 ```bash
 # Inside workspace
 ddev describe
@@ -541,6 +589,7 @@ docker ps | grep ddev
 ```
 
 **Solution:**
+
 - Use Coder's port forwarding links (not DDEV's URLs)
 - Ensure DDEV is configured for Coder environment
 - Check `host_webserver_port` in `.ddev/global_config.yaml`
@@ -550,6 +599,7 @@ docker ps | grep ddev
 **Symptom:** Port already in use errors
 
 **Check:**
+
 ```bash
 # Inside workspace
 ddev list
@@ -560,6 +610,7 @@ netstat -tlnp | grep :80
 ```
 
 **Solution:**
+
 ```bash
 # Stop all DDEV projects
 ddev stop --all
@@ -574,6 +625,7 @@ router_https_port: "8443"
 **Symptom:** VS Code can't forward ports from workspace
 
 **Check:**
+
 ```bash
 # Verify service is listening
 netstat -tlnp | grep <port>
@@ -583,6 +635,7 @@ curl localhost:<port>
 ```
 
 **Solution:**
+
 - Use Coder's port forwarding (not VS Code's)
 - Configure ports in `template.tf` `coder_app` resources
 - VS Code port forwarding may not work with Docker-in-Docker
@@ -594,6 +647,7 @@ curl localhost:<port>
 **Symptom:** VS Code app shows blank page or infinite loading
 
 **Check:**
+
 ```bash
 # Check workspace is running
 coder list
@@ -605,6 +659,7 @@ coder ssh my-workspace -- echo "Agent OK"
 ```
 
 **Solution:**
+
 - Refresh browser
 - Clear browser cache and cookies
 - Try different browser
@@ -615,6 +670,7 @@ coder ssh my-workspace -- echo "Agent OK"
 **Symptom:** Extensions fail to install or don't work
 
 **Check:**
+
 ```bash
 # Check disk space
 coder ssh my-workspace -- df -h
@@ -624,8 +680,10 @@ coder ssh my-workspace -- df -h
 ```
 
 **Solution:**
+
 - Some extensions require desktop VS Code
 - Use SSH connection with desktop VS Code:
+
   ```bash
   coder config-ssh
   # Then connect via VS Code Remote-SSH
@@ -636,6 +694,7 @@ coder ssh my-workspace -- df -h
 **Symptom:** Terminal in VS Code doesn't work or has wrong shell
 
 **Check:**
+
 ```bash
 # Inside workspace terminal
 echo $SHELL
@@ -645,6 +704,7 @@ which bash zsh
 ```
 
 **Solution:**
+
 - Default shell is bash
 - Change in VS Code settings: `Terminal › Integrated › Default Profile: Linux`
 - Restart VS Code
@@ -654,6 +714,7 @@ which bash zsh
 ### Workspace is Slow
 
 **Check:**
+
 ```bash
 # Check resource usage
 docker stats coder-<workspace-id>
@@ -665,11 +726,13 @@ docker stats
 ```
 
 **Causes:**
+
 1. **Insufficient resources** - Increase CPU/memory
 2. **Disk I/O** - Check Docker volume performance
 3. **Too many DDEV projects running** - Stop unused projects
 
 **Solution:**
+
 ```bash
 # Increase resources
 coder update my-workspace \
@@ -689,6 +752,7 @@ docker system prune -a -f
 **Symptom:** `docker build` or DDEV builds take very long
 
 **Check:**
+
 ```bash
 # Check Docker info
 docker info | grep "Storage Driver"
@@ -699,6 +763,7 @@ rm /tmp/test
 ```
 
 **Solution:**
+
 - Increase workspace resources
 - Use Docker BuildKit: `DOCKER_BUILDKIT=1 docker build ...`
 - Use multi-stage builds to reduce layer count
@@ -709,12 +774,14 @@ rm /tmp/test
 **Symptom:** DDEV project is slow (page loads, composer, npm)
 
 **Check:**
+
 ```bash
 ddev describe
 docker stats $(docker ps -q --filter name=ddev)
 ```
 
 **Solution:**
+
 ```bash
 # To increase resources, delete and recreate workspace
 # (Back up data first: coder ssh my-workspace -- tar -czf ~/backup.tar.gz ~/projects)
@@ -734,6 +801,7 @@ ddev xdebug off
 ### Viewing Logs
 
 **Workspace agent logs:**
+
 ```bash
 # Via Coder CLI
 coder logs my-workspace
@@ -746,17 +814,20 @@ journalctl -u coder-agent -f
 ```
 
 **Startup script logs** (output goes to Coder agent logs):
+
 ```bash
 coder logs my-workspace
 ```
 
 **Docker daemon logs:**
+
 ```bash
 coder ssh my-workspace -- cat /tmp/dockerd.log
 coder ssh my-workspace -- journalctl -u docker -f
 ```
 
 **DDEV logs:**
+
 ```bash
 coder ssh my-workspace -- ddev logs
 coder ssh my-workspace -- ddev logs db
@@ -766,6 +837,7 @@ coder ssh my-workspace -- ddev logs web
 ### Interactive Debugging
 
 **SSH into workspace:**
+
 ```bash
 # Open shell
 coder ssh my-workspace
@@ -778,6 +850,7 @@ coder logs my-workspace
 ```
 
 **Check workspace state:**
+
 ```bash
 # Show workspace details
 coder show my-workspace
@@ -791,6 +864,7 @@ docker volume inspect coder-<owner>-<workspace>-dind-cache
 ```
 
 **Test Docker inside workspace:**
+
 ```bash
 coder ssh my-workspace -- docker ps
 coder ssh my-workspace -- docker info
@@ -798,6 +872,7 @@ coder ssh my-workspace -- docker run hello-world
 ```
 
 **Test DDEV:**
+
 ```bash
 coder ssh my-workspace -- ddev version
 coder ssh my-workspace -- ddev list
@@ -820,6 +895,7 @@ coder ssh my-workspace -- ddev describe
 ### Emergency Recovery
 
 **Workspace completely broken:**
+
 ```bash
 # 1. Backup data if possible
 coder ssh my-workspace -- tar -czf ~/backup.tar.gz ~/projects
@@ -837,6 +913,7 @@ coder ssh my-workspace -- tar -xzf ~/backup.tar.gz
 ```
 
 **Docker daemon completely broken:**
+
 ```bash
 # Inside workspace
 sudo systemctl stop docker
@@ -849,6 +926,7 @@ coder restart my-workspace
 ```
 
 **Host out of resources:**
+
 ```bash
 # On Coder host
 docker system prune -a --volumes -f
@@ -878,16 +956,19 @@ New server setups should configure containerd's root during initial setup — se
 When reporting issues, provide:
 
 1. **Workspace details:**
+
    ```bash
    coder show my-workspace
    ```
 
 2. **Logs:**
+
    ```bash
    coder logs my-workspace > workspace-logs.txt
    ```
 
 3. **Template version:**
+
    ```bash
    grep image_version freeform/template.tf
    cat VERSION
@@ -907,7 +988,7 @@ When reporting issues, provide:
 
 - [Operations Guide](./operations-guide.md) - Template deployment
 - [User Management](./user-management.md) - User and permission issues
-- [Coder Troubleshooting](https://coder.com/docs/guides/troubleshooting) - Official docs
+- [Coder Troubleshooting](https://coder.com/docs/admin/monitoring) - Official docs
 - [Sysbox Troubleshooting](https://github.com/nestybox/sysbox/blob/master/docs/user-guide/troubleshoot.md) - Sysbox-specific issues
-- [DDEV Troubleshooting](https://docs.ddev.com/users/usage/troubleshooting/) - DDEV-specific issues
+- [DDEV Troubleshooting](https://docs.ddev.com/en/stable/users/usage/troubleshooting/) - DDEV-specific issues
 - [GitHub Issues](https://github.com/ddev/coder-ddev/issues) - Report bugs or ask questions

@@ -1,6 +1,7 @@
 /**
  * Shared design tokens + components for start.coder.ddev.com
- * Used on static HTML landing pages and Jekyll docs markdown pages.
+ * Used on the static HTML landing pages. (The user docs at docs.coder.ddev.com
+ * are a separate Zensical site with its own theme.)
  * See /components.html for example usage.
  * See DDEV brand guide https://docs.ddev.com/en/stable/developers/brand-guide/
  * for primary color definitions.
@@ -1508,4 +1509,64 @@ pre code {
   color: var(--text-secondary);
   line-height: 1.35;
   max-width: 100%;
+}
+
+/* Top bar on the landing page: puts the documentation link first */
+.cds-topbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border-subtle);
+  text-align: left;
+}
+
+.cds-topbar__brand {
+  color: var(--text);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.cds-topbar__brand:hover {
+  color: var(--link-hover);
+}
+
+.cds-topbar__links {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.cds-topbar__docs {
+  padding: 0.5rem 1rem;
+}
+
+/* The hero is vertically centered; keep its content clear of the top bar */
+.cds-hero {
+  padding-top: 5.5rem;
+}
+
+.cds-page-header__docs {
+  margin-left: auto;
+}
+
+@media (max-width: 560px) {
+  .cds-topbar {
+    padding: 0.75rem 1rem;
+  }
+
+  .cds-topbar__brand {
+    display: none;
+  }
+
+  .cds-topbar__links {
+    width: 100%;
+    justify-content: space-between;
+  }
 }

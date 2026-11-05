@@ -29,7 +29,22 @@ This project provides a Coder v2+ template for DDEV-based development environmen
 - **VS Code for Web** - Browser-based IDE via official Coder module
 - **Ubuntu 24.04** - Base container OS
 
-**Note:** User-facing documentation lives in `/docs/`. This file focuses on developer/contributor guidance.
+**Note:** User-facing documentation lives in `docs/content/` and is published to https://docs.coder.ddev.com. This file focuses on developer/contributor guidance.
+
+## Documentation
+
+Two separate sites are built from `docs/`:
+
+| Site | Source | Built with | Published by |
+| ---- | ------ | ---------- | ------------ |
+| https://docs.coder.ddev.com (user docs) | `docs/content/**/*.md`, config in root `mkdocs.yml` | [Zensical](https://zensical.org), set up the same way as ddev/ddev's docs | Read the Docs (`.readthedocs.yaml`), including PR previews |
+| https://start.coder.ddev.com (landing pages, deep-link builders) | `docs/*.html`, `docs/*.js`, `docs/coder-ddev-start.css` | Jekyll (`docs/_config.yml` excludes `content/`) | GitHub Pages (`docs-deploy.yml`, previews via `docs-preview.yml`) |
+
+- **Audience:** the user docs are written for people using the hosted service at coder.ddev.com. Self-hosting material goes under `docs/content/self-hosting/`.
+- **Add a page:** create the Markdown file under `docs/content/` and add it to `nav:` in `mkdocs.yml`; links between pages are relative `.md` links.
+- **Before pushing docs changes:** `make docs-check` (strict Zensical build, markdownlint with `.markdownlint.jsonc`, and `scripts/check-doc-params.sh`). Needs `pip install -r docs/requirements.txt` and `npm install -g markdownlint-cli`. `make zensical-serve` previews at http://localhost:8000. CI runs the same checks plus linkspector in `.github/workflows/docs-check.yml`.
+- **Moved or renamed a page?** Add a `redirect_maps` entry in `mkdocs.yml`. Old `start.coder.ddev.com` Markdown URLs are kept alive by the `redirect_to` stubs in `docs/user/`, `docs/admin/`, `docs/architecture/` and `docs/reference/`.
+- **When a template's user-facing behavior changes** (parameters, app buttons, URLs, `ddev coder-setup`/`coder-routes`/`launch`), update the matching page in `docs/content/` in the same PR — especially `docs/content/freeform/create.md` for freeform parameters.
 
 ## Coder CLI Commands in Docs
 
@@ -57,7 +72,7 @@ When writing or reviewing `coder` CLI commands in documentation, **always verify
 
 - **Never change an existing `coder_parameter`'s `type` in place — always give it a new `name`.** The `coder_parameter` data source validates the incoming value against the declared `type` *before* any of the template's own `locals` ever run, so a `try(tobool(...), false)`-style fallback in a `locals` block cannot rescue a stale value — the plan fails hard first, with an opaque `Error: Parameter value is not of type "bool"`. Any client still holding an old-typed value for that parameter name (a bookmarked workspace-creation deep link, a cached copy of a `docs/*.html` page, an already-open browser tab) will hit this on every future `terraform plan`, including the Coder UI's live dynamic-parameter preview during workspace creation. Renaming the parameter is the only fix — `terraform` code cannot intercept the provider's own type validation. Root-caused and fixed for `share_drupal_site` → `drupal_site_public` in #206 (`drupal-core`/`drupal-contrib`; both changed the parameter from a 3-way `owner`/`authenticated`/`public` string to a `bool` switch in #205, one PR earlier — the type change and the deep-link doc pages that still emitted the old string values shipped in the same PR and nothing caught the mismatch).
 - **`terraform test`'s `mock_provider "coder"` cannot catch the above class of bug.** The mock replaces the real `coder_parameter` data source entirely (including its type validation), so a run block asserting behavior for a stale/incompatible parameter value will pass locally and in CI even when the real provider would hard-fail. There is no terraform-test-layer way to close this gap; the only defense is the naming discipline above.
-- **`docs/drupal-core.html`, `docs/drupal-issue.html`, and `docs/coder-workspace-name.js` build Coder workspace-creation deep links (`?param.<name>=<value>`) and are not covered by any CI check against the live `coder_parameter` definitions in `template.tf`.** Whenever a template's parameter names, types, or allowed values change, grep these docs files for the old name/values and update them in the same PR — nothing currently fails CI if they drift out of sync.
+- **`docs/drupal-core.html`, `docs/drupal-issue.html`, and `docs/coder-workspace-name.js` build Coder workspace-creation deep links (`?param.<name>=<value>`).** `scripts/check-doc-params.sh` (`make check-doc-params`, run in `docs-check.yml`) fails if a `param.<name>` used in `docs/` no longer exists as a `coder_parameter` in any template or shared module, which catches renames and removals. It does **not** check parameter types or allowed values, or that a link targets the template that defines the parameter — whenever a template's parameter types or allowed values change, grep these docs files for the old values and update them in the same PR.
 
 ## Template Architecture Overview
 

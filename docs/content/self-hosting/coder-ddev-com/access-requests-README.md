@@ -25,6 +25,7 @@ If you do not have access through one of the above paths, open an issue in this 
 We will review your request and, if approved, add you to the `coder-ddev-com` org. You will receive a GitHub invitation — once you accept it, you can sign in to coder.ddev.com with your GitHub account.
 
 **What to include in your request:**
+
 - Your GitHub username
 - Why you want access (brief description — DDEV user, contributor, etc.)
 

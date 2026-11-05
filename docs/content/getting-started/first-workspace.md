@@ -7,6 +7,7 @@ This guide helps you create your first DDEV workspace and start developing in th
 **Coder** is an open-source platform for creating remote development environments. Instead of developing on your local machine, you work in a cloud-based workspace with all tools pre-installed.
 
 **Key concepts:**
+
 - **Workspace** - Your personal development environment (like a remote VM)
 - **Template** - A blueprint for creating workspaces (pre-configured tools, settings)
 - **Agent** - Software running in your workspace that connects to Coder server
@@ -22,6 +23,7 @@ With this template, DDEV runs inside your cloud workspace, giving you all DDEV f
 ### Coder Account
 
 You need access to a Coder server. Ask your administrator for:
+
 - Coder server URL (e.g., `https://coder.example.com`)
 - Username and password (or SSO login)
 - Confirmation that the `freeform` template is available
@@ -31,6 +33,7 @@ You need access to a Coder server. Ask your administrator for:
 Install on your local machine:
 
 **Coder CLI** (required for SSH access):
+
 ```bash
 # macOS (Homebrew)
 brew install coder/coder/coder
@@ -45,12 +48,14 @@ winget install Coder.Coder
 ```
 
 **SSH client** (usually pre-installed):
+
 ```bash
 # Verify SSH is available
 ssh -V
 ```
 
 **Git** (optional, for cloning repositories):
+
 ```bash
 # macOS
 brew install git
@@ -68,6 +73,7 @@ git --version
 ### Optional: Desktop VS Code
 
 If you prefer desktop VS Code over the web version:
+
 ```bash
 # Download from https://code.visualstudio.com/
 # Install Remote-SSH extension
@@ -95,6 +101,7 @@ coder login https://coder.example.com
 ```
 
 **Verify login:**
+
 ```bash
 coder list
 # Should show your workspaces (empty if this is your first time)
@@ -116,6 +123,7 @@ coder list
 5. Click **Create Workspace**
 
 **Wait for workspace to start** (1-3 minutes):
+
 - Status will change from "Starting" to "Running"
 - You'll see the workspace dashboard
 
@@ -133,6 +141,7 @@ coder create --template freeform my-first-workspace \
 ```
 
 **Check workspace status:**
+
 ```bash
 coder list
 # Should show your workspace as "Running"
@@ -159,6 +168,7 @@ coder ssh my-first-workspace
 ```
 
 **Run your first command:**
+
 ```bash
 # Check DDEV is installed
 ddev version
@@ -246,6 +256,7 @@ ddev start
 ```
 
 **Wait for DDEV to start** (1-2 minutes first time):
+
 ```
 Starting my-site...
 ...
@@ -294,6 +305,7 @@ ddev start
 DDEV normally uses URLs like `https://my-site.ddev.site`, but in Coder, you access projects via **port forwarding**.
 
 **How it works:**
+
 1. DDEV listens on ports 80/443 inside workspace
 2. Coder forwards these ports through its proxy
 3. You access via Coder's forwarded URLs
@@ -301,6 +313,7 @@ DDEV normally uses URLs like `https://my-site.ddev.site`, but in Coder, you acce
 ### Access Your Project
 
 **Via Coder Web UI (Recommended):**
+
 1. Go to Coder dashboard
 2. Find your workspace
 3. Under **Apps**, click **DDEV Web**
@@ -309,6 +322,7 @@ DDEV normally uses URLs like `https://my-site.ddev.site`, but in Coder, you acce
 The URL follows the pattern: `https://ddev-web--workspace-name--owner.coder.example.com/`
 
 **Via CLI Port Forward:**
+
 ```bash
 # Forward port to your local machine
 coder port-forward my-first-workspace --tcp 8080:80
@@ -318,6 +332,7 @@ coder port-forward my-first-workspace --tcp 8080:80
 ```
 
 **Check DDEV status:**
+
 ```bash
 ddev describe
 # Shows project details and status
@@ -329,12 +344,14 @@ ddev describe
 ### Edit Files
 
 **Via VS Code for Web:**
+
 1. Open VS Code (Apps → VS Code in Coder UI)
 2. Navigate to `~/projects/my-site`
 3. Edit files normally
 4. Changes are saved automatically
 
 **Via SSH and vim:**
+
 ```bash
 coder ssh my-first-workspace
 cd ~/projects/my-site
@@ -404,7 +421,8 @@ git config --global user.email "your.email@example.com"
 
 To clone private repositories or push to GitHub/GitLab/etc, you need to add your Coder public key to your Git host.
 
-**Step 1: Get your Coder public key**
+#### Step 1: Get your Coder public key
+
 ```bash
 # Inside workspace (via SSH or VS Code terminal)
 coder publickey
@@ -413,25 +431,29 @@ coder publickey
 # Copy the entire output (starts with ssh-ed25519 or ssh-rsa)
 ```
 
-**Step 2: Add key to your Git host**
+## Step 2: Add key to your Git host
 
 **For GitHub:**
-1. Go to https://github.com/settings/keys
+
+1. Go to <https://github.com/settings/keys>
 2. Click **New SSH key**
 3. Paste your Coder public key
 4. Click **Add SSH key**
 
 **For GitLab:**
-1. Go to https://gitlab.com/-/profile/keys
+
+1. Go to <https://gitlab.com/-/profile/keys>
 2. Paste your Coder public key
 3. Click **Add key**
 
 **For Bitbucket:**
-1. Go to https://bitbucket.org/account/settings/ssh-keys/
+
+1. Go to <https://bitbucket.org/account/settings/ssh-keys/>
 2. Click **Add key**
 3. Paste your Coder public key
 
-**Step 3: Test SSH connection**
+### Step 3: Test SSH connection
+
 ```bash
 # Test GitHub
 ssh -T git@github.com
@@ -475,6 +497,7 @@ coder stop my-first-workspace
 ```
 
 **What happens when stopped:**
+
 - Workspace container stops
 - All files in `/home/coder` are preserved
 - DDEV projects are preserved
@@ -492,6 +515,7 @@ coder start my-first-workspace
 **Startup time:** faster than initial create (no reinstall needed)
 
 **After starting:**
+
 ```bash
 # SSH in
 coder ssh my-first-workspace
@@ -513,12 +537,14 @@ coder delete my-first-workspace
 ```
 
 **What gets deleted:**
+
 - Workspace container
 - All files in `/home/coder`
 - All DDEV projects and databases
 - Docker images and volumes inside workspace
 
 **Before deleting:**
+
 ```bash
 # Backup important data
 cd ~/projects
@@ -531,6 +557,7 @@ tar -czf backup.tar.gz my-site/
 ### Workspace Won't Start
 
 **Check status:**
+
 ```bash
 coder list
 # If stuck in "Starting", check logs:
@@ -538,6 +565,7 @@ coder logs my-first-workspace
 ```
 
 **Common causes:**
+
 - Template not deployed correctly (contact admin)
 - Resource limits exceeded (contact admin)
 - Sysbox runtime not installed on host (contact admin)
@@ -547,6 +575,7 @@ coder logs my-first-workspace
 **Symptom:** `Cannot connect to Docker daemon`
 
 **Solution:**
+
 ```bash
 # Check Docker service
 systemctl status docker
@@ -565,12 +594,14 @@ If still broken, restart workspace: `coder restart my-first-workspace`
 **Symptom:** `ddev start` fails
 
 **Check Docker first:**
+
 ```bash
 docker ps
 # If this fails, fix Docker before DDEV
 ```
 
 **Common DDEV issues:**
+
 ```bash
 # Reset DDEV project
 ddev poweroff
@@ -587,6 +618,7 @@ ddev start
 **Symptom:** Port forwarding shows ports but URLs don't load
 
 **Check:**
+
 ```bash
 # Inside workspace
 ddev describe
@@ -595,6 +627,7 @@ curl localhost:80
 ```
 
 **Solution:**
+
 - Use Coder's port forwarding links (not DDEV URLs)
 - Find port URLs in the **Ports** section of Coder web UI
 - DDEV's URLs (*.ddev.site) won't work in Coder
@@ -604,6 +637,7 @@ curl localhost:80
 **Symptom:** `Permission denied (publickey)` when cloning
 
 **Solution:**
+
 1. Get your Coder public key: `coder publickey`
 2. Add that key to GitHub/GitLab (Settings → SSH Keys)
 3. Test: `ssh -T git@github.com`
@@ -614,6 +648,7 @@ curl localhost:80
 **Symptom:** `No space left on device`
 
 **Solution:**
+
 ```bash
 # Clean Docker images and volumes
 docker system prune -a --volumes -f
@@ -629,6 +664,7 @@ rm -rf ~/projects/old-project
 ### Workspace is Slow
 
 **Check resources:**
+
 ```bash
 # Inside workspace
 top        # Check CPU usage
@@ -637,6 +673,7 @@ docker stats  # Check Docker container resources
 ```
 
 **Solution:**
+
 - Stop unused DDEV projects: `ddev stop --all`
 - Increase workspace resources (delete and recreate with higher CPU/RAM)
 - Contact admin to increase default resources
@@ -651,8 +688,8 @@ docker stats  # Check Docker container resources
 
 ### Learn More About Coder
 
-- **[Using Workspaces](./using-workspaces.md)** - Daily workflows and tips
-- **[Coder CLI](https://coder.com/docs/cli)** - CLI reference
+- **[Using Workspaces](../workspaces/guide.md)** - Daily workflows and tips
+- **[Coder CLI](https://coder.com/docs/reference/cli)** - CLI reference
 - **[VS Code for Web](https://coder.com/docs/ides/web-ides)** - IDE features
 
 ### Try More Project Types
@@ -733,8 +770,8 @@ source ~/.bashrc
 
 ### Documentation
 
-- [Using Workspaces](./using-workspaces.md) - Advanced workflows
-- [Troubleshooting Guide](../admin/troubleshooting.md) - Detailed debugging
+- [Using Workspaces](../workspaces/guide.md) - Advanced workflows
+- [Troubleshooting Guide](../workspaces/troubleshooting.md) - Detailed debugging
 - [DDEV Docs](https://docs.ddev.com/) - DDEV reference
 
 ### Support
@@ -747,7 +784,7 @@ source ~/.bashrc
 ### Before Asking for Help
 
 1. Check this guide's [Troubleshooting](#troubleshooting) section
-2. Review [Troubleshooting Guide](../admin/troubleshooting.md)
+2. Review [Troubleshooting Guide](../workspaces/troubleshooting.md)
 3. Collect error messages and logs
 4. Try restarting workspace: `coder restart my-first-workspace`
 
