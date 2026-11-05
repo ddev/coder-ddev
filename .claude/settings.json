@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "ask": [
+      "Bash(git push *)"
+    ],
+    "deny": [
+      "Bash(git push *--no-verify*)",
+      "Bash(docker push *)"
+    ]
+  }
+}

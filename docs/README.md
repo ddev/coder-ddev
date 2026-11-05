@@ -5,7 +5,7 @@ Welcome to the DDEV Coder template documentation. This guide helps you deploy, m
 ## Quick Links
 
 - **[Project README](../README.md)** - Quick start and overview
-- **[Developer Guide (CLAUDE.md)](../CLAUDE.md)** - For contributors and AI-assisted development
+- **[Developer Guide (AGENTS.md)](../AGENTS.md)** - For contributors and AI-assisted development
 - **[Image Build Instructions](../image/README.md)** - Docker image details
 
 ## Documentation by Audience
@@ -199,7 +199,7 @@ This is an open-source project. Contributions welcome!
 - **Report bugs**: [GitHub Issues](https://github.com/ddev/coder-ddev/issues)
 - **Contribute code**: Fork, branch, submit PR
 - **Documentation**: Suggest improvements or add examples
-- **AI-assisted development**: See [CLAUDE.md](../CLAUDE.md) for AI workflow
+- **AI-assisted development**: See [AGENTS.md](../AGENTS.md) for AI workflow
 
 ## License
 

@@ -8,9 +8,10 @@
 # when done. Coder enforces a unique workspace name per owner, so `coder create
 # ci-slot-<i>` is an atomic compare-and-swap: only one concurrent caller can win
 # for a given <i>. See scripts/ci-acquire-staging-lock.sh /
-# scripts/ci-release-staging-lock.sh for the protocol, and
-# openspec/changes/add-ci-staging-lock/design.md for why this approach was chosen
-# over a git-ref-based lock.
+# scripts/ci-release-staging-lock.sh for the protocol. A git-ref lock
+# (`git push origin HEAD:refs/heads/ci-slot-N`) was rejected: it needs
+# `contents: write` on GITHUB_TOKEN and its own stale-lock reaper, while
+# ci-bot-owned slot workspaces are already reaped by scripts/ci-reap-staging.sh.
 #
 # Deliberately has no coder_agent: a lock slot is never connected to, only
 # created and deleted, so it provisions and tears down in a second or two.

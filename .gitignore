@@ -10,8 +10,14 @@ __pycache__/
 # Temp files
 composer.json.tmp
 
+# .claude/settings.json is shared team configuration and is committed; only
+# personal overrides stay private. https://code.claude.com/docs/en/claude-directory
+**/.claude/settings.local.json
+CLAUDE.local.md
+
 # Added by Spec Kitty CLI (auto-managed)
-.claude/
+.claude/*
+!.claude/settings.json
 .codex/
 .vibe/
 .opencode/

@@ -90,7 +90,7 @@ make build-and-push-no-cache && make push-all-templates  # Clean build and deplo
 - 🔍 [Comparison to Local DDEV](./docs/architecture/comparison-to-local.md) - Architecture, tradeoffs, migration
 
 **Developers/Contributors:**
-- 🤖 [CLAUDE.md](./CLAUDE.md) - AI-assisted development guide
+- 🤖 [AGENTS.md](./AGENTS.md) - AI-assisted development guide
 
 📚 **[Full Documentation Index](./docs/README.md)**
 

@@ -1277,7 +1277,7 @@ Go to **GitHub → Settings → Secrets and variables → Actions** and add:
 
 ### Tuning how many CI workspaces can run at once (`CI_LOCK_SLOTS`)
 
-`integration-test.yml`, `drupal-integration-test.yml`, and `drupal-contrib-integration-test.yml` all create real, resource-heavy (Sysbox + Docker-in-Docker) workspaces on the single shared staging box. Before creating one, each job runs `scripts/ci-acquire-staging-lock.sh`, which claims one of a fixed number of lock-slot workspaces (`ci-slot-1`..`ci-slot-N`) and waits if all are held — see that script's header comment and `openspec/changes/add-ci-staging-lock/design.md` for the full mechanism.
+`integration-test.yml`, `drupal-integration-test.yml`, and `drupal-contrib-integration-test.yml` all create real, resource-heavy (Sysbox + Docker-in-Docker) workspaces on the single shared staging box. Before creating one, each job runs `scripts/ci-acquire-staging-lock.sh`, which claims one of a fixed number of lock-slot workspaces (`ci-slot-1`..`ci-slot-N`) and waits if all are held — see the header comments in that script and in `ci-lock/template.tf` for the full mechanism.
 
 `N` is controlled entirely by the `CI_LOCK_SLOTS` repository variable — no code change needed to retune it:
 
