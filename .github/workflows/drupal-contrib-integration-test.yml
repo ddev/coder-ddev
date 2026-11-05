@@ -479,7 +479,7 @@ jobs:
       run:
         shell: bash -euo pipefail {0}
     env:
-      WORKSPACE_NAME: gc-${{ matrix.project }}-d${{ matrix.drupal_version }}-${{ github.run_number }}-${{ github.run_attempt }}
+      WORKSPACE_NAME: gc-${{ matrix.project }}-d${{ matrix.drupal_version }}-${{ github.event.pull_request.number && format('pr{0}', github.event.pull_request.number) || github.ref_name == 'main' && 'main' || format('x{0}', github.run_number) }}-${{ github.run_number }}-${{ github.run_attempt }}
       CI: "true"
       DDEV_NONINTERACTIVE: "true"
       NO_COLOR: "1"
@@ -512,7 +512,7 @@ jobs:
             --variable github_token=${{ secrets.GITHUB_TOKEN }}
 
       - name: Reap predecessor workspaces (cancelled prior runs of this cell)
-        run: ./scripts/ci-reap-family.sh "gc-${{ matrix.project }}-d${{ matrix.drupal_version }}-" "${{ env.WORKSPACE_NAME }}"
+        run: ./scripts/ci-reap-family.sh "${WORKSPACE_NAME%-*-*}-" "$WORKSPACE_NAME"
 
       - name: Acquire staging box lock
         run: ./scripts/ci-acquire-staging-lock.sh
@@ -696,7 +696,7 @@ jobs:
       run:
         shell: bash -euo pipefail {0}
     env:
-      WORKSPACE_NAME: gc-fork-${{ github.run_number }}-${{ github.run_attempt }}
+      WORKSPACE_NAME: gc-fork-${{ github.event.pull_request.number && format('pr{0}', github.event.pull_request.number) || github.ref_name == 'main' && 'main' || format('x{0}', github.run_number) }}-${{ github.run_number }}-${{ github.run_attempt }}
       CI: "true"
       DDEV_NONINTERACTIVE: "true"
       NO_COLOR: "1"
@@ -765,7 +765,7 @@ jobs:
             --variable github_token=${{ secrets.GITHUB_TOKEN }}
 
       - name: Reap predecessor workspaces (cancelled prior runs of this cell)
-        run: ./scripts/ci-reap-family.sh "gc-fork-" "${{ env.WORKSPACE_NAME }}"
+        run: ./scripts/ci-reap-family.sh "${WORKSPACE_NAME%-*-*}-" "$WORKSPACE_NAME"
 
       - name: Acquire staging box lock
         run: ./scripts/ci-acquire-staging-lock.sh
@@ -906,7 +906,7 @@ jobs:
       run:
         shell: bash -euo pipefail {0}
     env:
-      WORKSPACE_NAME: gc-glfork-${{ github.run_number }}-${{ github.run_attempt }}
+      WORKSPACE_NAME: gc-glfork-${{ github.event.pull_request.number && format('pr{0}', github.event.pull_request.number) || github.ref_name == 'main' && 'main' || format('x{0}', github.run_number) }}-${{ github.run_number }}-${{ github.run_attempt }}
       CI: "true"
       DDEV_NONINTERACTIVE: "true"
       NO_COLOR: "1"
@@ -975,7 +975,7 @@ jobs:
             --variable github_token=${{ secrets.GITHUB_TOKEN }}
 
       - name: Reap predecessor workspaces (cancelled prior runs of this cell)
-        run: ./scripts/ci-reap-family.sh "gc-glfork-" "${{ env.WORKSPACE_NAME }}"
+        run: ./scripts/ci-reap-family.sh "${WORKSPACE_NAME%-*-*}-" "$WORKSPACE_NAME"
 
       - name: Acquire staging box lock
         run: ./scripts/ci-acquire-staging-lock.sh

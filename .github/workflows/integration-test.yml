@@ -323,7 +323,7 @@ jobs:
         shell: bash -euo pipefail {0}
     env:
       CI_TAG: ${{ github.run_number }}-${{ github.run_attempt }}
-      WORKSPACE_NAME: gh-${{ matrix.ws_name }}-${{ github.run_number }}-${{ github.run_attempt }}
+      WORKSPACE_NAME: gh-${{ matrix.ws_name }}-${{ github.event.pull_request.number && format('pr{0}', github.event.pull_request.number) || github.ref_name == 'main' && 'main' || format('x{0}', github.run_number) }}-${{ github.run_number }}-${{ github.run_attempt }}
       CI: "true"
       DDEV_NONINTERACTIVE: "true"
       NO_COLOR: "1"
@@ -363,7 +363,7 @@ jobs:
             ${{ matrix.extra_vars }}
 
       - name: Reap predecessor workspaces (cancelled prior runs of this cell)
-        run: ./scripts/ci-reap-family.sh "gh-${{ matrix.ws_name }}-" "${{ env.WORKSPACE_NAME }}"
+        run: ./scripts/ci-reap-family.sh "${WORKSPACE_NAME%-*-*}-" "$WORKSPACE_NAME"
 
       - name: Acquire staging box lock
         run: ./scripts/ci-acquire-staging-lock.sh
