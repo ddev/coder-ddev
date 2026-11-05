@@ -2,7 +2,7 @@
 
 ## Starting, stopping and deleting
 
-Use the buttons on the workspace page, or the [Coder CLI](https://coder.com/docs/install/cli):
+Use the buttons on the workspace page, or the [Coder CLI](coder-cli.md):
 
 ```bash
 coder start my-workspace

@@ -1,10 +1,14 @@
 name: Docs PR Preview
 
-# Deploys a preview of the /docs site to gh-pages at /pr-preview/pr-N/
-# and posts a comment with the URL on each PR.
-# On PR close, removes the preview automatically.
+# Posts one comment on each PR linking both previews:
 #
-# Preview URLs: https://start.coder.ddev.com/pr-preview/pr-<N>/
+# - start.coder.ddev.com landing pages (docs/*.html): built with Jekyll here and
+#   deployed to gh-pages at /pr-preview/pr-<N>/, with coder.ddev.com links
+#   pointed at staging-coder.ddev.com and docs.coder.ddev.com links pointed at
+#   this PR's Read the Docs preview. Removed again when the PR closes.
+# - docs.coder.ddev.com (docs/content): built by Read the Docs, not by this
+#   workflow, at https://coder-ddev--<N>.org.readthedocs.build/. Read the Docs
+#   also posts its own comment with build status and changed pages.
 
 on:
   pull_request:
@@ -17,6 +21,10 @@ permissions:
 concurrency:
   group: pr-preview-${{ github.event.number }}
   cancel-in-progress: true
+
+env:
+  LANDING_PREVIEW_URL: https://start.coder.ddev.com/pr-preview/pr-${{ github.event.number }}/
+  DOCS_PREVIEW_URL: https://coder-ddev--${{ github.event.number }}.org.readthedocs.build/
 
 jobs:
   preview:
@@ -34,17 +42,51 @@ jobs:
           source: ./docs
           destination: ./_site
 
-      - name: Point preview at staging-coder.ddev.com
+      - name: Point preview at staging-coder.ddev.com and the docs preview
         if: github.event.action != 'closed'
         run: |
           cp -r ./_site ./_site_preview
-          find ./_site_preview -name "*.html" -exec sed -i 's|https://coder\.ddev\.com|https://staging-coder.ddev.com|g' {} +
+          find ./_site_preview -name "*.html" -exec sed -i \
+            -e 's|https://coder\.ddev\.com|https://staging-coder.ddev.com|g' \
+            -e "s|https://docs\.coder\.ddev\.com/|${DOCS_PREVIEW_URL}|g" {} +
 
-      - name: Deploy PR preview
+      - name: Deploy or remove landing-page preview
         uses: rossjrw/pr-preview-action@v1
         with:
           source-dir: ./_site_preview
           preview-branch: gh-pages
           umbrella-dir: pr-preview
+          pages-base-url: start.coder.ddev.com
           token: ${{ secrets.GITHUB_TOKEN }}
           action: auto
+          # The combined comment below replaces the action's own comment
+          comment: false
+
+      - name: Comment with both preview links
+        if: github.event.action != 'closed'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          # Same header the preview action used for its comment, so this
+          # replaces that comment on PRs that already have one
+          header: pr-preview
+          message: |
+            ### Previews
+
+            | Site | Preview |
+            | ---- | ------- |
+            | **docs.coder.ddev.com** (`docs/content`, built by Read the Docs) | ${{ env.DOCS_PREVIEW_URL }} |
+            | **start.coder.ddev.com** (`docs/*.html`, deployed to `gh-pages`) | ${{ env.LANDING_PREVIEW_URL }} |
+
+            The landing-page preview creates workspaces on staging-coder.ddev.com, and its Documentation links open the docs preview. Read the Docs posts its build status and changed pages in its own comment; the docs preview may take a minute or two after a push to update.
+
+            <sub>Updated for ${{ github.event.pull_request.head.sha }}</sub>
+
+      - name: Update comment when the PR closes
+        if: github.event.action == 'closed'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: pr-preview
+          message: |
+            ### Previews
+
+            The start.coder.ddev.com landing-page preview has been removed. Read the Docs keeps or removes its own docs preview.

@@ -6,7 +6,7 @@ This walkthrough takes you from an empty workspace to a running site. It assumes
 
 On the workspace page, click **VS Code**. When it opens, choose **Terminal → New Terminal** from the menu (☰). VS Code opens in `~/my-site`, a directory named after the workspace; it may not exist yet, in which case VS Code opens your home directory.
 
-You can also use SSH from your computer. See [Editors, SSH and files](../workspaces/editors-and-ssh.md).
+You can also use SSH from your computer. See [Using the Coder CLI](../workspaces/coder-cli.md#ssh-into-a-workspace).
 
 ## 2. Get your code
 

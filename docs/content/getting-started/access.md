@@ -29,10 +29,10 @@ If you see an "access denied" page, your GitHub account isn't in one of the orga
 
 ## Use the CLI (optional)
 
-The [Coder CLI](https://coder.com/docs/install/cli) lets you SSH into workspaces, copy files, and connect desktop editors.
+The [Coder CLI](../workspaces/coder-cli.md) lets you SSH into workspaces, copy files, and connect desktop editors.
 
 ```bash
 coder login https://coder.ddev.com
 ```
 
-This opens your browser to approve the login. See [Editors, SSH and files](../workspaces/editors-and-ssh.md) for what you can do next.
+This opens your browser to approve the login. See [Using the Coder CLI](../workspaces/coder-cli.md) for how to install it and what you can do with it.
