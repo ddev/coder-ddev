@@ -635,7 +635,7 @@ Monitor resource usage and adjust template defaults accordingly.
 
 ### Documentation
 
-- Keep `CLAUDE.md` updated for AI-assisted development
+- Keep `AGENTS.md` updated for AI-assisted development
 - Update user docs in `/docs/user/` when template changes
 - Document breaking changes in git tags and release notes
 

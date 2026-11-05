@@ -94,8 +94,8 @@ RUN echo 'export PATH="/home/coder/.local/bin:$PATH"' > /etc/profile.d/coder-pat
 USER coder
 
 
-RUN npm install -g @fission-ai/openspec@latest typescript 2>/dev/null || \
-  echo "Warning: npm global installation failed, will be retried in startup script"
+RUN npm install -g typescript 2>/dev/null || \
+  echo "Warning: npm global installation failed"
 
 
 # Install Docker CLI (for Docker-in-Docker)
