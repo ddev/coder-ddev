@@ -1,5 +1,9 @@
 dirs:
   - docs/content
+# Message templates for the coder-ddev-com GitHub org; they contain
+# [PLACEHOLDER] URLs that operators fill in before sending
+excludedDirs:
+  - docs/content/self-hosting/coder-ddev-com
 ignorePatterns:
   # Internal anchors are already checked by `zensical build --strict`
   - pattern: ".md#"
