@@ -15,3 +15,7 @@ composer.json.tmp
 **/.claude/settings.local.json
 CLAUDE.local.md
 .claude/agent-memory-local/
+
+# Zensical build output and cache (make zensical)
+site/
+.cache/

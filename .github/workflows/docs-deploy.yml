@@ -1,8 +1,10 @@
 name: Deploy Docs to GitHub Pages
 
-# Builds and deploys /docs to the root of the gh-pages branch on every push
-# to main that touches the docs directory. PR previews (in /pr-preview/) are
-# preserved across production deployments.
+# Builds and deploys the start.coder.ddev.com landing pages in /docs to the root
+# of the gh-pages branch on every push to main that touches them. The user docs
+# in /docs/content are a separate Zensical site published by Read the Docs to
+# https://docs.coder.ddev.com and are excluded from this Jekyll build.
+# PR previews (in /pr-preview/) are preserved across production deployments.
 #
 # GitHub Pages must be configured to serve from:
 #   Branch: gh-pages  /  (root)
@@ -10,7 +12,7 @@ name: Deploy Docs to GitHub Pages
 on:
   push:
     branches: [main]
-    paths: ['docs/**']
+    paths: ['docs/**', '!docs/content/**']
   workflow_dispatch:
 
 permissions:

@@ -6,11 +6,12 @@ Subject: coder.ddev.com access for [ORG NAME] org members
 
 Hi,
 
-As a $100+/month sponsor of DDEV, all members of the **[ORG NAME]** GitHub organization ([github.com/[GITHUB ORG SLUG]](https://github.com/[GITHUB ORG SLUG])) now have access to **[coder.ddev.com](https://coder.ddev.com)** — a cloud-hosted DDEV development environment.
+As a $100+/month sponsor of DDEV, all members of the **[ORG NAME]** GitHub organization ([github.com/[GITHUB ORG SLUG]](<https://github.com/[GITHUB> ORG SLUG])) now have access to **[coder.ddev.com](https://coder.ddev.com)** — a cloud-hosted DDEV development environment.
 
 **What is coder.ddev.com?**
 
 coder.ddev.com provides on-demand cloud workspaces running DDEV with:
+
 - VS Code for Web (full IDE in the browser)
 - A terminal
 - Docker-in-Docker via Sysbox (full DDEV support, all project types)
@@ -28,7 +29,7 @@ All members of the [ORG NAME] GitHub org can sign in. They do not need to be add
 
 **Questions or issues?**
 
-- [DDEV Discord](https://discord.ddev.com) — `#coder-ddev-com` channel (or any channel)
+- [DDEV Discord](https://ddev.com/s/discord) — `#coder-ddev-com` channel (or any channel)
 - [ddev/ddev issues](https://github.com/ddev/ddev/issues)
 
 Thank you for supporting DDEV!

@@ -29,4 +29,4 @@ If you do not have access through one of the paths above, open an issue in the [
 
 ## Questions
 
-Visit the [DDEV Discord](https://discord.ddev.com) or open an issue in [ddev/ddev](https://github.com/ddev/ddev/issues).
+Visit the [DDEV Discord](https://ddev.com/s/discord) or open an issue in [ddev/ddev](https://github.com/ddev/ddev/issues).

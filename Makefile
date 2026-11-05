@@ -177,6 +177,29 @@ test-templates: sync-shared ## Run Terraform mock unit tests for all templates (
 	done
 	@echo "All template tests passed."
 
+# --- Documentation (Zensical, same setup as ddev/ddev; published by Read the Docs) ---
+# Install the docs toolchain with: pip install -r docs/requirements.txt
+# and markdownlint with: npm install -g markdownlint-cli
+
+.PHONY: zensical
+zensical: ## Build the docs site in docs/content with Zensical (strict, like Read the Docs)
+	zensical build --clean --strict
+
+.PHONY: zensical-serve
+zensical-serve: ## Preview the docs site locally at http://localhost:8000 with live reload
+	zensical serve
+
+.PHONY: markdownlint
+markdownlint: ## Lint the docs Markdown with markdownlint (config in .markdownlint.jsonc)
+	markdownlint --config .markdownlint.jsonc docs/content
+
+.PHONY: check-doc-params
+check-doc-params: ## Check that deep-link param.<name> values in the docs exist as coder_parameters
+	scripts/check-doc-params.sh
+
+.PHONY: docs-check
+docs-check: zensical markdownlint check-doc-params ## Run all local docs checks
+
 .PHONY: push-staging
 push-staging: ## Push all templates to staging-coder.ddev.com inactive (ACTIVATE=false); requires CODER_URL set to staging
 	$(MAKE) push-all-templates ACTIVATE=false

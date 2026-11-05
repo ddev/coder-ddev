@@ -1,2 +1,11 @@
 title: "DDEV Coder Workspaces"
 description: "Cloud-hosted development environments powered by DDEV"
+# This Jekyll site is only the landing pages at https://start.coder.ddev.com
+# (index, drupal-issue, drupal-core). The user documentation in content/ is a
+# Zensical site published by Read the Docs to https://docs.coder.ddev.com
+# (see mkdocs.yml and .readthedocs.yaml at the repo root).
+exclude:
+  - content
+  - requirements.txt
+plugins:
+  - jekyll-redirect-from

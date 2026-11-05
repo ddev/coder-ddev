@@ -55,7 +55,6 @@ Admin credentials: `admin` / `admin`  (<em>Please modify if site is shared publi
 
 ## Code layout
 
-
 ### Drupal core development
 
 ```
@@ -181,4 +180,4 @@ tail -50 /tmp/drupal-setup.log
 ddev describe
 ```
 
-See also: [full getting-started guide](getting-started.md) · [DDEV docs](https://docs.ddev.com/) · [Drupal core contribution guide](https://www.drupal.org/contribute/development) · [ddev-drupal-dev add-on](https://github.com/amateescu/ddev-drupal-dev)
+See also: [full getting-started guide](../getting-started/first-workspace.md) · [DDEV docs](https://docs.ddev.com/) · [Drupal core contribution guide](https://www.drupal.org/contribute/development) · [ddev-drupal-dev add-on](https://github.com/amateescu/ddev-drupal-dev)

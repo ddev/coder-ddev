@@ -5,6 +5,7 @@ This guide covers setting up a new Coder server with the DDEV template from scra
 ## Overview
 
 The full stack requires:
+
 1. Provisioning the server (Hetzner) — if starting from bare metal; skip if you already have a fresh Ubuntu 24.04 LTS or higher LTS install
 2. Docker (non-snap) — for running workspace containers
 3. Registry mirror — pull-through cache to speed up workspace starts and avoid Docker Hub rate limits
@@ -33,9 +34,11 @@ The recommended layout uses LVM on the system disk and a plain ext4 partition on
 
 LVM means any of `root`, `var`, or `data` can be grown later with `lvextend -r`. Sizes above are deliberately generous for staging and scale up automatically on prod-sized disks because `data` claims the rest of the volume group.
 
-> **Software RAID:** This guide uses `SWRAID 0` (no RAID) because the staging server has mismatched-purpose disks. For production with two matched disks, change to `SWRAID 1` with `SWRAIDLEVEL 1` and adjust the `PART` lines per Hetzner's installimage docs. RAID-1 across the system disk is recommended for prod; the second disk holding workspace files can be left out of the array if you intend to grow it independently.
+!!! note "Software RAID"
+    This guide uses `SWRAID 0` (no RAID) because the staging server has mismatched-purpose disks. For production with two matched disks, change to `SWRAID 1` with `SWRAIDLEVEL 1` and adjust the `PART` lines per Hetzner's installimage docs. RAID-1 across the system disk is recommended for prod; the second disk holding workspace files can be left out of the array if you intend to grow it independently.
 
-> **Boot mode:** Hetzner servers default to Legacy/BIOS boot, and Hetzner Robot does not expose a UEFI toggle when activating the rescue system. Switching to UEFI requires firmware-level access via vKVM or a support ticket. For most installs Legacy/BIOS is fine; this guide assumes it. If you do switch to UEFI, add `PART /boot/efi esp 256M` as the first partition.
+!!! note "Boot mode"
+    Hetzner servers default to Legacy/BIOS boot, and Hetzner Robot does not expose a UEFI toggle when activating the rescue system. Switching to UEFI requires firmware-level access via vKVM or a support ticket. For most installs Legacy/BIOS is fine; this guide assumes it. If you do switch to UEFI, add `PART /boot/efi esp 256M` as the first partition.
 
 ### Activate the rescue system
 
@@ -659,13 +662,15 @@ coder login https://coder.ddev.com
 The initial admin account must be created with username/password via the web UI (above). Once that's done, configure GitHub OAuth so all subsequent logins — including `coder login` from the CLI — can use GitHub instead.
 
 > **If you already have a duplicate account** (e.g. `rfay` password account and `rfay-wanderingortiz8` GitHub account): Coder does not support renaming users in the UI or reliably via the API. Fix it directly in PostgreSQL:
+>
 > ```bash
 > sudo -u postgres psql coder -c "UPDATE users SET username='rfay' WHERE username='rfay-wanderingortiz8';"
 > sudo systemctl restart coder
 > ```
+>
 > You will also need to delete the original password account (`rfay`) first if it still exists, or rename it out of the way the same way.
 
-**1. Create a GitHub OAuth App**
+#### 1. Create a GitHub OAuth App
 
 Create the app under your **GitHub organization**, not your personal account — apps created under a personal account show "by \<username\>" on the authorization screen instead of "by \<org\>". Go to **github.com/organizations/ddev/settings/applications → New OAuth App** and fill in:
 
@@ -716,7 +721,7 @@ CODER_OAUTH2_GITHUB_ALLOWED_ORGS=ddev,coder-ddev-com,tag1consulting,upsun,platfo
 
 > **Device Flow:** Do not set `CODER_OAUTH2_GITHUB_DEVICE_FLOW=true` when `CODER_OAUTH2_GITHUB_ALLOWED_ORGS` is set. Device flow routes all GitHub logins through a code-based flow that does not request `read:org` scope — org membership checks fail with a 403 and users cannot log in.
 
-**3. Restart Coder**
+## 3. Restart Coder
 
 ```bash
 sudo systemctl restart coder
@@ -845,6 +850,7 @@ make deploy-all
 ```
 
 This deploys three templates:
+
 - **drupal-core** — automated Drupal core development environment; clones Drupal core, installs the site, and sets up the [amateescu/ddev-drupal-dev](https://github.com/amateescu/ddev-drupal-dev) add-on (see Step 10 for the recommended seed cache setup)
 - **drupal-contrib** — automated environment for developing Drupal contrib modules and themes; uses the [ddev/ddev-drupal-contrib](https://github.com/ddev/ddev-drupal-contrib) add-on, which installs Drupal as a dev dependency and symlinks the module/theme into the web root
 - **freeform** — multi-project workspace: keeps ddev-router running so multiple DDEV projects can coexist in one workspace, each reachable at its own hostname via Host-header routing
@@ -1061,6 +1067,7 @@ sudo systemctl restart coder
 **User preferences** (per-user opt-in): Go to `https://coder.ddev.com/settings/notifications` and enable specific events. Some events (e.g. "Workspace Created") are disabled by default and must be explicitly enabled here — the deployment events page only sets the delivery method, not whether the event fires for you.
 
 Recommended events to enable:
+
 - **User account created** — fires when any user signs up (admin-facing, enabled by default)
 - **Workspace Created** — fires when you or another user creates a workspace (must opt in at `/settings/notifications`)
 - **Workspace Deleted** — workspace removed
@@ -1396,6 +1403,7 @@ sudo journalctl -u workspace-lifecycle-cleanup -q -n50
 ## Troubleshooting
 
 **Coder service won't start:**
+
 ```bash
 journalctl -u coder -n50
 # Check CODER_ACCESS_URL is set and reachable
@@ -1403,6 +1411,7 @@ journalctl -u coder -n50
 ```
 
 **Sysbox containers fail to start:**
+
 ```bash
 sysbox-runc --version          # Verify sysbox is installed
 sudo systemctl status sysbox   # Check sysbox services are running
@@ -1410,6 +1419,7 @@ docker info | grep -i runtime  # Verify sysbox-runc appears as a runtime
 ```
 
 **Workspaces can't reach Docker:**
+
 ```bash
 # Inside a workspace
 docker ps   # Should work if Sysbox is functioning

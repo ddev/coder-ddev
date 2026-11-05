@@ -1,0 +1,66 @@
+name: Check docs
+
+# Checks the Zensical docs site in docs/content, the same way ddev/ddev checks
+# its docs. Read the Docs builds the PR preview and publishes
+# https://docs.coder.ddev.com/ from main; this workflow only checks.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - "docs/**"
+      - "mkdocs.yml"
+      - ".readthedocs.yaml"
+      - ".markdownlint.jsonc"
+      - ".linkspector.yml"
+      - "scripts/check-doc-params.sh"
+      - "drupal-core/template.tf"
+      - "drupal-contrib/template.tf"
+      - "freeform/template.tf"
+      - "modules/**"
+      - ".github/workflows/docs-check.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: read
+
+jobs:
+  docs-check:
+    name: Docs check (build, markdownlint, links, deep-link parameters)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.x"
+
+      - name: Build with Zensical (strict)
+        run: |
+          pip install -r docs/requirements.txt
+          make zensical
+
+      - name: Run markdownlint
+        run: |
+          npm install -g markdownlint-cli
+          make markdownlint
+
+      - name: Check deep-link parameters
+        run: make check-doc-params
+
+      - name: Run linkspector to check external links
+        uses: umbrelladocs/action-linkspector@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          reporter: github-check
+          fail_on_error: true
+          # Check links only in added lines for PRs, but check everything otherwise
+          filter_mode: ${{ github.event_name == 'pull_request' && 'added' || 'nofilter' }}
+          config_file: ".linkspector.yml"

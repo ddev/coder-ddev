@@ -2,6 +2,8 @@
 
 Coder workspace template for DDEV-based development with Docker-in-Docker support, Node.js, and Git.
 
+📚 **Documentation:** [docs.coder.ddev.com](https://docs.coder.ddev.com/)
+
 **Get started (recommended paths):**
 
 - **Drupal.org issue or project** → [Drupal Issue Picker](https://start.coder.ddev.com/drupal-issue) (auto-detects core vs contrib and prefills sensible defaults)
@@ -62,7 +64,7 @@ make help               # See all available commands
 
 ### Version Management
 
-The `VERSION` file in the root directory controls the image tag. The Makefile automatically copies it into each template directory before pushing, and `template.tf` reads it from there — no manual edits to `template.tf` are needed.
+The `VERSION` file in the root directory controls the image tag. The Makefile passes it to every template as `--variable image_version=...` at push time, so no edits to `template.tf` are needed.
 
 **To release a new version:**
 1. Update the `VERSION` file (e.g., `v0.7`)
@@ -77,22 +79,16 @@ make build-and-push-no-cache && make push-all-templates  # Clean build and deplo
 
 ## Documentation
 
-**New to Coder?**
-- 📘 [Getting Started Guide](./docs/user/getting-started.md) - Create your first workspace
-- 📗 [Using Workspaces](./docs/user/using-workspaces.md) - Daily workflows and tips
+📚 **User documentation: [docs.coder.ddev.com](https://docs.coder.ddev.com/)**, built with [Zensical](https://zensical.org) from [`docs/content/`](./docs/content/) and published by Read the Docs, the same way as [docs.ddev.com](https://docs.ddev.com).
 
-**Administrators:**
-- 📕 [Operations Guide](./docs/admin/operations-guide.md) - Deploy and manage template
-- 📙 [User Management](./docs/admin/user-management.md) - Users, roles, permissions
-- 📔 [Troubleshooting](./docs/admin/troubleshooting.md) - Debug common issues
+- [Getting started](https://docs.coder.ddev.com/getting-started/): access, sign-in, choosing a template
+- [Freeform workspaces](https://docs.coder.ddev.com/freeform/): running your own DDEV projects
+- [Drupal quickstart](https://docs.coder.ddev.com/drupal/quickstart/)
+- [Self-hosting](https://docs.coder.ddev.com/self-hosting/overview/): server setup, operations, user management
 
-**DDEV Experts:**
-- 🔍 [Comparison to Local DDEV](./docs/architecture/comparison-to-local.md) - Architecture, tradeoffs, migration
+Preview the docs locally with `pip install -r docs/requirements.txt` and `make zensical-serve`. Developer and contributor guidance is in [AGENTS.md](./AGENTS.md).
 
-**Developers/Contributors:**
-- 🤖 [AGENTS.md](./AGENTS.md) - AI-assisted development guide
-
-📚 **[Full Documentation Index](./docs/README.md)**
+The landing pages at [start.coder.ddev.com](https://start.coder.ddev.com) (`docs/*.html`) are a separate Jekyll site deployed to GitHub Pages.
 
 ## Template Structure
 
@@ -205,7 +201,7 @@ coder create --template drupal-contrib <workspace-name> \
 - Find your workspace
 - Click on port **80** or **443** under "Apps"
 
-**📖 [Full Getting Started Guide](./docs/user/getting-started.md)**
+**📖 [Full Getting Started Guide](https://docs.coder.ddev.com/getting-started/)**
 
 ### For Administrators
 
@@ -225,4 +221,4 @@ make build-and-push       # Build + push image
 make deploy-freeform       # Push freeform template (uses existing image)
 ```
 
-**📖 [Full Operations Guide](./docs/admin/operations-guide.md)**
+**📖 [Full Operations Guide](https://docs.coder.ddev.com/self-hosting/operations-guide/)**

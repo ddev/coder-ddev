@@ -1,0 +1,173 @@
+# yaml-language-server: $schema=https://squidfunk.github.io/mkdocs-material/schema.json
+# Built with Zensical (https://zensical.org), the same way as https://docs.ddev.com
+# (see ddev/ddev's mkdocs.yml and .readthedocs.yaml).
+#   Local preview: make zensical-serve
+#   Strict build:  make zensical
+# Published by Read the Docs to https://docs.coder.ddev.com/
+site_name: DDEV Coder Workspaces Docs
+# Overridden by .readthedocs.yaml with $READTHEDOCS_CANONICAL_URL before the build,
+# otherwise the 404 page would be broken
+site_url: https://docs.coder.ddev.com/
+repo_url: https://github.com/ddev/coder-ddev
+repo_name: ddev/coder-ddev
+edit_uri: blob/main/docs/content
+copyright: DDEV Foundation
+site_author: DDEV Foundation
+site_description: >-
+  Browser-based DDEV development environments on coder.ddev.com: create a
+  workspace, run one or many DDEV projects, and work from VS Code for Web.
+docs_dir: docs/content
+
+# Configuration
+theme:
+  variant: classic
+  icon:
+    edit: material/pencil
+  palette:
+    # Palette toggle for automatic mode
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode
+      primary: indigo
+      accent: indigo
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+      primary: indigo
+      accent: indigo
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to system preference
+      primary: indigo
+      accent: indigo
+  features:
+    - content.action.edit
+    - content.code.copy
+    - content.tabs.link
+    - navigation.expand
+    - navigation.indexes
+    - navigation.sections
+    - navigation.tabs
+    - navigation.top
+    - navigation.tracking
+    - navigation.footer
+    - search.suggest
+  favicon: assets/favicon.svg
+  logo: assets/favicon.svg
+
+# Plugins https://zensical.org/compatibility/plugins/
+plugins:
+  - search
+  - privacy:
+      enabled: !ENV [ READTHEDOCS, false ]
+      assets_include:
+        - fonts.googleapis.com/*
+        - fonts.gstatic.com/*
+  - redirects:
+      redirect_maps:
+  - minify:
+      minify_html: true
+
+# Operational drafts for the coder-ddev-com GitHub org; kept with the docs but
+# not part of the published navigation.
+not_in_nav: |
+  self-hosting/coder-ddev-com/*
+
+# Validation
+validation:
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: warn
+  anchors: warn
+
+# Customization
+extra:
+  social:
+    - icon: fontawesome/brands/discord
+      link: https://ddev.com/s/discord
+    - icon: fontawesome/brands/github
+      link: https://github.com/ddev/coder-ddev
+  generator: false
+  canonical_url: !ENV [ READTHEDOCS_CANONICAL_URL, '' ]
+
+# Extensions
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - meta
+  - md_in_html
+  - toc:
+      permalink: true
+      toc_depth: 3
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:zensical.extensions.emoji.twemoji
+      emoji_generator: !!python/name:zensical.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.magiclink:
+      repo_url_shorthand: true
+      user: ddev
+      repo: coder-ddev
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences:
+  - pymdownx.tabbed:
+      alternate_style: true
+      combine_header_slug: true
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+  - smarty
+
+nav:
+  - Home:
+      - index.md
+  - Getting Started:
+      - getting-started/index.md
+      - getting-started/access.md
+      - getting-started/choosing-a-template.md
+      - getting-started/first-workspace.md
+  - Freeform:
+      - freeform/index.md
+      - freeform/create.md
+      - freeform/first-project.md
+      - freeform/multiple-projects.md
+      - freeform/recipes.md
+      - freeform/services.md
+      - freeform/sharing.md
+  - Drupal:
+      - drupal/quickstart.md
+  - Working in a Workspace:
+      - workspaces/lifecycle.md
+      - workspaces/editors-and-ssh.md
+      - workspaces/ai-tools.md
+      - workspaces/troubleshooting.md
+      - workspaces/guide.md
+  - Reference:
+      - reference/comparison-to-local.md
+      - reference/coder-url-patterns.md
+  - Self-Hosting:
+      - self-hosting/overview.md
+      - self-hosting/server-setup.md
+      - self-hosting/operations-guide.md
+      - self-hosting/user-management.md
+      - self-hosting/troubleshooting.md
