@@ -308,7 +308,7 @@ The `image/Dockerfile` builds the base workspace image:
 2. **User setup** - Rename ubuntu user → coder (UID 1000)
 3. **Scripts copy** - `COPY scripts /home/coder-files` (outside volume mount)
 4. **Python/Node** - Install Python 3, Node.js 24.x LTS
-5. **Global npm tools** - OpenSpec, TypeScript (in image, re-attempted in startup)
+5. **Global npm tools** - TypeScript
 6. **Docker daemon** - `docker-ce`, `docker-ce-cli`, `containerd`, systemd for Sysbox
 7. **DDEV** - from official apt package (pkg.ddev.com)
 8. **Homebrew (Linuxbrew)** - `bats-core`, `bats-support`, `bats-assert`, `go`, `golangci-lint`
@@ -365,9 +365,9 @@ Additional logs in workspace:
 - Volume may have host UID, fixed automatically
 
 **npm global packages missing:**
-- Packages pre-installed in image, re-attempted in startup script
+- Packages are pre-installed in the image
 - Check PATH includes `~/.npm-global/bin` and `~/.local/bin`
-- Manual install: `npm install -g @fission-ai/openspec`
+- Manual install: `npm install -g <package>`
 
 ## Important Code Locations
 

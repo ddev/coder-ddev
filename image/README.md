@@ -115,7 +115,6 @@ Add to the npm install layer:
 
 ```dockerfile
 RUN npm install -g \
-    @fission-ai/openspec \
     typescript \
     your-package-here
 ```
