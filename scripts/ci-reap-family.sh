@@ -10,9 +10,17 @@
 #   its own family and can delete any older sibling before creating its own.
 #
 #   Workspace names are <family>-<run_number>-<run_attempt> (e.g.
-#   gc-pathauto-d11-152-1). The family is the stable part shared across runs of
-#   the same matrix cell. Passing the family prefix here deletes every ci-bot
-#   workspace that starts with it EXCEPT the one this run is about to create.
+#   gc-pathauto-d11-pr212-152-1). The family is the stable part shared across
+#   runs of the same matrix cell ON THE SAME REF. Passing the family prefix here
+#   deletes every ci-bot workspace that starts with it EXCEPT the one this run
+#   is about to create.
+#
+#   The family MUST include a ref tag (pr<N> for pull requests, main for
+#   push/schedule/dispatch on main, x<run_number> elsewhere). Runs on different
+#   refs are in different concurrency groups and legitimately overlap; without
+#   the ref tag, a PR run's reap would delete main's in-flight workspace (this
+#   happened on main run 407, deleted by PR run 408). Callers derive the family
+#   from WORKSPACE_NAME as "${WORKSPACE_NAME%-*-*}-" so the two cannot drift.
 #
 # Usage:
 #   ci-reap-family.sh <family-prefix> [keep-name]
