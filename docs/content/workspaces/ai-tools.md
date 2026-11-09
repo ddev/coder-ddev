@@ -122,3 +122,4 @@ On every start, the runner runs in the `tmux` session `claude-runner` (`tmux att
 
 - **Use a workspace only for the runner.** The runner rewrites `~/.gitconfig` and `~/.config/git` before every session. It can't be turned on together with remote control.
 - **Concurrent sessions** (1 to 4) sets how many sessions run at once. They share the workspace's Docker daemon and DDEV, and a skill installed in `~/.claude/skills/coder-shared-workspace` tells them how to stay out of each other's way. For full isolation, use several workspaces with one session each; the same environment secret works in all of them.
+- **Checkouts carry over between sessions.** A runner keeps its clones under `~/workspace/runner-<n>`, so a new session can find what an earlier one left behind. A hook in `/etc/claude-code/managed-settings.d/coder-runner.json` lists those leftover changes at the start of the session, and the skill tells Claude how to clean them up safely.

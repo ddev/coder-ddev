@@ -191,8 +191,12 @@ RUN mkdir -p "$HOMEBREW_CACHE" && /home/linuxbrew/.linuxbrew/bin/brew install \
   zellij
 
 USER root
-# Symlink brew-installed tools to /usr/local/bin so they're available system-wide
-# (brew installs to /home/linuxbrew which is only in PATH for interactive shells)
+# Every process in the workspace gets this PATH, including ones no shell
+# started: the Coder agent, its apps, tmux and Claude Code's Bash tool.
+# ~/.bashrc returns early in non-interactive shells, so its PATH lines don't
+# reach those. Homebrew stays last, so its formulas never shadow system tools.
+ENV PATH="/home/coder/.local/bin:/home/coder/.npm-global/bin:${PATH}:/home/linuxbrew/.linuxbrew/bin"
+# Kept for scripts that reset PATH to the system default.
 RUN ln -sf /home/linuxbrew/.linuxbrew/bin/yq /usr/local/bin/yq
 
 # Copy scripts last — changes here are frequent and should not bust the

@@ -24,13 +24,39 @@ since another session can start at any time.
 ## Repositories and checkouts
 
 - Each runner clones into its own directory, `~/workspace/runner-<n>/`, so
-  your checkout is yours. Never change files, branches or git state under
-  another runner's directory.
+  no other session uses your checkout while you work. Never change files,
+  branches or git state under another runner's directory.
+- A runner keeps its checkouts from one session to the next, so yours can
+  hold what an earlier session left behind. See "Leave the checkout clean"
+  below.
 - If you need a second checkout of your own repository, use a worktree
   next to it, not a new clone:
   `git worktree add ../<repo>-<your-branch> -b <your-branch> <base>`.
   Remove it with `git worktree remove` when you are done.
 - Put scratch files in `~/tmp/<your session id>/`, not directly in `~/tmp`.
+
+## Leave the checkout clean
+
+When a session starts in a checkout that is not clean, a hook prints the
+changed paths. Untracked files left by another branch can break a build or
+change what it generates, such as DDEV's image tags.
+
+- At the start, run `git status`. Do not commit changes you did not make.
+- Before deleting an untracked file, check that a commit holds the same
+  content: `git log --all --oneline -1 --find-object=$(git hash-object <file>)`.
+  Delete only the files this finds. Ask the user about the rest.
+- Restore a tracked file only when the change is generated output, or when
+  the user agrees.
+- At the end, delete the branches, worktrees and stashes you created, and
+  leave `git status` clean.
+
+## Tools and permission denials
+
+`go`, `make`, `golangci-lint` and the other Homebrew tools are on PATH in
+every shell. A login shell is not needed. When a command fails with
+"Permission ... has been denied", a permission rule blocked it. The tool is
+not missing. Read the repository's `AGENTS.md` and `.claude/settings.json`
+for the command to use instead, such as `make` in place of `go build`.
 
 ## Docker and DDEV
 
