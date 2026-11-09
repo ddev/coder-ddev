@@ -9,6 +9,10 @@ base="${base_dir}/runner-$n"
 mkdir -p "$base"
 export PATH="$HOME/.local/bin:$HOME/.npm-global/bin:/home/linuxbrew/.linuxbrew/bin:$PATH"
 export GIT_CONFIG_GLOBAL="$base/.gitconfig"
+# The workspace SSH agent relay (shared/ssh-agent-setup.sh): the user's
+# forwarded agent when one is connected, otherwise the Coder workspace key.
+# Without it, sessions can't push to an SSH remote such as a fork.
+export SSH_AUTH_SOCK="$HOME/.ssh-agent-relay/agent.sock"
 while true; do
   started=$(date +%s)
   /home/linuxbrew/.linuxbrew/bin/claude self-hosted-runner \

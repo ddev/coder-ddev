@@ -206,6 +206,10 @@ run "claude_code_enabled" {
     error_message = "startup script must actually launch claude --remote-control"
   }
   assert {
+    condition     = strcontains(coder_agent.main.startup_script, "SSH_AUTH_SOCK=/home/coder/.ssh-agent-relay/agent.sock /home/linuxbrew/.linuxbrew/bin/claude --remote-control")
+    error_message = "remote control must start claude with the workspace SSH agent relay, so it can push to SSH remotes"
+  }
+  assert {
     condition     = !strcontains(coder_agent.main.startup_script, "--dangerously-skip-permissions")
     error_message = "skip-permissions flag must not appear unless claude_code_skip_permissions is also set"
   }
@@ -292,6 +296,10 @@ run "claude_runner_enabled" {
   assert {
     condition     = strcontains(base64decode(regex("echo '([A-Za-z0-9+/=]+)' \\| base64 -d \\| sudo tee /etc/claude-code/managed-settings.d/coder-runner.json", coder_agent.main.startup_script)[0]), "claude-checkout-check /home/coder/workspace")
     error_message = "startup script must install the SessionStart hook that reports a checkout left dirty by an earlier session"
+  }
+  assert {
+    condition     = strcontains(base64decode(regex("echo '([A-Za-z0-9+/=]+)' \\| base64 -d > ~/.local/bin/claude-runner-loop", coder_agent.main.startup_script)[0]), "export SSH_AUTH_SOCK=\"$HOME/.ssh-agent-relay/agent.sock\"")
+    error_message = "runner sessions must get the workspace SSH agent relay, so they can push to SSH remotes"
   }
 }
 
