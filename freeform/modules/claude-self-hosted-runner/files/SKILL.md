@@ -120,3 +120,20 @@ The disk is shared. When it fills up, stop what you started and delete
 only what you created (build output, your worktrees, your `~/tmp`
 directory, your test projects). Never delete another session's files, and
 never prune Docker images or volumes another session may use.
+
+## Pushing over SSH
+
+`SSH_AUTH_SOCK` points at the workspace SSH agent relay,
+`~/.ssh-agent-relay/agent.sock`. The relay uses the user's own agent when
+one is forwarded (VS Code, `coder ssh -A`). Otherwise it uses the Coder
+workspace key, which GitHub accepts once the user adds it to their account
+(`coder publickey` prints it).
+
+- When you add a remote, such as the user's fork, use its SSH URL:
+  `git remote add <name> git@github.com:<owner>/<repo>`. HTTPS pushes go
+  through the session's git proxy, which reaches only the repositories
+  attached to the session.
+- Leave `origin` as the runner cloned it.
+- `ssh -T git@github.com` greets the user by name when SSH works.
+- On `Permission denied (publickey)`, ask the user to forward an agent or
+  add the Coder key to GitHub. Never create, copy or print keys.
