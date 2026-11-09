@@ -40,4 +40,18 @@ locals {
     secret_file = local.secret_file
     base_dir    = var.base_dir
   })
+
+  # A drop-in in /etc/claude-code/managed-settings.d, which every session
+  # reads, including the ones a runner starts with its own config directory.
+  # Claude Code skips it when claude.ai delivers server-managed settings.
+  managed_settings = jsonencode({
+    hooks = {
+      SessionStart = [{
+        hooks = [{
+          type    = "command"
+          command = "/home/coder/.local/bin/claude-checkout-check ${var.base_dir}"
+        }]
+      }]
+    }
+  })
 }

@@ -27,6 +27,10 @@ output "startup_script" {
         chmod +x ~/.local/bin/claude-runner-loop
         echo '${base64encode(file("${path.module}/files/claude-sessions"))}' | base64 -d > ~/.local/bin/claude-sessions
         chmod +x ~/.local/bin/claude-sessions
+        echo '${base64encode(file("${path.module}/files/claude-checkout-check"))}' | base64 -d > ~/.local/bin/claude-checkout-check
+        chmod +x ~/.local/bin/claude-checkout-check
+        sudo mkdir -p /etc/claude-code/managed-settings.d
+        echo '${base64encode(local.managed_settings)}' | base64 -d | sudo tee /etc/claude-code/managed-settings.d/coder-runner.json >/dev/null
         mkcert -install >/dev/null 2>&1 || true
         # Anchored on the program name: this script's own bash command line contains the phrase.
         if pgrep -f '^[^ ]*claude self-hosted-runner' >/dev/null || tmux has-session -t claude-runner 2>/dev/null; then
