@@ -16,6 +16,11 @@ output "startup_script" {
     # tmux session so it's connectable from claude.ai/code or the mobile app.
     CLAUDE_CODE_ENABLED="${local.enabled}"
     if [ "$CLAUDE_CODE_ENABLED" = "true" ]; then
+%{if local.custom_launch~}
+      mkdir -p ~/.local/bin
+      echo '${base64encode(var.launch_script)}' | base64 -d > ${local.launch_path}
+      chmod 700 ${local.launch_path}
+%{endif~}
       sed -i '/^export CLAUDE_REMOTE_CMD=/d;/^export CLAUDE_EXTRA_FLAGS=/d' ~/.bashrc || true
       echo 'export CLAUDE_REMOTE_CMD="${local.remote_cmd}"' >> ~/.bashrc
       echo 'export CLAUDE_EXTRA_FLAGS="${local.extra_flags}"' >> ~/.bashrc
@@ -93,11 +98,11 @@ CLAUDEHERE
       # down with it, with no session left for claude-ensure to even detect.
       tmux set-option -t "$CODER_WORKSPACE_NAME" remain-on-exit on 2>/dev/null || true
       read -r PANE_DEAD CURRENT_CMD < <(tmux list-panes -t "$CODER_WORKSPACE_NAME:0" -F '#{pane_dead} #{pane_current_command}' 2>/dev/null | head -1)
-      if [ "$PANE_DEAD" = "1" ] || [ "$CURRENT_CMD" != "claude" ]; then
-        tmux respawn-pane -k -t "$CODER_WORKSPACE_NAME:0" -c "$HOME" "$CLAUDE_REMOTE_CMD"
+      if [ "$PANE_DEAD" = "1" ]%{if !local.custom_launch} || [ "$CURRENT_CMD" != "claude" ]%{endif}; then
+        tmux respawn-pane -k -t "$CODER_WORKSPACE_NAME:0" -c "${var.project_directory}" "$CLAUDE_REMOTE_CMD"
       fi
     else
-      tmux new-session -d -s "$CODER_WORKSPACE_NAME" -c "$HOME" "$CLAUDE_REMOTE_CMD"
+      tmux new-session -d -s "$CODER_WORKSPACE_NAME" -c "${var.project_directory}" "$CLAUDE_REMOTE_CMD"
       tmux set-option -t "$CODER_WORKSPACE_NAME" remain-on-exit on
     fi
 CLAUDEENSURE

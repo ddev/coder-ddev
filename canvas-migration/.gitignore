@@ -1,0 +1,5 @@
+# Vault token file (not committed to Git)
+vault-token.txt
+
+# Terraform working directory
+.terraform/
