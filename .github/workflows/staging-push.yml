@@ -39,6 +39,8 @@ jobs:
             extra_vars: "--variable cache_path=/tmp/ci-no-cache"
           - template: freeform
             extra_vars: ""
+          - template: canvas-migration
+            extra_vars: ""
       fail-fast: false
     env:
       VERSION_NAME: ci-${{ github.run_id }}-${{ github.run_attempt }}

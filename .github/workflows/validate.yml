@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        template: [drupal-core, drupal-contrib, freeform]
+        template: [drupal-core, drupal-contrib, freeform, canvas-migration]
       fail-fast: false
     steps:
       - uses: actions/checkout@v6

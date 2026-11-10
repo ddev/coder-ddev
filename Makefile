@@ -10,7 +10,7 @@ DOCKERFILE := $(DOCKERFILE_DIR)/Dockerfile
 # ci-lock is a separate CI-only mutex template (see ci-lock/template.tf) --
 # deliberately excluded here since it has no shared assets to vendor and no
 # image_version variable; it gets its own validate/push handling below.
-TEMPLATES := drupal-core drupal-contrib freeform
+TEMPLATES := drupal-core drupal-contrib freeform canvas-migration
 
 # Host path to the drupal-core seed cache (bind-mounted read-only into workspaces).
 # This path is specific to the server where the template is deployed.
@@ -34,6 +34,7 @@ TEMPLATE_VARS_drupal-core      := --variable workspace_image_registry=index.dock
                                    --variable cache_path=$(DRUPAL_CACHE_PATH)
 TEMPLATE_VARS_drupal-contrib   := --variable workspace_image_registry=index.docker.io/$(IMAGE_NAME)
 TEMPLATE_VARS_freeform         := --variable workspace_image_registry=index.docker.io/$(IMAGE_NAME)
+TEMPLATE_VARS_canvas-migration := --variable workspace_image_registry=index.docker.io/$(IMAGE_NAME)
 
 # Per-template display metadata set via `coder templates edit` after push
 # (coder templates push only supports --name, not --description)
@@ -44,6 +45,9 @@ TEMPLATE_EDIT_drupal-contrib   := --display-name "Drupal Contrib Development" \
 TEMPLATE_EDIT_freeform         := --display-name "DDEV Freeform" \
                                    --description "Multi-project DDEV workspace: each project gets its own URL via ddev-router Host-header routing." \
                                    --default-ttl 24h
+TEMPLATE_EDIT_canvas-migration := --display-name "Drupal CMS Canvas Migration (Experimental)" \
+                                   --description "Bring an existing website into Drupal CMS with Canvas, Storybook and Claude, ready to use in your browser." \
+                                   --icon "/icon/docker.svg"
 
 # Shared recipe for pushing any template (call with template name as argument)
 define push_template
@@ -115,12 +119,17 @@ sync-claude-module: ## Vendor modules/claude-remote-control into each template d
 	done
 	@echo "Synced modules/claude-remote-control into: $(TEMPLATES)"
 
+# Templates that offer the Claude Code self-hosted runner.
+RUNNER_TEMPLATES := freeform canvas-migration
+
 .PHONY: sync-claude-runner-module
-sync-claude-runner-module: ## Vendor modules/claude-self-hosted-runner into freeform, the only template that offers it (same reason as sync-claude-module: push only bundles the given --directory)
-	@rm -rf freeform/modules/claude-self-hosted-runner
-	@mkdir -p freeform/modules
-	@cp -r modules/claude-self-hosted-runner freeform/modules/claude-self-hosted-runner
-	@echo "Synced modules/claude-self-hosted-runner into: freeform"
+sync-claude-runner-module: ## Vendor modules/claude-self-hosted-runner into the templates that offer it, RUNNER_TEMPLATES (same reason as sync-claude-module: push only bundles the given --directory)
+	@for t in $(RUNNER_TEMPLATES); do \
+		rm -rf $$t/modules/claude-self-hosted-runner; \
+		mkdir -p $$t/modules; \
+		cp -r modules/claude-self-hosted-runner $$t/modules/claude-self-hosted-runner; \
+	done
+	@echo "Synced modules/claude-self-hosted-runner into: $(RUNNER_TEMPLATES)"
 
 .PHONY: sync-vscode-extensions
 sync-vscode-extensions: ## Vendor shared/vscode-extensions.tf into each template dir (same reason as sync-claude-module: push only bundles the given --directory)
@@ -249,6 +258,10 @@ push-template-drupal-contrib: sync-shared ## Push drupal-contrib template to Cod
 push-template-freeform: sync-shared ## Push freeform template to Coder
 	$(call push_template,freeform)
 
+.PHONY: push-template-canvas-migration
+push-template-canvas-migration: sync-shared ## Push canvas-migration template to Coder
+	$(call push_template,canvas-migration)
+
 .PHONY: push-template-ci-lock
 push-template-ci-lock: ## Push the ci-lock CI-mutex template to Coder (no image, no shared assets -- see ci-lock/template.tf)
 	@echo "Pushing Coder template ci-lock..."
@@ -258,7 +271,7 @@ push-template-ci-lock: ## Push the ci-lock CI-mutex template to Coder (no image,
 	@echo "Template ci-lock push complete"
 
 .PHONY: push-all-templates
-push-all-templates: push-template-drupal-core push-template-drupal-contrib push-template-freeform push-template-ci-lock ## Push all templates to Coder (no image build)
+push-all-templates: push-template-drupal-core push-template-drupal-contrib push-template-freeform push-template-canvas-migration push-template-ci-lock ## Push all templates to Coder (no image build)
 	@echo "All templates pushed!"
 
 # --- Deploy targets ---
@@ -274,6 +287,10 @@ deploy-drupal-contrib: push-template-drupal-contrib ## Deploy drupal-contrib tem
 .PHONY: deploy-freeform
 deploy-freeform: push-template-freeform ## Deploy freeform template (uses existing image)
 	@echo "Deployment of freeform complete!"
+
+.PHONY: deploy-canvas-migration
+deploy-canvas-migration: push-template-canvas-migration ## Deploy canvas-migration template (uses existing image)
+	@echo "Deployment of canvas-migration complete!"
 
 .PHONY: deploy-all
 deploy-all: build-and-push push-all-templates ## Build image, push image, and push all templates

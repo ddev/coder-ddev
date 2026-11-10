@@ -76,15 +76,16 @@ When writing or reviewing `coder` CLI commands in documentation, **always verify
 
 ## Template Architecture Overview
 
-Three templates exist, each with a distinct routing model:
+Four templates exist, each with a distinct routing model:
 
 | Template             | Web port | Routing model                                         |
 | -------------------- | -------- | ----------------------------------------------------- |
 | `drupal-core`        | 80       | Direct bind, no ddev-router                           |
 | `drupal-contrib`     | 8080     | Direct bind, no ddev-router                           |
 | `freeform`           | 8080     | ddev-router on 8080, Host-header dispatch per project |
+| `canvas-migration`   | 8080     | Same as `freeform`, one project; Storybook on 6005    |
 
-The `freeform` template is unique: it keeps ddev-router running so multiple DDEV projects can coexist in one workspace, distinguished by Host header.
+The `freeform` template keeps ddev-router running so multiple DDEV projects can coexist in one workspace, distinguished by Host header. `canvas-migration` (experimental) is a single-project derivative of `freeform` that installs Drupal CMS with Canvas and Storybook on first start (`canvas-migration/migration-setup.sh`) for the Canvas AI Migrations workflow; see `canvas-migration/MAINTAINERS.md`.
 
 ## Tool Preferences
 
@@ -110,9 +111,9 @@ make test-templates
 
 ## Shared Terraform Assets
 
-Some Terraform config (currently `modules/claude-remote-control`, `modules/docker-daemon`, `shared/vscode-extensions.tf`, `shared/bashrc-symlink-guard.sh` and `shared/ssh-agent-setup.sh`) is shared across all three templates but must exist as a **physical copy inside each template directory** — `coder templates push` and CI's `terraform validate`/`test` only ever operate on a single template directory, so a relative `../modules` or `../shared` reference would not survive the push and would not be visible to CI.
+Some Terraform config (currently `modules/claude-remote-control`, `modules/docker-daemon`, `shared/vscode-extensions.tf`, `shared/bashrc-symlink-guard.sh` and `shared/ssh-agent-setup.sh`) is shared across all templates but must exist as a **physical copy inside each template directory** — `coder templates push` and CI's `terraform validate`/`test` only ever operate on a single template directory, so a relative `../modules` or `../shared` reference would not survive the push and would not be visible to CI.
 
-`modules/claude-self-hosted-runner` follows the same rules but is vendored into `freeform` only, the one template that offers the runner.
+`modules/claude-self-hosted-runner` follows the same rules but is vendored only into the templates listed in the Makefile's `RUNNER_TEMPLATES` (`freeform` and `canvas-migration`), the ones that offer the runner.
 
 - **Edit only the canonical source**: `modules/claude-remote-control/` or `shared/vscode-extensions.tf` at the repo root. Never hand-edit the vendored copies (`<template>/modules/claude-remote-control/`, `<template>/vscode-extensions.tf`) — they get overwritten the next time anyone runs the sync.
 - **Always resync through `make`**, never by hand-copying: `make sync-shared` (or `make sync-claude-module` / `make sync-vscode-extensions` individually). `make validate`, `make test-templates`, and every `make push-template-*` / `make push-all-templates` target already depend on `sync-shared`, so day-to-day you rarely need to invoke it directly.
@@ -153,6 +154,7 @@ make push-all-templates
 make push-template-drupal-core
 make push-template-drupal-contrib
 make push-template-freeform
+make push-template-canvas-migration
 
 # List all templates
 coder templates list
@@ -389,6 +391,7 @@ Additional logs in workspace:
 - `drupal-core/template.tf` - Drupal core development template (most actively developed)
 - `drupal-contrib/template.tf` - Drupal contributed module development template
 - `freeform/template.tf` - Multi-project freeform workspace template (keeps ddev-router)
+- `canvas-migration/template.tf` - Experimental single-project Drupal CMS Canvas migration template, derived from freeform; first-start setup in `canvas-migration/migration-setup.sh`
 - `image/scripts/.ddev/commands/host/launch` - Shared `ddev launch` override for all templates. Honors `DDEV_DEBUG`/`DDEV_VERBOSE` (prints `FULLURL <url>` and exits, matching stock ddev's contract used by tooling). For interactive use, branches on `ddev describe -j`'s `.raw.router_disabled`: freeform (router enabled) reads the per-project `coder-routes` Traefik config; drupal-core/drupal-contrib (router disabled, direct port bind) construct the named-app URL directly from the `ddev-web`/`mailpit` `coder_app` slugs — no Traefik file needed.
 - `image/Dockerfile` - Base image build instructions (shared by all templates)
 - `image/scripts/.ddev/global_config.yaml` - DDEV defaults copied into workspaces
