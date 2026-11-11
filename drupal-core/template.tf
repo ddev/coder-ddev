@@ -1057,9 +1057,21 @@ TESTENV_EOF
     # Step 6.5: Cache rebuild — ensures a clean state after any successful setup path.
     # Skipped when setup failed: there is no installed site to rebuild, and running it
     # anyway just appends a confusing "drush is not available" error to the log.
+    #
+    # The drupal-site healthcheck requests / every 10s, including while drush si
+    # runs. A request during the install leaves stale caches, and / then returns
+    # 404 "No route found" until they are flushed. Drush 14's cache:rebuild runs
+    # core's vendor/bin/dr, which core only has from 11.4 on, so it fails on
+    # older branches. Flush through Drupal's own API instead (#238).
     if [ "$SETUP_FAILED" != "true" ]; then
       log_setup "Running cache rebuild..."
-      ddev drush cr >> "$SETUP_LOG" 2>&1 || true
+      if ! ddev drush cr >> "$SETUP_LOG" 2>&1; then
+        if ddev drush php:eval 'drupal_flush_all_caches();' >> "$SETUP_LOG" 2>&1; then
+          log_setup "✓ Caches flushed with drupal_flush_all_caches() (drush cr failed)"
+        else
+          log_setup "⚠ Cache rebuild failed"
+        fi
+      fi
     fi
 
     # Step 6.6: Set up phpunit.xml for running core tests
