@@ -284,6 +284,11 @@ resource "coder_agent" "main" {
 
     ${file("${path.module}/ssh-agent-setup.sh")}
 
+    # Trust the mkcert CA so curl/browsers inside the workspace accept
+    # https://<project>.ddev.site. The CA lives in the persistent home, but the
+    # system trust store is in the container layer, so this runs every start.
+    mkcert -install 2>/dev/null || true
+
     # Create .ddev commands directory
     mkdir -p ~/.ddev/commands/host
     if [ -d /home/coder-files/.ddev/commands/host ]; then
