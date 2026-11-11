@@ -305,6 +305,8 @@ resource "coder_agent" "main" {
       tail -20 /tmp/ddev-download-images.log || true
     fi
 
+    ${file("${path.module}/mkcert-setup.sh")}
+
     # Ensure yq and linuxbrew are in PATH for this session
     export PATH="$PATH:/home/linuxbrew/.linuxbrew/bin"
 

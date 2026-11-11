@@ -451,10 +451,6 @@ resource "coder_agent" "main" {
 
     ${file("${path.module}/ssh-agent-setup.sh")}
 
-    # Install mkcert CA to suppress DDEV's "mkcert may not be properly installed" warning
-    # DDEV ships its own mkcert binary; this sets up the local CA trust
-    mkcert -install 2>/dev/null || true
-
     # Pre-pull DDEV images (uses registry mirror if configured). Redirect --
     # non-TTY docker pull progress prints a new line per layer per tick
     # (often written to stderr), so unredirected this alone was 95% of a
@@ -469,6 +465,8 @@ resource "coder_agent" "main" {
       echo "  ⚠ ddev utility download-images failed after $${IMAGES_TIME}s (see /tmp/ddev-download-images.log)"
       tail -20 /tmp/ddev-download-images.log || true
     fi
+
+    ${file("${path.module}/mkcert-setup.sh")}
 
     # ==========================================
     # DRUPAL CORE AUTOMATIC SETUP
