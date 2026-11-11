@@ -881,6 +881,27 @@ web_environment:
 TESTENV_EOF
         log_setup "✓ .ddev/config.zzz-coder-test-env.yaml written (SIMPLETEST_BASE_URL override)"
 
+        # Make Composer install drupal/core from the checked-out core/ directory.
+        # On an issue branch, Composer gives the root package core's branch
+        # alias (e.g. 12.x-dev), but gives the core/ path package the raw branch
+        # name (dev-<issue>-<slug>), which doesn't match the root's
+        # "self.version" requirement. Composer then takes drupal/core dev-main
+        # from Packagist, so the branch is built against today's main
+        # dependencies, and an older branch can't install at all (#238).
+        # Declaring core/ first, with the version from its own branch alias,
+        # makes the local copy win.
+        _core_alias=$(jq -r '(.extra["branch-alias"] // {}) | to_entries | first | .value // empty' core/composer.json 2>/dev/null)
+        if [ -n "$_core_alias" ] && [ -f composer.local.json ]; then
+          if jq --arg v "$_core_alias" \
+               '.repositories = ({"drupal-core-local": {"type": "path", "url": "core", "options": {"versions": {"drupal/core": $v}}}} + (.repositories // {}))' \
+               composer.local.json > composer.local.json.tmp && mv composer.local.json.tmp composer.local.json; then
+            log_setup "✓ composer.local.json: drupal/core pinned to local core/ ($_core_alias)"
+          else
+            rm -f composer.local.json.tmp
+            log_setup "⚠ Could not pin drupal/core to local core/ in composer.local.json"
+          fi
+        fi
+
         log_setup "Restarting DDEV to activate add-on..."
         ddev restart >> "$SETUP_LOG" 2>&1 || true
 
