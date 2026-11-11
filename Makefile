@@ -152,8 +152,15 @@ sync-ssh-agent-setup: ## Vendor shared/ssh-agent-setup.sh into each template dir
 	done
 	@echo "Synced shared/ssh-agent-setup.sh into: $(TEMPLATES)"
 
+.PHONY: sync-mkcert-setup
+sync-mkcert-setup: ## Vendor shared/mkcert-setup.sh into each template dir (same reason as sync-vscode-extensions: push only bundles the given --directory)
+	@for t in $(TEMPLATES); do \
+		cp shared/mkcert-setup.sh $$t/mkcert-setup.sh; \
+	done
+	@echo "Synced shared/mkcert-setup.sh into: $(TEMPLATES)"
+
 .PHONY: sync-shared
-sync-shared: sync-claude-module sync-claude-runner-module sync-vscode-extensions sync-docker-daemon-module sync-bashrc-guard sync-ssh-agent-setup ## Vendor all shared Terraform assets (modules + vscode-extensions.tf) into each template dir
+sync-shared: sync-claude-module sync-claude-runner-module sync-vscode-extensions sync-docker-daemon-module sync-bashrc-guard sync-ssh-agent-setup sync-mkcert-setup ## Vendor all shared Terraform assets (modules + vscode-extensions.tf) into each template dir
 
 .PHONY: validate
 validate: sync-shared ## Validate all Terraform templates (requires terraform in PATH)

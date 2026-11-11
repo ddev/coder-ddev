@@ -369,7 +369,6 @@ resource "coder_agent" "main" {
     ddev config global --omit-containers=ddev-router --instrumentation-opt-in=false > /dev/null 2>&1 || true
 
     ${file("${path.module}/ssh-agent-setup.sh")}
-    mkcert -install 2>/dev/null || true
 
     # Pre-pull DDEV images (uses registry mirror if configured). Redirect --
     # non-TTY docker pull progress prints a new line per layer per tick
@@ -385,6 +384,8 @@ resource "coder_agent" "main" {
       echo "  ⚠ ddev utility download-images failed after $${IMAGES_TIME}s (see /tmp/ddev-download-images.log)"
       tail -20 /tmp/ddev-download-images.log || true
     fi
+
+    ${file("${path.module}/mkcert-setup.sh")}
 
     # ==========================================
     # DRUPAL CONTRIB AUTOMATIC SETUP

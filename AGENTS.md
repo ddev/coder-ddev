@@ -110,7 +110,7 @@ make test-templates
 
 ## Shared Terraform Assets
 
-Some Terraform config (currently `modules/claude-remote-control`, `modules/docker-daemon`, `shared/vscode-extensions.tf`, `shared/bashrc-symlink-guard.sh` and `shared/ssh-agent-setup.sh`) is shared across all three templates but must exist as a **physical copy inside each template directory** — `coder templates push` and CI's `terraform validate`/`test` only ever operate on a single template directory, so a relative `../modules` or `../shared` reference would not survive the push and would not be visible to CI.
+Some Terraform config (currently `modules/claude-remote-control`, `modules/docker-daemon`, `shared/vscode-extensions.tf`, `shared/bashrc-symlink-guard.sh`, `shared/ssh-agent-setup.sh` and `shared/mkcert-setup.sh`) is shared across all three templates but must exist as a **physical copy inside each template directory** — `coder templates push` and CI's `terraform validate`/`test` only ever operate on a single template directory, so a relative `../modules` or `../shared` reference would not survive the push and would not be visible to CI.
 
 `modules/claude-self-hosted-runner` follows the same rules but is vendored into `freeform` only, the one template that offers the runner.
 

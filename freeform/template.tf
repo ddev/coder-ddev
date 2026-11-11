@@ -284,11 +284,6 @@ resource "coder_agent" "main" {
 
     ${file("${path.module}/ssh-agent-setup.sh")}
 
-    # Trust the mkcert CA so curl/browsers inside the workspace accept
-    # https://<project>.ddev.site. The CA lives in the persistent home, but the
-    # system trust store is in the container layer, so this runs every start.
-    mkcert -install 2>/dev/null || true
-
     # Create .ddev commands directory
     mkdir -p ~/.ddev/commands/host
     if [ -d /home/coder-files/.ddev/commands/host ]; then
@@ -309,6 +304,8 @@ resource "coder_agent" "main" {
       echo "⚠ ddev utility download-images failed (see /tmp/ddev-download-images.log)"
       tail -20 /tmp/ddev-download-images.log || true
     fi
+
+    ${file("${path.module}/mkcert-setup.sh")}
 
     # Ensure yq and linuxbrew are in PATH for this session
     export PATH="$PATH:/home/linuxbrew/.linuxbrew/bin"
