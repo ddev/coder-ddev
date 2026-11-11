@@ -107,10 +107,9 @@ Claude runs in the `tmux` session named after the workspace, starting in your ho
 One-time setup:
 
 1. On claude.ai, create a self-hosted environment and copy its environment secret.
-2. In the workspace, save it:
+2. In the workspace, save it in `~/.claude-runner`, which the workspace creates when the setting is on. The `README.md` there has these steps, and says where the runner keeps its logs, checkouts and rescued work.
 
     ```bash
-    mkdir -p ~/.claude-runner
     # paste the secret, press Enter, then Ctrl-D
     cat > ~/.claude-runner/environment-secret
     chmod 600 ~/.claude-runner/environment-secret

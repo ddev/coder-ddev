@@ -306,6 +306,10 @@ run "claude_runner_enabled" {
     error_message = "each runner must get a hooks dir whose post-session hook sweeps its checkouts"
   }
   assert {
+    condition     = strcontains(base64decode(regex("echo '([A-Za-z0-9+/=]+)' \\| base64 -d > ~/.claude-runner/README.md", coder_agent.main.startup_script)[0]), "~/.claude-runner/environment-secret")
+    error_message = "startup script must create ~/.claude-runner with a README that says where to save the secret"
+  }
+  assert {
     condition     = strcontains(coder_agent.main.startup_script, "base64 -d > ~/.local/bin/claude-runner-sweep")
     error_message = "startup script must install claude-runner-sweep"
   }

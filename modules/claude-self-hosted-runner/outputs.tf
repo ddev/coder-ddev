@@ -11,10 +11,14 @@ output "startup_script" {
     CLAUDE_RUNNER_ENABLED="${local.enabled}"
     CLAUDE_REMOTE_CONTROL_ENABLED="${var.remote_control_enabled}"
     if [ "$CLAUDE_RUNNER_ENABLED" = "true" ]; then
+      # Created before the checks below, so the secret has an obvious home.
+      mkdir -p ~/.claude-runner
+      chmod 700 ~/.claude-runner
+      echo '${base64encode(file("${path.module}/files/README.md"))}' | base64 -d > ~/.claude-runner/README.md
       if [ "$CLAUDE_REMOTE_CONTROL_ENABLED" = "true" ]; then
         CLAUDE_RUNNER_MSG="✗ Claude Code self-hosted runner NOT started: Claude Code remote control is also enabled, and the runner rewrites ~/.gitconfig before every session. Turn one of them off."
       elif [ ! -s "${local.secret_file}" ]; then
-        CLAUDE_RUNNER_MSG="✗ Claude Code self-hosted runner NOT started: save your environment secret as ${local.secret_file} (chmod 600), then restart the workspace."
+        CLAUDE_RUNNER_MSG="✗ Claude Code self-hosted runner NOT started: save your environment secret as ${local.secret_file} (chmod 600), then restart the workspace. See ~/.claude-runner/README.md."
       else
         # /etc is not persistent, so reinstall the session git config on every start.
         echo '${base64encode(file("${path.module}/files/gitconfig"))}' | base64 -d | sudo tee /etc/gitconfig >/dev/null
