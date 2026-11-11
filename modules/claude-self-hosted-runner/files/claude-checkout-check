@@ -1,20 +1,31 @@
 #!/usr/bin/env bash
 # Claude Code SessionStart hook, installed by the claude-self-hosted-runner
-# module. A runner keeps its checkouts from one session to the next, so tell
-# a new session when an earlier one left changes behind. Usage:
+# module. A runner keeps its checkouts from one session to the next, and
+# claude-runner-sweep cleans them after each session. Tell a new session when
+# that did not happen, and tell a resumed one where the sweep put its work.
+# Usage:
 #   claude-checkout-check <runner base dir>
 # Prints nothing for a clean checkout or one outside the base dir, such as a
 # project you run claude in by hand.
 base="${1:?usage: claude-checkout-check <runner base dir>}"
+rescue_root="${CLAUDE_RUNNER_RESCUE_DIR:-$HOME/.local/state/claude-runner-rescue}"
 dir="${CLAUDE_PROJECT_DIR:-$PWD}"
 case "$dir/" in
   "${base%/}"/*) ;;
   *) exit 0 ;;
 esac
+# The hook's input names this session; the sweep logs the runner's ids for it.
+input=$(cat 2>/dev/null)
+sid=$(jq -r '.session_id // empty' <<<"$input" 2>/dev/null)
+if [ -n "$sid" ] && [ -f "$rescue_root/log" ] && grep -qF -- "$sid" "$rescue_root/log"; then
+  echo "This session was released earlier, and the runner saved what it had left uncommitted. Entries in $rescue_root/log:"
+  grep -F -- "$sid" "$rescue_root/log" | tail -10
+  echo "Stashes are in the checkout named there (find them with: git -C <checkout> stash list | grep runner-rescue). Before restoring one, tell the user what it holds."
+fi
 status=$(git -C "$dir" status --porcelain 2>/dev/null) || exit 0
 [ -n "$status" ] || exit 0
 count=$(printf '%s\n' "$status" | wc -l)
 echo "The checkout $dir is not clean at the start of this session: an earlier session left $count changed or untracked path(s)."
-echo "They are not part of your task, and they can break a build. Before you build, test or commit, follow \"Leave the checkout clean\" in the coder-shared-workspace skill."
+echo "They are not part of your task. Save them with: git stash push --include-untracked -m \"leftovers from an earlier session\". Then continue in this checkout; do not make a worktree or a new clone to avoid them. See \"Leave the checkout clean\" in the coder-shared-workspace skill."
 printf '%s\n' "$status" | head -20
 [ "$count" -le 20 ] || echo "... and $((count - 20)) more"

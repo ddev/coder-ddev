@@ -29,6 +29,8 @@ output "startup_script" {
         chmod +x ~/.local/bin/claude-sessions
         echo '${base64encode(file("${path.module}/files/claude-checkout-check"))}' | base64 -d > ~/.local/bin/claude-checkout-check
         chmod +x ~/.local/bin/claude-checkout-check
+        echo '${base64encode(file("${path.module}/files/claude-runner-sweep"))}' | base64 -d > ~/.local/bin/claude-runner-sweep
+        chmod +x ~/.local/bin/claude-runner-sweep
         sudo mkdir -p /etc/claude-code/managed-settings.d
         echo '${base64encode(local.managed_settings)}' | base64 -d | sudo tee /etc/claude-code/managed-settings.d/coder-runner.json >/dev/null
         mkcert -install >/dev/null 2>&1 || true

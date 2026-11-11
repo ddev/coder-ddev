@@ -26,13 +26,14 @@ since another session can start at any time.
 - Each runner clones into its own directory, `~/workspace/runner-<n>/`, so
   no other session uses your checkout while you work. Never change files,
   branches or git state under another runner's directory.
-- A runner keeps its checkouts from one session to the next, so yours can
-  hold what an earlier session left behind. See "Leave the checkout clean"
+- A runner keeps its checkouts from one session to the next. After every
+  session, `claude-runner-sweep` cleans them: it stashes uncommitted changes
+  as `runner-rescue` stashes, removes worktrees, and moves other clones to
+  `~/.local/state/claude-runner-rescue/`. See "Leave the checkout clean"
   below.
-- If you need a second checkout of your own repository, use a worktree
-  next to it, not a new clone:
-  `git worktree add ../<repo>-<your-branch> -b <your-branch> <base>`.
-  Remove it with `git worktree remove` when you are done.
+- Work in the checkout the runner gave you. Do not make a new clone, and
+  never make a worktree or clone to get around files an earlier session
+  left behind. If a task needs a second checkout, ask the user first.
 - Put scratch files in `~/tmp/<your session id>/`, not directly in `~/tmp`.
 
 ## Leave the checkout clean
@@ -41,12 +42,17 @@ When a session starts in a checkout that is not clean, a hook prints the
 changed paths. Untracked files left by another branch can break a build or
 change what it generates, such as DDEV's image tags.
 
-- At the start, run `git status`. Do not commit changes you did not make.
-- Before deleting an untracked file, check that a commit holds the same
-  content: `git log --all --oneline -1 --find-object=$(git hash-object <file>)`.
-  Delete only the files this finds. Ask the user about the rest.
-- Restore a tracked file only when the change is generated output, or when
-  the user agrees.
+- If the hook reports leftovers, they are not yours. Save them, then carry
+  on in the same checkout:
+  `git stash push --include-untracked -m "leftovers from an earlier session"`.
+  Do not commit, delete or restore them.
+- The runner can end your session without warning once the user has sent
+  nothing for 30 minutes. Before you finish a turn and wait for the user,
+  commit your work, and push it if the task includes pushing. What you
+  leave uncommitted is stashed when the session ends, and a resumed session
+  may run on another runner, in a checkout without it.
+- If the hook says this session was released earlier and its changes were
+  saved, tell the user what was saved before restoring any of it.
 - At the end, delete the branches, worktrees and stashes you created, and
   leave `git status` clean.
 

@@ -1,0 +1,131 @@
+#!/usr/bin/env bash
+# Installed by the claude-self-hosted-runner module. Cleans one runner's
+# checkouts after a session, so the next session starts clean. Usage:
+#   claude-runner-sweep <runner dir, such as ~/workspace/runner-1>
+# Runs as the runner's post-session hook and before every runner start, so
+# never while a session uses the directory (each runner has --capacity 1).
+# Nothing a session left is deleted unless a commit or remote already holds it:
+# - Leftover changes in the runner's clones go into a "runner-rescue" stash.
+# - Worktrees are removed, after stashing their changes the same way.
+# - Other clones, and broken worktrees, are deleted if they hold nothing
+#   unpushed, and otherwise moved to the rescue directory,
+#   ~/.local/state/claude-runner-rescue/<runner>/<time>/.
+# Every action is logged in the rescue directory's "log". Rescue stashes and
+# directories older than CLAUDE_RUNNER_RESCUE_DAYS (default 30) are removed.
+set -u
+runner_dir="${1:?usage: claude-runner-sweep <runner dir>}"
+runner_dir="${runner_dir%/}"
+[ -d "$runner_dir" ] || exit 0
+runner=$(basename "$runner_dir")
+rescue_root="${CLAUDE_RUNNER_RESCUE_DIR:-$HOME/.local/state/claude-runner-rescue}"
+keep_days="${CLAUDE_RUNNER_RESCUE_DAYS:-30}"
+stamp=$(date +%Y%m%d-%H%M%S)
+session="${CLAUDE_RUNNER_SESSION_ID:-no-session}"
+uuid="${CLAUDE_RUNNER_SESSION_UUID:-}"
+mkdir -p "$rescue_root"
+# Lifecycle hooks may run git without the session's identity; a stash needs one.
+export GIT_AUTHOR_NAME="${GIT_AUTHOR_NAME:-Claude runner}" GIT_AUTHOR_EMAIL="${GIT_AUTHOR_EMAIL:-noreply@anthropic.com}"
+export GIT_COMMITTER_NAME="${GIT_COMMITTER_NAME:-Claude runner}" GIT_COMMITTER_EMAIL="${GIT_COMMITTER_EMAIL:-noreply@anthropic.com}"
+
+note() {
+  printf '%s %s %s %s %s\n' "$(date -Is)" "$runner" "$session" "${uuid:--}" "$*" >>"$rescue_root/log"
+  echo "claude-runner-sweep: $*"
+}
+
+dirty() { [ -n "$(git -C "$1" status --porcelain 2>/dev/null)" ]; }
+
+# Stash everything uncommitted in a checkout, including untracked files. A
+# merge, rebase or cherry-pick in progress blocks a stash, so abort it first;
+# its commits are still on the branch it started from.
+rescue_stash() {
+  local dir="$1" what="$2" branch msg
+  dirty "$dir" || return 0
+  branch=$(git -C "$dir" branch --show-current 2>/dev/null)
+  branch="${branch:-detached at $(git -C "$dir" rev-parse --short HEAD 2>/dev/null)}"
+  msg="runner-rescue $stamp $session $what on $branch"
+  if ! git -C "$dir" stash push --include-untracked --quiet -m "$msg" >/dev/null 2>&1; then
+    local op
+    for op in merge rebase cherry-pick revert; do
+      git -C "$dir" "$op" --abort >/dev/null 2>&1 && note "aborted an unfinished $op in $dir"
+    done
+    dirty "$dir" || return 0
+    if ! git -C "$dir" stash push --include-untracked --quiet -m "$msg" >/dev/null 2>&1; then
+      note "FAILED to stash changes in $dir; left in place"
+      return 1
+    fi
+  fi
+  note "stashed changes in $dir as \"$msg\""
+}
+
+# True when deleting this checkout loses nothing: no changes, no stashes and
+# no commits that are missing from every remote-tracking branch.
+disposable() {
+  local dir="$1"
+  git -C "$dir" rev-parse --git-dir >/dev/null 2>&1 || return 1
+  dirty "$dir" && return 1
+  [ -z "$(git -C "$dir" stash list 2>/dev/null)" ] || return 1
+  [ "$(git -C "$dir" rev-list --count --branches --not --remotes 2>/dev/null)" = 0 ] || return 1
+  # A detached HEAD may hold commits on no branch at all.
+  [ -z "$(git -C "$dir" rev-list -1 HEAD --not --remotes --branches 2>/dev/null)" ] || return 1
+}
+
+# The runner clones <owner>/<repo> into <runner dir>/<owner>/<repo>. Anything
+# else at that depth with a .git is a clone or worktree a session made.
+is_runner_clone() {
+  local dir="$1" url name
+  [ -d "$dir/.git" ] || return 1
+  url=$(git -C "$dir" remote get-url origin 2>/dev/null) || return 1
+  name=$(basename "${url%/}" .git)
+  [ "$name" = "$(basename "$dir")" ]
+}
+
+shopt -s nullglob
+candidates=()
+for dir in "$runner_dir"/*/*/; do
+  dir="${dir%/}"
+  case "$dir" in
+    "$runner_dir"/_sessions/* | "$runner_dir"/.*) continue ;;
+  esac
+  [ -e "$dir/.git" ] && candidates+=("$dir")
+done
+
+# Runner clones first, so their worktrees are gone before the second pass.
+for dir in "${candidates[@]}"; do
+  is_runner_clone "$dir" || continue
+  while read -r wt; do
+    [ "$wt" = "$dir" ] && continue
+    if [ -d "$wt" ]; then
+      rescue_stash "$wt" "worktree $(basename "$wt")" || continue
+      if git -C "$dir" worktree remove --force "$wt" 2>/dev/null; then
+        note "removed worktree $wt"
+      fi
+    fi
+  done < <(git -C "$dir" worktree list --porcelain 2>/dev/null | sed -n 's/^worktree //p')
+  git -C "$dir" worktree prune 2>/dev/null
+  rescue_stash "$dir" "checkout"
+  # Drop expired rescue stashes, highest index (oldest) first, so the lower
+  # indexes stay valid.
+  cutoff=$(($(date +%s) - keep_days * 86400))
+  git -C "$dir" stash list --format='%gd %ct %gs' 2>/dev/null | sort -t'{' -k2 -rn |
+    while read -r ref ct subject; do
+      case "$subject" in *runner-rescue*) ;; *) continue ;; esac
+      [ "$ct" -lt "$cutoff" ] && git -C "$dir" stash drop --quiet "$ref" 2>/dev/null
+    done
+done
+
+for dir in "${candidates[@]}"; do
+  [ -e "$dir" ] || continue
+  is_runner_clone "$dir" && continue
+  if disposable "$dir"; then
+    rm -rf "$dir" && note "deleted $dir, which held nothing unpushed"
+  else
+    dest="$rescue_root/$runner/$stamp/$(basename "$(dirname "$dir")")"
+    mkdir -p "$dest" && mv "$dir" "$dest/" && note "moved $dir to $dest/"
+  fi
+done
+
+find "$rescue_root" -mindepth 2 -maxdepth 2 -type d -mtime +"$keep_days" -exec rm -rf {} + 2>/dev/null
+if [ -f "$rescue_root/log" ] && [ "$(wc -l <"$rescue_root/log")" -gt 5000 ]; then
+  tail -n 2000 "$rescue_root/log" >"$rescue_root/log.tmp" && mv "$rescue_root/log.tmp" "$rescue_root/log"
+fi
+exit 0
