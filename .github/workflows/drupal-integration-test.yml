@@ -502,6 +502,12 @@ jobs:
           echo "Current branch: $CURRENT  Expected: ${{ env.ISSUE_BRANCH }}"
           [[ "$CURRENT" == "${{ env.ISSUE_BRANCH }}" ]] || { echo "ERROR: wrong branch" >&2; exit 1; }
 
+      - name: Verify workspace — drupal/core installed from the checked-out branch (#238)
+        run: |
+          DIST=$(coder ssh ${{ env.WORKSPACE_NAME }} -- env -C /home/coder/drupal-core ddev composer show drupal/core | tr -d '\r' | grep -E '^dist ' || true)
+          echo "drupal/core $DIST"
+          [[ "$DIST" == *"[path] core"* ]] || { echo "ERROR: drupal/core was not installed from the local core/ path repository" >&2; exit 1; }
+
       - name: Verify workspace — Drush DB connected
         run: coder ssh ${{ env.WORKSPACE_NAME }} -- ddev drush status --fields=db-status | grep -i connected
 
@@ -694,6 +700,16 @@ jobs:
             exit 1
           fi
           echo "OK: git tree is clean"
+
+      - # Regression check for #238: without the composer.local.json pin in
+        # template.tf, Composer takes drupal/core from Packagist's dev-main on
+        # an issue branch. That still installs when the branch is recent, so
+        # check where drupal/core came from, not just that it installed.
+        name: Verify workspace — drupal/core installed from the checked-out branch (#238)
+        run: |
+          DIST=$(coder ssh ${{ env.WORKSPACE_NAME }} -- env -C /home/coder/drupal-core ddev composer show drupal/core | tr -d '\r' | grep -E '^dist ' || true)
+          echo "drupal/core $DIST"
+          [[ "$DIST" == *"[path] core"* ]] || { echo "ERROR: drupal/core was not installed from the local core/ path repository" >&2; exit 1; }
 
       - name: Verify workspace — Drush DB connected
         run: coder ssh ${{ env.WORKSPACE_NAME }} -- ddev drush status --fields=db-status | grep -i connected
