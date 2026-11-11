@@ -107,10 +107,9 @@ Claude runs in the `tmux` session named after the workspace, starting in your ho
 One-time setup:
 
 1. On claude.ai, create a self-hosted environment and copy its environment secret.
-2. In the workspace, save it:
+2. In the workspace, save it in `~/.claude-runner`, which the workspace creates when the setting is on. The `README.md` there has these steps, and says where the runner keeps its logs, checkouts and rescued work.
 
     ```bash
-    mkdir -p ~/.claude-runner
     # paste the secret, press Enter, then Ctrl-D
     cat > ~/.claude-runner/environment-secret
     chmod 600 ~/.claude-runner/environment-secret
@@ -122,5 +121,5 @@ On every start, the runner runs in the `tmux` session `claude-runner` (`tmux att
 
 - **Use a workspace only for the runner.** The runner rewrites `~/.gitconfig` and `~/.config/git` before every session. It can't be turned on together with remote control.
 - **Concurrent sessions** (1 to 4) sets how many sessions run at once. They share the workspace's Docker daemon and DDEV, and a skill installed in `~/.claude/skills/coder-shared-workspace` tells them how to stay out of each other's way. For full isolation, use several workspaces with one session each; the same environment secret works in all of them.
-- **Checkouts carry over between sessions.** A runner keeps its clones under `~/workspace/runner-<n>`, so a new session can find what an earlier one left behind. A hook in `/etc/claude-code/managed-settings.d/coder-runner.json` lists those leftover changes at the start of the session, and the skill tells Claude how to clean them up safely.
+- **Checkouts are cleaned between sessions.** A runner keeps its clones under `~/workspace/runner-<n>`. When a session ends, including when the runner releases it after 30 idle minutes, `claude-runner-sweep` cleans that runner's directory, and it runs again before each runner start. Uncommitted changes become `runner-rescue` stashes in the clone (`git stash list`). Worktrees are removed. Extra clones a session made are deleted if everything in them is pushed, and otherwise moved to `~/.local/state/claude-runner-rescue/`. Everything the sweep does is logged in `~/.local/state/claude-runner-rescue/log`, and rescues are kept for 30 days. If a checkout is still dirty when a session starts, a hook tells Claude to stash the leftovers rather than work around them.
 - **Pushing to your fork.** Runner and remote-control sessions use the workspace SSH agent: your own agent when you have one forwarded (VS Code, `coder ssh -A`), otherwise the Coder workspace key. Add your fork as an SSH remote, such as `git@github.com:<you>/<repo>`. If you don't forward an agent, add the key that `coder publickey` prints to your GitHub account.

@@ -11,10 +11,14 @@ output "startup_script" {
     CLAUDE_RUNNER_ENABLED="${local.enabled}"
     CLAUDE_REMOTE_CONTROL_ENABLED="${var.remote_control_enabled}"
     if [ "$CLAUDE_RUNNER_ENABLED" = "true" ]; then
+      # Created before the checks below, so the secret has an obvious home.
+      mkdir -p ~/.claude-runner
+      chmod 700 ~/.claude-runner
+      echo '${base64encode(file("${path.module}/files/README.md"))}' | base64 -d > ~/.claude-runner/README.md
       if [ "$CLAUDE_REMOTE_CONTROL_ENABLED" = "true" ]; then
         CLAUDE_RUNNER_MSG="✗ Claude Code self-hosted runner NOT started: Claude Code remote control is also enabled, and the runner rewrites ~/.gitconfig before every session. Turn one of them off."
       elif [ ! -s "${local.secret_file}" ]; then
-        CLAUDE_RUNNER_MSG="✗ Claude Code self-hosted runner NOT started: save your environment secret as ${local.secret_file} (chmod 600), then restart the workspace."
+        CLAUDE_RUNNER_MSG="✗ Claude Code self-hosted runner NOT started: save your environment secret as ${local.secret_file} (chmod 600), then restart the workspace. See ~/.claude-runner/README.md."
       else
         # /etc is not persistent, so reinstall the session git config on every start.
         echo '${base64encode(file("${path.module}/files/gitconfig"))}' | base64 -d | sudo tee /etc/gitconfig >/dev/null
@@ -29,6 +33,8 @@ output "startup_script" {
         chmod +x ~/.local/bin/claude-sessions
         echo '${base64encode(file("${path.module}/files/claude-checkout-check"))}' | base64 -d > ~/.local/bin/claude-checkout-check
         chmod +x ~/.local/bin/claude-checkout-check
+        echo '${base64encode(file("${path.module}/files/claude-runner-sweep"))}' | base64 -d > ~/.local/bin/claude-runner-sweep
+        chmod +x ~/.local/bin/claude-runner-sweep
         sudo mkdir -p /etc/claude-code/managed-settings.d
         echo '${base64encode(local.managed_settings)}' | base64 -d | sudo tee /etc/claude-code/managed-settings.d/coder-runner.json >/dev/null
         mkcert -install >/dev/null 2>&1 || true

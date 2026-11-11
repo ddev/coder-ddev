@@ -13,11 +13,21 @@ export GIT_CONFIG_GLOBAL="$base/.gitconfig"
 # forwarded agent when one is connected, otherwise the Coder workspace key.
 # Without it, sessions can't push to an SSH remote such as a fork.
 export SSH_AUTH_SOCK="$HOME/.ssh-agent-relay/agent.sock"
+# The runner keeps its checkouts between sessions. Its post-session hook cleans
+# them (claude-runner-sweep), and so does this loop before every start, for a
+# runner that was killed before its hook ran, as when the workspace stops.
+hooks="$HOME/.claude-runner/hooks/runner-$n"
+mkdir -p "$hooks"
+printf '#!/usr/bin/env bash\nexec "$HOME/.local/bin/claude-runner-sweep" %q\n' "$base" >"$hooks/post-session"
+chmod +x "$hooks/post-session"
 while true; do
+  "$HOME/.local/bin/claude-runner-sweep" "$base"
   started=$(date +%s)
   /home/linuxbrew/.linuxbrew/bin/claude self-hosted-runner \
     --environment-secret-file "${secret_file}" \
     --base-dir "$base" \
+    --hooks-dir "$hooks" \
+    --post-session-hook-timeout-sec 120 \
     --capacity 1 \
     --client-label "$CODER_WORKSPACE_NAME-$n" \
     --use-anthropic-git-proxy \

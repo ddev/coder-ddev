@@ -301,6 +301,22 @@ run "claude_runner_enabled" {
     condition     = strcontains(base64decode(regex("echo '([A-Za-z0-9+/=]+)' \\| base64 -d > ~/.local/bin/claude-runner-loop", coder_agent.main.startup_script)[0]), "export SSH_AUTH_SOCK=\"$HOME/.ssh-agent-relay/agent.sock\"")
     error_message = "runner sessions must get the workspace SSH agent relay, so they can push to SSH remotes"
   }
+  assert {
+    condition     = strcontains(base64decode(regex("echo '([A-Za-z0-9+/=]+)' \\| base64 -d > ~/.local/bin/claude-runner-loop", coder_agent.main.startup_script)[0]), "--hooks-dir \"$hooks\"")
+    error_message = "each runner must get a hooks dir whose post-session hook sweeps its checkouts"
+  }
+  assert {
+    condition     = strcontains(base64decode(regex("echo '([A-Za-z0-9+/=]+)' \\| base64 -d > ~/.claude-runner/README.md", coder_agent.main.startup_script)[0]), "~/.claude-runner/environment-secret")
+    error_message = "startup script must create ~/.claude-runner with a README that says where to save the secret"
+  }
+  assert {
+    condition     = strcontains(coder_agent.main.startup_script, "base64 -d > ~/.local/bin/claude-runner-sweep")
+    error_message = "startup script must install claude-runner-sweep"
+  }
+  assert {
+    condition     = strcontains(base64decode(regex("echo '([A-Za-z0-9+/=]+)' \\| base64 -d \\| sudo tee /etc/claude-code/managed-settings.d/coder-runner.json", coder_agent.main.startup_script)[0]), "\"matcher\":\"startup|resume\"")
+    error_message = "the SessionStart hook must not run on compact or clear, when the changes are the session's own"
+  }
 }
 
 run "claude_runner_refuses_alongside_remote_control" {

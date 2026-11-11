@@ -47,6 +47,8 @@ locals {
   managed_settings = jsonencode({
     hooks = {
       SessionStart = [{
+        # Not "compact" or "clear": by then the changes are the session's own.
+        matcher = "startup|resume"
         hooks = [{
           type    = "command"
           command = "/home/coder/.local/bin/claude-checkout-check ${var.base_dir}"
