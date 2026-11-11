@@ -422,12 +422,24 @@ jobs:
           # Strip optional "drupal-" prefix so bare numbers and prefixed values both work
           ISSUE_NUM="${ISSUE_FORK#drupal-}"
 
-          # Derive the default branch of the issue fork from the GitLab API
+          # A core issue fork's default_branch is always "main" -- a frozen copy
+          # of core main from when the fork was created, not the issue's work.
+          # The issue branch follows drupal.org's "<issue_number>-description"
+          # convention, so pick the most recently committed match (same logic
+          # as drupal-contrib-integration-test.yml); fall back to the fork's
+          # default branch only if no such branch exists yet.
           ISSUE_BRANCH=$(curl -sf \
-            "https://git.drupalcode.org/api/v4/projects/issue%2Fdrupal-${ISSUE_NUM}" \
-            | jq -r '.default_branch')
+            "https://git.drupalcode.org/api/v4/projects/issue%2Fdrupal-${ISSUE_NUM}/repository/branches?per_page=100" \
+            | jq -r --arg prefix "${ISSUE_NUM}-" \
+              '[.[] | select(.name | startswith($prefix))] | sort_by(.commit.committed_date) | last.name // empty')
+          if [[ -z "$ISSUE_BRANCH" ]]; then
+            echo "No '${ISSUE_NUM}-*' branch found on drupal-${ISSUE_NUM} — falling back to its default branch"
+            ISSUE_BRANCH=$(curl -sf \
+              "https://git.drupalcode.org/api/v4/projects/issue%2Fdrupal-${ISSUE_NUM}" \
+              | jq -r '.default_branch')
+          fi
           if [[ -z "$ISSUE_BRANCH" || "$ISSUE_BRANCH" == "null" ]]; then
-            echo "ERROR: Could not resolve default branch for issue fork $ISSUE_NUM" >&2
+            echo "ERROR: Could not resolve a branch for issue fork $ISSUE_NUM" >&2
             exit 1
           fi
 
@@ -489,6 +501,12 @@ jobs:
           CURRENT=$(coder ssh ${{ env.WORKSPACE_NAME }} -- git -C /home/coder/drupal-core branch --show-current | tr -d '\r\n')
           echo "Current branch: $CURRENT  Expected: ${{ env.ISSUE_BRANCH }}"
           [[ "$CURRENT" == "${{ env.ISSUE_BRANCH }}" ]] || { echo "ERROR: wrong branch" >&2; exit 1; }
+
+      - name: Verify workspace — drupal/core installed from the checked-out branch (#238)
+        run: |
+          DIST=$(coder ssh ${{ env.WORKSPACE_NAME }} -- env -C /home/coder/drupal-core ddev composer show drupal/core | tr -d '\r' | grep -E '^dist ' || true)
+          echo "drupal/core $DIST"
+          [[ "$DIST" == *"[path] core"* ]] || { echo "ERROR: drupal/core was not installed from the local core/ path repository" >&2; exit 1; }
 
       - name: Verify workspace — Drush DB connected
         run: coder ssh ${{ env.WORKSPACE_NAME }} -- ddev drush status --fields=db-status | grep -i connected
@@ -593,11 +611,20 @@ jobs:
       - name: Resolve issue branch and Drupal version from issue number
         run: |
           ISSUE_NUM="${ISSUE_FORK#drupal-}"
+          # See the matching step in drupal-issue-fork: the fork's default_branch
+          # is a stale copy of core main, so prefer the "<issue>-*" branch.
           ISSUE_BRANCH=$(curl -sf \
-            "https://git.drupalcode.org/api/v4/projects/issue%2Fdrupal-${ISSUE_NUM}" \
-            | jq -r '.default_branch')
+            "https://git.drupalcode.org/api/v4/projects/issue%2Fdrupal-${ISSUE_NUM}/repository/branches?per_page=100" \
+            | jq -r --arg prefix "${ISSUE_NUM}-" \
+              '[.[] | select(.name | startswith($prefix))] | sort_by(.commit.committed_date) | last.name // empty')
+          if [[ -z "$ISSUE_BRANCH" ]]; then
+            echo "No '${ISSUE_NUM}-*' branch found on drupal-${ISSUE_NUM} — falling back to its default branch"
+            ISSUE_BRANCH=$(curl -sf \
+              "https://git.drupalcode.org/api/v4/projects/issue%2Fdrupal-${ISSUE_NUM}" \
+              | jq -r '.default_branch')
+          fi
           if [[ -z "$ISSUE_BRANCH" || "$ISSUE_BRANCH" == "null" ]]; then
-            echo "ERROR: Could not resolve default branch for issue fork $ISSUE_NUM" >&2
+            echo "ERROR: Could not resolve a branch for issue fork $ISSUE_NUM" >&2
             exit 1
           fi
           RAW_VERSION=$(curl -sf \
@@ -673,6 +700,16 @@ jobs:
             exit 1
           fi
           echo "OK: git tree is clean"
+
+      - # Regression check for #238: without the composer.local.json pin in
+        # template.tf, Composer takes drupal/core from Packagist's dev-main on
+        # an issue branch. That still installs when the branch is recent, so
+        # check where drupal/core came from, not just that it installed.
+        name: Verify workspace — drupal/core installed from the checked-out branch (#238)
+        run: |
+          DIST=$(coder ssh ${{ env.WORKSPACE_NAME }} -- env -C /home/coder/drupal-core ddev composer show drupal/core | tr -d '\r' | grep -E '^dist ' || true)
+          echo "drupal/core $DIST"
+          [[ "$DIST" == *"[path] core"* ]] || { echo "ERROR: drupal/core was not installed from the local core/ path repository" >&2; exit 1; }
 
       - name: Verify workspace — Drush DB connected
         run: coder ssh ${{ env.WORKSPACE_NAME }} -- ddev drush status --fields=db-status | grep -i connected

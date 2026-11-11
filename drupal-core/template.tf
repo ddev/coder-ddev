@@ -881,6 +881,55 @@ web_environment:
 TESTENV_EOF
         log_setup "✓ .ddev/config.zzz-coder-test-env.yaml written (SIMPLETEST_BASE_URL override)"
 
+        # Build the checked-out branch the way core's own CI does: with its own
+        # core/ and composer/Plugin/* code, and the dependency versions in its
+        # composer.lock (#238).
+        #
+        # 1. Path packages. On an issue branch, Composer gives the root package
+        #    core's branch alias (e.g. 12.x-dev), but gives the path packages
+        #    the raw branch name (dev-<issue>-<slug>), which doesn't match the
+        #    root's "self.version" requirements. Composer then takes drupal/core
+        #    and the core-* plugins from Packagist (today's main). Declaring
+        #    every path repository from core's composer.json first, each with
+        #    the version from its own branch alias, makes the local copies win.
+        # 2. pin-core-lock. The add-on's overlay re-solves everything to the
+        #    newest allowed versions, so an older branch runs against
+        #    dependencies it never saw (a May branch got Symfony 8.1 instead of
+        #    its locked 8.0 and served 404 on every route). The add-on's
+        #    extra.drupal-dev.pin-core-lock restricts packages core's lock has
+        #    to the locked versions; packages it doesn't have (drush and its
+        #    own dependencies) still resolve freely. It needs step 1, since
+        #    the lock records the path packages under the branch alias.
+        # 3. Security blocking off. Composer refuses versions with published
+        #    advisories, and an older lock always has some, so with pinning on
+        #    the install has nothing to fall back to. This is a throwaway dev
+        #    environment for testing that branch; `composer audit` still
+        #    reports them. Both keys: policy.* is Composer >=2.11, audit.* older.
+        _path_repos='{}'
+        for _dir in $(jq -r '.repositories[]? | select(.type == "path") | .url' composer.json 2>/dev/null); do
+          _name=$(jq -r '.name // empty' "$_dir/composer.json" 2>/dev/null)
+          _alias=$(jq -r '(.extra["branch-alias"] // {}) | to_entries | first | .value // empty' "$_dir/composer.json" 2>/dev/null)
+          [ -n "$_name" ] && [ -n "$_alias" ] || continue
+          _path_repos=$(jq -c --arg n "$_name" --arg u "$_dir" --arg v "$_alias" \
+            '. + {("local-" + $n): {"type": "path", "url": $u, "options": {"versions": {($n): $v}}}}' <<< "$_path_repos")
+        done
+        _pin_core_lock=false
+        [ -f composer.lock ] && _pin_core_lock=true
+        if [ "$_path_repos" != "{}" ] && [ -f composer.local.json ]; then
+          if jq --argjson r "$_path_repos" --argjson pin "$_pin_core_lock" \
+               '.repositories = ($r + (.repositories // {}))
+                | if $pin then .extra["drupal-dev"]["pin-core-lock"] = true
+                    | .config.policy.advisories.block = false
+                    | .config.audit["block-insecure"] = false
+                  else . end' \
+               composer.local.json > composer.local.json.tmp && mv composer.local.json.tmp composer.local.json; then
+            log_setup "✓ composer.local.json: core path packages pinned to the checkout ($(jq -r 'keys | map(ltrimstr("local-")) | join(", ")' <<< "$_path_repos")), pin-core-lock=$_pin_core_lock"
+          else
+            rm -f composer.local.json.tmp
+            log_setup "⚠ Could not pin core path packages in composer.local.json"
+          fi
+        fi
+
         log_setup "Restarting DDEV to activate add-on..."
         ddev restart >> "$SETUP_LOG" 2>&1 || true
 
@@ -1008,9 +1057,21 @@ TESTENV_EOF
     # Step 6.5: Cache rebuild — ensures a clean state after any successful setup path.
     # Skipped when setup failed: there is no installed site to rebuild, and running it
     # anyway just appends a confusing "drush is not available" error to the log.
+    #
+    # The drupal-site healthcheck requests / every 10s, including while drush si
+    # runs. A request during the install leaves stale caches, and / then returns
+    # 404 "No route found" until they are flushed. Drush 14's cache:rebuild runs
+    # core's vendor/bin/dr, which core only has from 11.4 on, so it fails on
+    # older branches. Flush through Drupal's own API instead (#238).
     if [ "$SETUP_FAILED" != "true" ]; then
       log_setup "Running cache rebuild..."
-      ddev drush cr >> "$SETUP_LOG" 2>&1 || true
+      if ! ddev drush cr >> "$SETUP_LOG" 2>&1; then
+        if ddev drush php:eval 'drupal_flush_all_caches();' >> "$SETUP_LOG" 2>&1; then
+          log_setup "✓ Caches flushed with drupal_flush_all_caches() (drush cr failed)"
+        else
+          log_setup "⚠ Cache rebuild failed"
+        fi
+      fi
     fi
 
     # Step 6.6: Set up phpunit.xml for running core tests
