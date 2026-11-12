@@ -620,6 +620,11 @@ project_tld: "$CODER_DOMAIN"
 use_dns_when_possible: false
 host_webserver_port: "8080"
 host_mailpit_port: "8025"
+# URLs that 'ddev start', 'ddev describe' and 'ddev list' show, keyed by the
+# web and Mailpit ports. DDEV versions without external_urls ignore this.
+external_urls:
+  "8080": "https://drupal-site--$${CODER_WORKSPACE_NAME}--$${CODER_WORKSPACE_OWNER_NAME}.$CODER_DOMAIN"
+  "8025": "https://mailpit--$${CODER_WORKSPACE_NAME}--$${CODER_WORKSPACE_OWNER_NAME}.$CODER_DOMAIN"
 hooks:
   post-start:
     - exec-host: 'echo "" && echo "  Site:    https://drupal-site--$${CODER_WORKSPACE_NAME}--$${CODER_WORKSPACE_OWNER_NAME}.$CODER_DOMAIN" && echo "  Mailpit: https://mailpit--$${CODER_WORKSPACE_NAME}--$${CODER_WORKSPACE_OWNER_NAME}.$CODER_DOMAIN" && echo ""'
