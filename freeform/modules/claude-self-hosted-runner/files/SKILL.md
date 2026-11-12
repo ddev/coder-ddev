@@ -127,19 +127,40 @@ only what you created (build output, your worktrees, your `~/tmp`
 directory, your test projects). Never delete another session's files, and
 never prune Docker images or volumes another session may use.
 
+## GitHub and `gh`
+
+HTTPS git and `gh` act as the GitHub account connected to the claude.ai
+account that started this session, through Anthropic's proxy.
+
+- `gh` here is a per-session wrapper that sets a placeholder token,
+  `GH_TOKEN=proxy-injected`. `gh auth status` therefore always reports the
+  token as invalid. Don't report that as a problem. Check access with
+  `gh api user --jq .login`.
+- The proxy serves only GitHub's REST API. `gh pr list`, `gh pr view`,
+  `gh pr create` and other GraphQL commands fail with HTTP 403. Use
+  `gh api repos/<owner>/<repo>/...` or the GitHub MCP tools.
+- Don't call `/usr/bin/gh` directly, and don't set `GH_TOKEN` or
+  `GITHUB_TOKEN`. Either makes `gh` skip the proxy and act as the login or
+  token the workspace holds, not as this session's account.
+- Don't run `gh auth login`. It stores a login for the whole workspace,
+  which every later session could use.
+
 ## Pushing over SSH
 
 `SSH_AUTH_SOCK` points at the workspace SSH agent relay,
-`~/.ssh-agent-relay/agent.sock`. The relay uses the user's own agent when
-one is forwarded (VS Code, `coder ssh -A`). Otherwise it uses the Coder
-workspace key, which GitHub accepts once the user adds it to their account
-(`coder publickey` prints it).
+`~/.ssh-agent-relay/agent.sock`. The relay uses the workspace owner's own
+agent when one is forwarded (VS Code, `coder ssh -A`). Otherwise it uses
+the Coder workspace key, which GitHub accepts once the owner adds it to
+their account (`coder publickey` prints it). SSH pushes act as the
+workspace owner, who may not be the person who started this session.
 
 - When you add a remote, such as the user's fork, use its SSH URL:
   `git remote add <name> git@github.com:<owner>/<repo>`. HTTPS pushes go
   through the session's git proxy, which reaches only the repositories
   attached to the session.
 - Leave `origin` as the runner cloned it.
-- `ssh -T git@github.com` greets the user by name when SSH works.
+- `ssh -T git@github.com` greets the account SSH pushes act as. If it
+  differs from `gh api user --jq .login`, ask the user before pushing over
+  SSH.
 - On `Permission denied (publickey)`, ask the user to forward an agent or
   add the Coder key to GitHub. Never create, copy or print keys.
