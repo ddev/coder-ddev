@@ -239,7 +239,14 @@ fi
 # in this script for why this only covers real compose services, not
 # web_extra_exposed_ports rows. DDEV_APPROOT is provided by DDEV for host commands
 # (their cwd is wherever `ddev` was invoked from, not the project root).
-if [ -n "${DDEV_APPROOT:-}" ] && [ -n "$WEB_URL" ]; then
+# DDEV sets DDEV_PRIMARY_EXTERNAL_URL when it understands the external_urls that
+# coder-setup writes, and then shows every Coder URL itself, so this file would
+# only repeat them.
+if [ -n "${DDEV_PRIMARY_EXTERNAL_URL:-}" ]; then
+  if [ -n "${DDEV_APPROOT:-}" ]; then
+    rm -f "${DDEV_APPROOT}/.ddev/docker-compose.coder-describe.yaml"
+  fi
+elif [ -n "${DDEV_APPROOT:-}" ] && [ -n "$WEB_URL" ]; then
   DESCRIBE_FILE="${DDEV_APPROOT}/.ddev/docker-compose.coder-describe.yaml"
   {
     echo "#ddev-silent-no-warn"

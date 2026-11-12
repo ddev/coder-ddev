@@ -704,6 +704,11 @@ host_webserver_port: "80"
 # Bind mailpit directly to workspace localhost (ddev-router is omitted in this template).
 # Without this, mailpit is only reachable inside the DDEV web container.
 host_mailpit_port: "8025"
+# URLs that 'ddev start', 'ddev describe' and 'ddev list' show, keyed by the
+# web and Mailpit ports. DDEV versions without external_urls ignore this.
+external_urls:
+  "80": "https://drupal-site--$${CODER_WORKSPACE_NAME}--$${CODER_WORKSPACE_OWNER_NAME}.$CODER_DOMAIN"
+  "8025": "https://mailpit--$${CODER_WORKSPACE_NAME}--$${CODER_WORKSPACE_OWNER_NAME}.$CODER_DOMAIN"
 # Show Coder URLs after every ddev start/restart (appended after DDEV's own message).
 hooks:
   post-start:
