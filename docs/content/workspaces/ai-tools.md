@@ -120,6 +120,29 @@ One-time setup:
 On every start, the runner runs in the `tmux` session `claude-runner` (`tmux attach -t claude-runner`), logging to `/tmp/claude-runner-<n>.log`. Sessions clone their repositories under `~/workspace/runner-<n>`. Run `claude-sessions` to list live sessions with their checkout, branch and number of unpushed commits.
 
 - **Use a workspace only for the runner.** The runner rewrites `~/.gitconfig` and `~/.config/git` before every session. It can't be turned on together with remote control.
-- **Concurrent sessions** (1 to 4) sets how many sessions run at once. They share the workspace's Docker daemon and DDEV, and a skill installed in `~/.claude/skills/coder-shared-workspace` tells them how to stay out of each other's way. For full isolation, use several workspaces with one session each; the same environment secret works in all of them.
+- **Concurrent sessions** (1 to 4) sets how many sessions run at once. They share the workspace's Docker daemon and DDEV, and a skill installed in `~/.claude/skills/coder-shared-workspace` tells them how to stay out of each other's way. For full isolation, use several workspaces with one session each; the same environment secret works in all of them (see [Who can use the runner](#who-can-use-the-runner)).
 - **Checkouts are cleaned between sessions.** A runner keeps its clones under `~/workspace/runner-<n>`. When a session ends, including when the runner releases it after 30 idle minutes, `claude-runner-sweep` cleans that runner's directory, and it runs again before each runner start. Uncommitted changes become `runner-rescue` stashes in the clone (`git stash list`). Worktrees are removed. Extra clones a session made are deleted if everything in them is pushed, and otherwise moved to `~/.local/state/claude-runner-rescue/`. Everything the sweep does is logged in `~/.local/state/claude-runner-rescue/log`, and rescues are kept for 30 days. If a checkout is still dirty when a session starts, a hook tells Claude to stash the leftovers rather than work around them.
-- **Pushing to your fork.** Runner and remote-control sessions use the workspace SSH agent: your own agent when you have one forwarded (VS Code, `coder ssh -A`), otherwise the Coder workspace key. Add your fork as an SSH remote, such as `git@github.com:<you>/<repo>`. If you don't forward an agent, add the key that `coder publickey` prints to your GitHub account.
+- **Pushing to your fork.** Runner and remote-control sessions use the workspace SSH agent: your own agent when you have one forwarded (VS Code, `coder ssh -A`), otherwise the Coder workspace key. Add your fork as an SSH remote, such as `git@github.com:<you>/<repo>`. If you don't forward an agent, add the key that `coder publickey` prints to your GitHub account. SSH pushes act as the workspace owner, whoever started the session; see [Who acts on GitHub](#who-acts-on-github).
+
+### Who acts on GitHub
+
+The runner uses Anthropic-managed git. A session reaches GitHub in three ways, and only two of them follow the person who started it:
+
+| Path | Acts as |
+|---|---|
+| HTTPS git: the clone, fetch, and pushes to `origin` | The GitHub account connected to the claude.ai account that started the session |
+| `gh` inside a session | The same connected account, through Anthropic's proxy |
+| SSH remotes (`git@github.com:…`) | Every key in the workspace SSH agent: the workspace owner's forwarded agent, or the Coder workspace key |
+
+- **Everyone who starts sessions must connect GitHub** in claude.ai, under **Settings → Connectors → GitHub**. Nothing in the workspace stands in for it. When the connection is missing or has expired, the session fails before Claude starts, and `/tmp/claude-runner-<n>.log` shows `Repository access validation failed` with `GitHub authentication required. Please reconnect your GitHub account.` Reconnect, then start the session again. Until then the runner exits and restarts after each attempt, and the session may be retried on other runners.
+- **`gh` in a session is REST-only.** A per-session wrapper sends `gh` through the proxy with a placeholder token, `GH_TOKEN=proxy-injected`. `gh api …` works. Commands that use GitHub's GraphQL API, such as `gh pr list`, `gh pr view` and `gh pr create`, fail with HTTP 403. `gh auth status` always reports the token as invalid, because it checks it over GraphQL; use `gh api user --jq .login` to see which account a session acts as.
+- **`gh` in your own terminal is different.** It uses the login in `~/.config/gh`, if you made one. A session that calls `/usr/bin/gh` directly, or that has a real `GH_TOKEN` or `GITHUB_TOKEN` set, uses that login or token instead of the session's own account. Don't run `gh auth login` or set those variables in a workspace that other people's sessions use.
+- **SSH offers every key the agent holds.** With an agent forwarded from your computer, sessions can sign with all of its keys, not only your GitHub key, for as long as you stay connected.
+
+### Who can use the runner
+
+An environment is a pool. Every runner that uses its secret, in this workspace or any other, takes the next session from anyone who can start sessions in that environment, such as other members of your claude.ai organization. The runner's label decides nothing.
+
+- A session from another person can land in your workspace. It then runs as your Unix user, with your SSH agent and any `gh` login or credentials stored in the workspace.
+- Share an environment only with people you would trust with those credentials. Otherwise, give each person their own environment and their own runner workspace. Their SSH pushes then use their own Coder key.
+- Use a separate environment for each kind of runner you want to choose between, for example one per operating system. Sessions go to whichever runner is free, with no routing by label or platform.
