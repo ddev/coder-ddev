@@ -19,7 +19,7 @@ Work through these in order:
 
 ## `ddev describe` shows `*.ddev.site` URLs
 
-Those URLs only work inside the workspace. Run `ddev coder-setup` in the project and restart it; `ddev describe` and `ddev launch` then show the `coder.ddev.com` URLs. URLs for a newly added add-on show up in `ddev describe` after one more `ddev restart`.
+Those URLs only work inside the workspace. Run `ddev coder-setup` in the project and restart it; `ddev start`, `ddev describe`, `ddev list` and `ddev launch` then show the `coder.ddev.com` URLs, including those of add-ons and `web_extra_exposed_ports`. `ddev coder-setup` writes them as `external_url_template` and `external_urls` in `.ddev/config.coder.yaml`. With a DDEV version older than the one that added those settings, only `ddev describe` and `ddev launch` show `coder.ddev.com` URLs, and a newly added add-on's URL appears in `ddev describe` after one more `ddev restart`.
 
 ## The site redirects to `*.ddev.site` or `http://`
 

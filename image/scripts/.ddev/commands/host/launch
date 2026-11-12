@@ -2,14 +2,15 @@
 #ddev-silent-no-warn
 
 ## Description: Show Coder URLs for this DDEV project (replaces browser-open in cloud)
-## Usage: launch [path] [-m|--mailpit]
-## Example: "ddev launch" or "ddev launch /admin" or "ddev launch -m"
+## Usage: launch [path|:port] [-m|--mailpit]
+## Example: "ddev launch" or "ddev launch /admin" or "ddev launch :8036" or "ddev launch -m"
 ## Flags: [{"Name":"mailpit","Shorthand":"m","Usage":"ddev launch -m shows the Mailpit URL"}]
 
 # Parse flags/path before anything else, so both the DDEV_DEBUG branch below
 # and the interactive branches further down agree on the same target.
 MAILPIT=false
 PATH_SUFFIX=""
+PORT_ARG=""
 
 while :; do
   case ${1:-} in
@@ -23,7 +24,9 @@ while :; do
   shift
 done
 
-if [ -n "${1:-}" ]; then
+if [[ "${1:-}" =~ ^:[0-9]+$ ]]; then
+  PORT_ARG="${1#:}"
+elif [ -n "${1:-}" ]; then
   PATH_SUFFIX="/${1#/}"
 fi
 
@@ -42,6 +45,8 @@ if [ "${DDEV_DEBUG:-}" = "true" ] || [ "${DDEV_VERBOSE:-}" = "true" ]; then
     else
       FULLURL="${FULLURL%:[0-9]*}:${DDEV_MAILPIT_PORT}"
     fi
+  elif [ -n "${PORT_ARG}" ]; then
+    FULLURL="${FULLURL%:[0-9]*}:${PORT_ARG}"
   else
     FULLURL="${FULLURL%/}${PATH_SUFFIX}"
   fi
@@ -78,23 +83,35 @@ fi
 
 # DDEV_SITENAME is the DDEV project name (may differ from the Coder workspace name).
 PROJECT="${DDEV_SITENAME}"
-AGENT="${CODER_AGENT_NAME:-main}"
+AGENT="${CODER_WORKSPACE_AGENT_NAME:-${CODER_AGENT_NAME:-main}}"
+
+# A router port: use the external URL DDEV knows for it (from the external_urls
+# that coder-setup writes), else Coder's port-forwarding URL for that port.
+if [ -n "${PORT_ARG}" ]; then
+  url=""
+  if [ -n "${DDEV_PRIMARY_EXTERNAL_URL:-}" ]; then
+    url=$(ddev describe -j 2>/dev/null | jq -r --arg p "${PORT_ARG}" '.raw.external_urls[$p] // empty')
+  fi
+  echo "$(hyperlink "${url:-https://${PORT_ARG}--${AGENT}--${WORKSPACE}--${OWNER}.${DOMAIN}}")"
+  exit 0
+fi
 
 # drupal-core/drupal-contrib omit ddev-router and bind the web container directly
 # to a fixed host port, so there's no Traefik merged config for coder-routes to
-# read. They register fixed `coder_app` slugs (ddev-web, mailpit) instead, whose
+# read. They register fixed `coder_app` slugs (drupal-site, mailpit) instead, whose
 # subdomain URLs follow Coder's named-app pattern (no agent segment, since these
 # templates define a single agent) — see docs/reference/coder-url-patterns.md.
 ROUTER_DISABLED=$(ddev describe -j 2>/dev/null | jq -r '.raw.router_disabled // false')
 
 if [ "$ROUTER_DISABLED" = "true" ]; then
   if [ "${MAILPIT}" = "true" ]; then
-    echo "$(hyperlink "https://mailpit--${WORKSPACE}--${OWNER}.${DOMAIN}")"
+    echo "$(hyperlink "${DDEV_MAILPIT_EXTERNAL_URL:-https://mailpit--${WORKSPACE}--${OWNER}.${DOMAIN}}")"
     exit 0
   fi
+  web_url="${DDEV_PRIMARY_EXTERNAL_URL:-https://drupal-site--${WORKSPACE}--${OWNER}.${DOMAIN}}"
   echo ""
   echo "Coder URL for project '${PROJECT}':"
-  echo "  Web: $(hyperlink "https://ddev-web--${WORKSPACE}--${OWNER}.${DOMAIN}${PATH_SUFFIX}")"
+  echo "  Web: $(hyperlink "${web_url%/}${PATH_SUFFIX}")"
   echo ""
   exit 0
 fi
@@ -111,6 +128,10 @@ PROJECT_SLUG=$(echo "$PROJECT" | tr '[:upper:]' '[:lower:]' | tr '._' '--' | tr 
 WEB_ROUTER="${PROJECT}-coder-${PROJECT_SLUG}"
 
 if [ "${MAILPIT}" = "true" ]; then
+  if [ -n "${DDEV_MAILPIT_EXTERNAL_URL:-}" ]; then
+    echo "$(hyperlink "${DDEV_MAILPIT_EXTERNAL_URL}")"
+    exit 0
+  fi
   if [ -f "$CODER_ROUTES" ]; then
     mailpit_rule=$(yq e ".http.routers.\"${PROJECT}-coder-mailpit-${PROJECT_SLUG}\".rule // \"\"" "$CODER_ROUTES" 2>/dev/null)
     if [ -n "$mailpit_rule" ] && [ "$mailpit_rule" != "null" ]; then
@@ -150,14 +171,17 @@ while IFS= read -r router; do
     host=$(echo "$rule" | sed -E 's/Host\(`(.+)`\)/\1/')
     if [ "$router" = "$WEB_ROUTER" ]; then
       WEB_LINE="  Web:     $(hyperlink "https://${host}${PATH_SUFFIX}")"
-    elif [ "$slug" = "mailpit" ]; then
+    elif [ "$slug" = "mailpit-${PROJECT_SLUG}" ]; then
       MAILPIT_LINE="  Mailpit: $(hyperlink "https://${host}")"
     else
-      OTHER_LINES="${OTHER_LINES}  ${slug}: $(hyperlink "https://${host}")\n"
+      OTHER_LINES="${OTHER_LINES}  ${slug%-${PROJECT_SLUG}}: $(hyperlink "https://${host}")\n"
     fi
   else
-    # PathPrefix rule — dynamic add-on, accessible via Coder port-forwarding URL
-    OTHER_LINES="${OTHER_LINES}  ${slug}: $(hyperlink "https://${ext_port}--${AGENT}--${WORKSPACE}--${OWNER}.${DOMAIN}")\n"
+    # PathPrefix rule — dynamic add-on, accessible via Coder port-forwarding URL.
+    # slug is {service}-{container port}; extra ports on web read as web:{port}.
+    label="${slug%-*}"
+    [ "$label" = "web" ] && label="web:${slug##*-}"
+    OTHER_LINES="${OTHER_LINES}  ${label}: $(hyperlink "https://${ext_port}--${AGENT}--${WORKSPACE}--${OWNER}.${DOMAIN}")\n"
   fi
 done < <(yq e '.http.routers | keys | .[]' "$CODER_ROUTES" 2>/dev/null)
 
