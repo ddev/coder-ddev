@@ -68,7 +68,7 @@ jobs:
 
       - name: Push template (inactive)
         run: |
-          coder templates push ${{ matrix.template }} \
+          ./scripts/ci-template-push.sh ${{ matrix.template }} \
             --directory ${{ matrix.template }} \
             --activate=false \
             --name ${{ env.VERSION_NAME }} \

@@ -111,7 +111,7 @@ jobs:
 
       - name: Push template (inactive)
         run: |
-          coder templates push drupal-core \
+          ./scripts/ci-template-push.sh drupal-core \
             --directory drupal-core \
             --activate=false \
             --name ${{ env.WORKSPACE_NAME }} \
@@ -279,7 +279,7 @@ jobs:
 
       - name: Push template (inactive)
         run: |
-          coder templates push drupal-core \
+          ./scripts/ci-template-push.sh drupal-core \
             --directory drupal-core \
             --activate=false \
             --name ${{ env.WORKSPACE_NAME }} \
@@ -456,7 +456,7 @@ jobs:
 
       - name: Push template (inactive)
         run: |
-          coder templates push drupal-core \
+          ./scripts/ci-template-push.sh drupal-core \
             --directory drupal-core \
             --activate=false \
             --name cd-${{ github.run_number }}-${{ github.run_attempt }} \
@@ -637,7 +637,7 @@ jobs:
 
       - name: Push template (inactive)
         run: |
-          coder templates push drupal-core \
+          ./scripts/ci-template-push.sh drupal-core \
             --directory drupal-core \
             --activate=false \
             --name gd-${{ github.run_number }}-${{ github.run_attempt }} \

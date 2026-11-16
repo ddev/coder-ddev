@@ -133,7 +133,7 @@ jobs:
 
       - name: Push template (inactive)
         run: |
-          coder templates push ${{ matrix.template }} \
+          ./scripts/ci-template-push.sh ${{ matrix.template }} \
             --directory ${{ matrix.template }} \
             --activate=false \
             --name ci-${{ env.CI_TAG }} \
@@ -353,7 +353,7 @@ jobs:
 
       - name: Push template (inactive)
         run: |
-          coder templates push ${{ matrix.template }} \
+          ./scripts/ci-template-push.sh ${{ matrix.template }} \
             --directory ${{ matrix.template }} \
             --activate=false \
             --name ci-gh-${{ env.CI_TAG }} \
