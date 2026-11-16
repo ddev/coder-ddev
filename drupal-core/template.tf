@@ -997,7 +997,9 @@ TESTENV_EOF
       if [ "$SETUP_FAILED" != "true" ]; then
         log_setup "Adding Drush to composer.local.json..."
         update_status "⏳ Drush install: In progress..."
-        if ddev composer require drush/drush >> "$SETUP_LOG" 2>&1; then
+        # Drush 15 (Drupal 12+) replaced the drush command with a stub that recurses
+        # forever; 14.x still supports Drupal 12. See drush-ops/drush#6673.
+        if ddev composer require "drush/drush:<15" >> "$SETUP_LOG" 2>&1; then
           log_setup "✓ Drush installed"
           update_status "✓ Drush install: Success"
         else

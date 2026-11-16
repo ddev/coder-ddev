@@ -132,7 +132,7 @@ for SPEC in "${TESTS[@]}"; do
   # --- Add drush as require-dev and run ddev poser ---
   if [ ! -f web/index.php ]; then
     log "Adding drush as require-dev..."
-    ddev exec composer require --dev drush/drush --no-update --no-interaction 2>&1 | tail -5
+    ddev exec composer require --dev "drush/drush:<15" --no-update --no-interaction 2>&1 | tail -5
 
     log "Running ddev poser..."
     if ! ddev poser 2>&1 | tail -10; then
