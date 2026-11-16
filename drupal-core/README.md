@@ -125,7 +125,7 @@ ddev start
 ddev add-on get amateescu/ddev-drupal-dev
 ddev restart
 ddev composer install
-ddev composer require drush/drush
+ddev composer require "drush/drush:<15"
 ddev drush si -y demo_umami --account-pass=admin
 ```
 

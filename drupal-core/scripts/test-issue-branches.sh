@@ -148,7 +148,7 @@ for PAIR in "${TESTS[@]}"; do
   ddev composer install 2>&1 || COMPOSER_EXIT=$?
 
   if [ "$COMPOSER_EXIT" = "0" ]; then
-    ddev composer require drush/drush 2>&1 | tail -5
+    ddev composer require "drush/drush:<15" 2>&1 | tail -5
   fi
 
   # --- Record result ---

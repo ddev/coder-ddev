@@ -745,7 +745,7 @@ COMPOSE_EOF
         # Direct JSON edit (not `composer require`) per ddev-drupal-contrib README.
         log_setup "Adding drush to require-dev..."
         update_status "⏳ drush: Adding to composer.json..."
-        jq '.["require-dev"]["drush/drush"] = "*"' composer.json > composer.json.tmp && mv composer.json.tmp composer.json
+        jq '.["require-dev"]["drush/drush"] = "<15"' composer.json > composer.json.tmp && mv composer.json.tmp composer.json
 
         # Allow all Composer plugins in this dev environment. Composer 2.2+ blocks
         # unknown plugins by default; modules can pull in arbitrary plugins (e.g.
