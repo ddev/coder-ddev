@@ -22,7 +22,9 @@ FULL_EVERY=${FULL_EVERY:-30D}
 
 DUMP_DIR=/var/backups/coder
 STAMP=/var/lib/coder-backup/last-success
-install -d -m 700 "$DUMP_DIR" "$(dirname "$STAMP")"
+install -d -m 700 "$DUMP_DIR"
+# Readable by Icinga's check_file_age, which runs as nagios.
+install -d -m 755 "$(dirname "$STAMP")"
 
 runuser -u postgres -- pg_dump -Fc coder > "$DUMP_DIR/coder.dump.tmp"
 mv "$DUMP_DIR/coder.dump.tmp" "$DUMP_DIR/coder.dump"
