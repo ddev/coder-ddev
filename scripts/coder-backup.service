@@ -1,0 +1,10 @@
+[Unit]
+Description=Back up Coder database and host config to S3
+After=network-online.target postgresql.service
+Wants=network-online.target
+OnFailure=coder-backup-failed.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/coder-backup.env
+ExecStart=/usr/local/bin/coder-backup

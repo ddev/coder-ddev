@@ -349,6 +349,85 @@ coder templates push --directory freeform freeform --yes
 
 ## Backup and Maintenance
 
+### Database and Server Config Backup
+
+Coder's PostgreSQL database holds every user, template and workspace record. If the system drive fails without a backup, all of those have to be recreated by hand. `scripts/coder-backup.sh` runs nightly as root. It dumps the database with `pg_dump -Fc`, then uses [duplicity](https://duplicity.us/) to upload the dump and the host configuration to S3, encrypted with a passphrase. The configuration includes `/etc/coder.d`, `/etc/letsencrypt`, the systemd units, sudoers drop-ins, Docker and registry config, the janitor and Discord relay env files, and the Icinga certificates. Workspace home directories in `/coder-workspaces` are not included.
+
+Duplicity makes a full backup every 30 days and incremental backups in between, and removes backups older than 90 days.
+
+#### AWS setup
+
+Create a private S3 bucket, and an IAM user whose only permissions are on that bucket:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {"Effect": "Allow", "Action": ["s3:ListBucket", "s3:GetBucketLocation"], "Resource": "arn:aws:s3:::YOUR_BUCKET"},
+    {"Effect": "Allow", "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"], "Resource": "arn:aws:s3:::YOUR_BUCKET/*"}
+  ]
+}
+```
+
+Store the IAM user's access key and a long random passphrase in 1Password. A restore needs both, so keep them somewhere other than the server.
+
+#### Install
+
+```bash
+REPO=~/workspace/coder-ddev   # adjust if your repo is elsewhere
+
+sudo apt-get install -y duplicity python3-boto3
+
+sudo install -m 755 $REPO/scripts/coder-backup.sh /usr/local/bin/coder-backup
+sudo install -m 755 $REPO/scripts/coder-restore-test.sh /usr/local/bin/coder-restore-test
+sudo install -m 644 $REPO/scripts/coder-backup.service $REPO/scripts/coder-backup.timer \
+  $REPO/scripts/coder-backup-failed.service /etc/systemd/system/
+
+sudo tee /etc/coder-backup.env > /dev/null <<'EOF'
+BACKUP_TARGET=s3://YOUR_BUCKET/coder.example.com
+PASSPHRASE=REPLACE_WITH_PASSPHRASE
+AWS_ACCESS_KEY_ID=REPLACE_WITH_KEY_ID
+AWS_SECRET_ACCESS_KEY=REPLACE_WITH_SECRET
+AWS_DEFAULT_REGION=us-east-1
+EOF
+sudo chmod 600 /etc/coder-backup.env
+
+sudo systemctl daemon-reload
+sudo systemctl enable --now coder-backup.timer
+```
+
+Run the first backup and the restore test by hand:
+
+```bash
+sudo systemctl start coder-backup.service
+sudo journalctl -u coder-backup -q -n 20
+sudo bash -c 'set -a; source /etc/coder-backup.env; set +a; coder-restore-test'
+```
+
+The restore test restores the latest dump into a scratch database, prints its user and template counts, and drops the scratch database. Run it again after any change to the backup setup.
+
+#### Alerts
+
+When `coder-backup.service` fails, `coder-backup-failed.service` posts to Discord through the relay from [Step 11 of the server setup](server-setup.md#step-11-set-up-discord-notifications). A backup that stops running entirely does not fail, so also monitor the age of `/var/lib/coder-backup/last-success`, which holds the time of the last successful backup. In Icinga Director, add a service on the host that runs `check_file_age` with `-f /var/lib/coder-backup/last-success -w 93600 -c 180000`, which warns after 26 hours and goes critical after 50.
+
+#### Restore after losing the server
+
+1. Rebuild the host by following the [server setup](server-setup.md) through PostgreSQL (Step 5). Install `duplicity` and `python3-boto3`, and write `/etc/coder-backup.env` from 1Password.
+2. Restore the backup to a staging directory, then copy back what you need:
+
+    ```bash
+    sudo bash -c 'set -a; source /etc/coder-backup.env; set +a; duplicity restore "$BACKUP_TARGET" /root/restore'
+    ```
+
+3. Restore the database before starting Coder. The dump owns its objects as `coder`, so create that user first with the password from `/root/restore/root/coder-pg-password`:
+
+    ```bash
+    sudo -u postgres createdb -O coder coder
+    sudo -u postgres pg_restore --dbname coder /root/restore/var/backups/coder/coder.dump
+    ```
+
+4. Copy `/etc/coder.d`, `/etc/letsencrypt` and the other files from `/root/restore` into place, then continue with the remaining setup steps.
+
 ### Workspace Data Backup
 
 Each workspace stores persistent data in:
