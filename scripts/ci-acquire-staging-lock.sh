@@ -37,7 +37,9 @@
 #   CI_OWNER           Coder username that owns CI workspaces (default: ci-bot)
 #   MAX_WAIT_SECONDS   Give up and fail after this long (default: 2700 = 45m)
 #   POLL_SECONDS       Delay between full passes over all slots (default: 30)
-#   STALE_MINUTES      Force-reclaim a held slot older than this (default: 30)
+#   STALE_MINUTES      Force-reclaim a held slot older than this (default: 80;
+#                      must stay above the jobs' 75-minute timeout-minutes so
+#                      a slot held by a live job is never reclaimed)
 #   STAGGER_SECONDS    Minimum gap enforced between two workspace starts, even
 #                      when slots are available (default: 90)
 
@@ -47,7 +49,7 @@ CI_LOCK_SLOTS="${CI_LOCK_SLOTS:-2}"
 CI_OWNER="${CI_OWNER:-ci-bot}"
 MAX_WAIT_SECONDS="${MAX_WAIT_SECONDS:-2700}"
 POLL_SECONDS="${POLL_SECONDS:-30}"
-STALE_MINUTES="${STALE_MINUTES:-30}"
+STALE_MINUTES="${STALE_MINUTES:-80}"
 STAGGER_SECONDS="${STAGGER_SECONDS:-90}"
 
 acquired=""
