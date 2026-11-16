@@ -108,6 +108,14 @@ coder create --template freeform my-workspace \
 
 ## Workspace Startup Failures
 
+### `sudo` Fails After a Host Reboot
+
+**Symptom:** After the host reboots, workspaces that were running show `start_error`, and the startup log begins with `sudo: /usr/bin/sudo must be owned by uid 0 and have the setuid bit set`.
+
+**Cause:** Docker restarted the container itself at boot, and Sysbox did not redo its user-namespace ID mapping, so files from the image are owned by `nobody` (65534).
+
+**Solution:** Restart the workspace with `coder restart my-workspace` or the **Restart** button, which recreates the container. To do this automatically at boot, install the service in [Step 15 of the server setup](server-setup.md#step-15-restart-workspaces-after-a-host-reboot).
+
 ### Workspace Stuck in "Starting" State
 
 **Symptom:** Workspace creation hangs, never reaches "Running"

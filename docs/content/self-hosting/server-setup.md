@@ -1400,6 +1400,31 @@ sudo journalctl -u workspace-lifecycle-cleanup -q -n50
 
 ---
 
+## Step 15: Restart Workspaces After a Host Reboot
+
+When the host reboots, Docker restarts each running workspace container by itself, but Sysbox does not redo the container's user-namespace ID mapping. Inside those containers, files from the image are owned by `nobody` (65534), so `sudo` fails with `/usr/bin/sudo must be owned by uid 0 and have the setuid bit set` and the workspace shows `start_error`. A plain `docker restart` without a reboot does not cause this.
+
+`coder restart` recreates the container, which fixes it. A oneshot service does that for every running workspace at boot, using the `workspace-janitor` token from Step 14:
+
+```bash
+REPO=~/workspace/coder-ddev   # adjust if your repo is elsewhere
+
+sudo install -m 755 $REPO/scripts/restart-workspaces-after-boot.sh /usr/local/bin/restart-workspaces-after-boot
+sudo install -m 644 $REPO/scripts/restart-workspaces-after-boot.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable restart-workspaces-after-boot.service
+```
+
+Enable it without `--now`: it only needs to run at the next boot. To see which workspaces it would restart, run it without `--force`:
+
+```bash
+sudo -u rfay bash -c 'set -a; source /etc/workspace-lifecycle-cleanup.env; set +a; /usr/local/bin/restart-workspaces-after-boot'
+```
+
+After a reboot, `sudo journalctl -u restart-workspaces-after-boot -q` shows what it restarted.
+
+---
+
 ## Troubleshooting
 
 **Coder service won't start:**
