@@ -88,7 +88,7 @@ SWRAID 0
 BOOTLOADER grub
 HOSTNAME staging-coder.ddev.com
 
-IMAGE /root/.oldroot/nfs/install/../images/Ubuntu-2404-noble-amd64-base.tar.gz
+IMAGE /root/.oldroot/nfs/install/../images/Ubuntu-2404-noble-amd64-base.tar.zst
 
 PART /boot  ext4  1G
 PART lvm    vg0   all
@@ -105,6 +105,16 @@ Replace `staging-coder.ddev.com` with your hostname and `YOUR_GITHUB_USERNAME` w
 
 > **Hostname note:** The Coder server's hostname must not collide with the wildcard subdomain reserved for workspace app routing. `*.coder.ddev.com` is used for workspaces, so the Coder server itself is `coder.ddev.com` and a parallel staging server lives at `staging-coder.ddev.com` (with `*.staging-coder.ddev.com` for its workspaces).
 
+!!! warning "Check which drive is which before you set `DRIVE1` and `DRIVE2`"
+    installimage wipes every drive listed in `DRIVE` lines. NVMe device names follow the order the kernel finds the drives, so they can change between boots and after Hetzner replaces a drive. Identify each drive by model, size, serial and existing filesystem:
+
+    ```bash
+    lsblk -o NAME,SIZE,FSTYPE,MODEL,SERIAL
+    blkid /dev/nvme*n1
+    ```
+
+    When you reinstall a server whose workspace drive must survive, such as after a failed system drive, list only the system drive as `DRIVE1`. Remove the `DRIVE2` line, skip the second-disk setup below, and mount the existing drive by UUID instead.
+
 Verify the IMAGE filename actually exists in the rescue, since it changes occasionally:
 
 ```bash
@@ -119,7 +129,7 @@ If the filename in `/tmp/install.conf` doesn't match, edit it before continuing.
 installimage -a -c /tmp/install.conf
 ```
 
-`-a` skips the interactive editor; `-c` reads the config from the given file. installimage runs a syntax check, asks once to confirm it will wipe both drives, then partitions, installs Ubuntu, configures grub, and applies your `SSHKEYS_URL`. The whole process takes 3–6 minutes.
+`-a` skips the interactive editor; `-c` reads the config from the given file. installimage runs a syntax check and does not ask for confirmation. It waits 20 seconds, during which Ctrl-C aborts, then wipes the listed drives, partitions, installs Ubuntu, configures grub, and applies your `SSHKEYS_URL`. The whole process takes 3–6 minutes.
 
 When it finishes, reboot:
 
@@ -185,10 +195,16 @@ printf "Types: deb\nURIs: https://download.docker.com/linux/ubuntu\nSuites: %s\n
 sudo apt-get update
 sudo apt-get install -y docker-ce docker-ce-cli containerd.io
 
-# Configure Docker to use /data as its data root
+# Configure Docker to use /data as its data root.
+# Sysbox 0.6.x cannot run containers that have a time namespace, which Docker 29
+# adds by default; without "time-namespaces": false, workspaces fail with
+# 'OCI runtime create failed: namespace {"time" ""} does not exist'.
 sudo tee /etc/docker/daemon.json > /dev/null <<'EOF'
 {
-  "data-root": "/data/docker"
+  "data-root": "/data/docker",
+  "features": {
+    "time-namespaces": false
+  }
 }
 EOF
 
@@ -590,7 +606,7 @@ CODER_WILDCARD_ACCESS_URL=*.coder.example.com
 CODER_PG_CONNECTION_URL=postgresql://coder:strongpasswordhere@localhost/coder?sslmode=disable
 
 # Telemetry — disable if you prefer not to send usage data to Coder
-CODER_TELEMETRY=false
+CODER_TELEMETRY_ENABLE=false
 ```
 
 #### Alternative: plain HTTP or non-standard port
@@ -648,6 +664,8 @@ Without this setup, workspace deletion will log permission errors and leave the 
 Navigate to `https://coder.example.com` (your hostname) and create the initial admin user.
 
 > **Important:** Use your GitHub username as the Coder username (e.g. `rfay`). When you later log in via GitHub OAuth, Coder matches on username — if the name is already taken it creates a second account with a random suffix (e.g. `rfay-wanderingortiz8`) which will not have admin permissions. Getting the username right here avoids that entirely.
+
+If `coder.env` already has the GitHub OAuth settings below when Coder first starts, you can skip the password account: the first user who signs in with GitHub becomes the owner. This avoids the duplicate-account problem entirely.
 
 ### Authenticate the CLI
 
@@ -1243,7 +1261,9 @@ Get a fresh registration token for each batch from **GitHub → Settings → Act
 #### 2. Create the CI bot user on staging
 
 ```bash
-coder users create --email ci@staging-coder.ddev.com --username ci-bot --login-type none
+# Random, discarded password: see the note in Step 14 about --login-type none
+coder users create --email ci@staging-coder.ddev.com --username ci-bot \
+  --login-type password --password "$(openssl rand -base64 36)" > /dev/null
 coder users edit-roles ci-bot --roles template-admin --yes
 coder organizations members edit-roles ci-bot organization-template-admin
 coder tokens create --user ci-bot --lifetime 8760h
@@ -1335,11 +1355,13 @@ sudo systemctl restart coder
 
 The script needs `owner` (list-all + delete-any-workspace; this deployment has no Premium license, so there's no narrower role):
 
+Coder 2.38 and later reject `--login-type none`, and `--service-account` needs a Premium license. So the account gets a random password that nobody keeps. `coder users create` prints the password, so discard its output. Create the token after any password change, because changing the password revokes the account's tokens.
+
 ```bash
 coder users create --username workspace-janitor \
   --email workspace-janitor@ddev.com \
   --full-name "Workspace Lifecycle Janitor" \
-  --login-type none
+  --login-type password --password "$(openssl rand -base64 36)" > /dev/null
 
 coder users edit-roles workspace-janitor --roles owner --yes
 
@@ -1372,6 +1394,8 @@ MAILGUN_DOMAIN=coder.ddev.com
 STATE_FILE=/var/lib/workspace-lifecycle-cleanup/state.json
 EOF
 sudo chmod 600 /etc/workspace-lifecycle-cleanup.env
+# The service user must be able to read it for the dry run below
+sudo chown rfay:rfay /etc/workspace-lifecycle-cleanup.env
 
 # Install and enable the systemd service + timer
 sudo install -m 644 $REPO/scripts/workspace-lifecycle-cleanup.service /etc/systemd/system/
