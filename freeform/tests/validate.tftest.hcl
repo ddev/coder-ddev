@@ -294,6 +294,10 @@ run "claude_runner_enabled" {
     error_message = "each runner must use --capacity 1, which --use-anthropic-git-proxy requires"
   }
   assert {
+    condition     = strcontains(base64decode(regex("echo '([A-Za-z0-9+/=]+)' \\| base64 -d >> ~/.ssh/known_hosts", coder_agent.main.startup_script)[0]), "github.com ssh-ed25519 ")
+    error_message = "startup script must add GitHub's host keys to known_hosts, or SSH pushes from sessions fail host key verification"
+  }
+  assert {
     condition     = strcontains(base64decode(regex("echo '([A-Za-z0-9+/=]+)' \\| base64 -d \\| sudo tee /etc/claude-code/managed-settings.d/coder-runner.json", coder_agent.main.startup_script)[0]), "claude-checkout-check /home/coder/workspace")
     error_message = "startup script must install the SessionStart hook that reports a checkout left dirty by an earlier session"
   }
