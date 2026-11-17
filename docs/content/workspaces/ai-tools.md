@@ -141,10 +141,8 @@ The runner uses Anthropic-managed git. A session reaches GitHub in three ways, a
 
 ### Who can use the runner
 
-An environment is a pool. Every runner that uses its secret, in this workspace or any other, takes the next session from anyone who can start sessions in that environment, such as other members of your claude.ai organization. The runner's label decides nothing.
+**A runner workspace is personal. Don't share its environment.** An environment is a pool: every runner that uses its secret, in this workspace or any other, takes the next session from anyone who can start sessions in that environment. The runner's label decides nothing.
 
-- A session from another person can land in your workspace. It then runs as your Unix user, with your SSH agent, your Coder key, and any `gh` login or credentials stored in the workspace.
-- Share an environment only with people you would trust with those credentials. Otherwise, give each person their own environment and their own runner workspace. Their SSH pushes then use their own Coder key.
-- **For a runner your whole organization shares, let a dedicated Coder user own the workspace,** such as `ddev-runner`, and don't add that user's Coder key to anyone's GitHub account. Even among trusted people, a session that pushes over SSH as the workspace owner is easy to miss. Without that key on GitHub, sessions push only over HTTPS, as the person who started them. To push to a fork, a session attaches the fork with push access. A template setting can't prevent this: any process in a workspace can use the owner's Coder key, through `coder gitssh` or the workspace agent.
-- **Don't connect to a shared runner workspace with a forwarded SSH agent.** Sessions could then sign with every key on your computer while you stay connected.
+- A session from another person would run as your Unix user, with your SSH agent, your Coder key, and any credentials stored in the workspace. Its SSH pushes would act as you, and no template setting can prevent that: any process in a workspace can use the owner's Coder key, through `coder gitssh` or the workspace agent.
+- Each person who wants a runner creates their own environment and their own runner workspace.
 - Use a separate environment for each kind of runner you want to choose between, for example one per operating system. Sessions go to whichever runner is free, with no routing by label or platform.

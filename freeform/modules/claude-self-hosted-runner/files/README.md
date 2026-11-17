@@ -53,15 +53,10 @@ Coder key, which is the same in all your workspaces. SSH pushes act as you
 in every session. The workspace adds GitHub's host keys to
 `~/.ssh/known_hosts` on start.
 
-Every runner that uses this environment secret takes sessions from anyone
-who can start sessions in the environment, and runs them as this
-workspace's user, with its SSH agent. Share the environment only with
-people you trust with those keys.
-
-For a runner your whole organization shares, let a dedicated Coder user own
-the workspace, and don't add its Coder key to anyone's GitHub account.
-Sessions then push only over HTTPS, as the person who started them. Don't
-connect to a shared runner workspace with a forwarded SSH agent.
+This runner is personal. Every runner that uses this environment secret
+takes sessions from anyone who can start sessions in the environment, and
+runs them as you, with your SSH agent and Coder key. Don't share the
+environment with other people.
 
 ## Troubleshooting
 
