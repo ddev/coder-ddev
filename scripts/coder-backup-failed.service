@@ -1,0 +1,6 @@
+[Unit]
+Description=Report a failed Coder backup to Discord
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/curl -fsS -X POST http://localhost:9876/ -H "Content-Type: application/json" -d '{"title":"coder-backup failed on %H","body":"See journalctl -u coder-backup on %H"}'
