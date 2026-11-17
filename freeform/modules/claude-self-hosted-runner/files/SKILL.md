@@ -127,19 +127,40 @@ only what you created (build output, your worktrees, your `~/tmp`
 directory, your test projects). Never delete another session's files, and
 never prune Docker images or volumes another session may use.
 
+## GitHub and `gh`
+
+HTTPS git (the clone, fetch, and pushes to `origin`) and the GitHub MCP
+tools act as the GitHub account connected to the claude.ai account that
+started this session, through Anthropic's proxy. The MCP tools reach only
+the repositories attached to the session.
+
+`gh` here is the workspace's own `gh`, and acts as whoever logged it in,
+normally the workspace owner.
+
+- Run `gh auth status`. With a login, `gh` works fully, GraphQL included,
+  for every repository that account can reach. Use it when the user's
+  instructions say to.
+- Without a login, use the GitHub MCP tools. Don't report the missing
+  login as a problem, and don't run `gh auth login` or set `GH_TOKEN`
+  yourself; that is the user's decision.
+
 ## Pushing over SSH
 
 `SSH_AUTH_SOCK` points at the workspace SSH agent relay,
-`~/.ssh-agent-relay/agent.sock`. The relay uses the user's own agent when
-one is forwarded (VS Code, `coder ssh -A`). Otherwise it uses the Coder
-workspace key, which GitHub accepts once the user adds it to their account
-(`coder publickey` prints it).
+`~/.ssh-agent-relay/agent.sock`. The relay uses the workspace owner's own
+agent when one is forwarded (VS Code, `coder ssh -A`). Otherwise it uses
+the owner's Coder key, which GitHub accepts once the owner adds it to
+their account (`coder publickey` prints it). SSH pushes act as the
+workspace owner, who may not be the person who started this session.
 
 - When you add a remote, such as the user's fork, use its SSH URL:
   `git remote add <name> git@github.com:<owner>/<repo>`. HTTPS pushes go
   through the session's git proxy, which reaches only the repositories
   attached to the session.
 - Leave `origin` as the runner cloned it.
-- `ssh -T git@github.com` greets the user by name when SSH works.
+- `ssh -T git@github.com` greets the account SSH pushes act as. Compare it
+  with the account the MCP tools report (`get_me`), or with
+  `gh api user --jq .login` when `gh` has a login. If they differ, or you
+  have neither to compare, ask the user before pushing over SSH.
 - On `Permission denied (publickey)`, ask the user to forward an agent or
   add the Coder key to GitHub. Never create, copy or print keys.

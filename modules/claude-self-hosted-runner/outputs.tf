@@ -26,6 +26,13 @@ output "startup_script" {
         # The runner copies ~/.claude into each session when it starts.
         mkdir -p ~/.claude/skills/coder-shared-workspace ~/.cache "${var.base_dir}"
         echo '${base64encode(file("${path.module}/files/SKILL.md"))}' | base64 -d > ~/.claude/skills/coder-shared-workspace/SKILL.md
+        # Without github.com in known_hosts, SSH pushes from sessions fail with
+        # "Host key verification failed". These are GitHub's published keys.
+        mkdir -p ~/.ssh
+        chmod 700 ~/.ssh
+        if ! ssh-keygen -F github.com >/dev/null 2>&1; then
+          echo '${base64encode(file("${path.module}/files/github_known_hosts"))}' | base64 -d >> ~/.ssh/known_hosts
+        fi
         mkdir -p ~/.local/bin
         echo '${base64encode(local.loop_script)}' | base64 -d > ~/.local/bin/claude-runner-loop
         chmod +x ~/.local/bin/claude-runner-loop
