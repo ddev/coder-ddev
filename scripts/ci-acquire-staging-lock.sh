@@ -35,11 +35,12 @@
 # Environment:
 #   CI_LOCK_SLOTS      Number of concurrent slots (default: 2)
 #   CI_OWNER           Coder username that owns CI workspaces (default: ci-bot)
-#   MAX_WAIT_SECONDS   Give up and fail after this long (default: 2700 = 45m)
+#   MAX_WAIT_SECONDS   Give up and fail after this long (default: 0 = never;
+#                      the job's own timeout-minutes still applies)
 #   POLL_SECONDS       Delay between full passes over all slots (default: 30)
 #   STALE_MINUTES      Force-reclaim a held slot older than this (default: 80;
-#                      must stay above the jobs' 75-minute timeout-minutes so
-#                      a slot held by a live job is never reclaimed)
+#                      must stay above the longest time a live job holds its
+#                      slot, about 45 minutes, so a live slot is never reclaimed)
 #   STAGGER_SECONDS    Minimum gap enforced between two workspace starts, even
 #                      when slots are available (default: 90)
 
@@ -47,7 +48,7 @@ set -uo pipefail
 
 CI_LOCK_SLOTS="${CI_LOCK_SLOTS:-2}"
 CI_OWNER="${CI_OWNER:-ci-bot}"
-MAX_WAIT_SECONDS="${MAX_WAIT_SECONDS:-2700}"
+MAX_WAIT_SECONDS="${MAX_WAIT_SECONDS:-0}"
 POLL_SECONDS="${POLL_SECONDS:-30}"
 STALE_MINUTES="${STALE_MINUTES:-80}"
 STAGGER_SECONDS="${STAGGER_SECONDS:-90}"
@@ -122,7 +123,7 @@ stagger_if_needed() {
 
 # Fail fast if the ci-lock template itself is missing (e.g. never pushed to
 # this Coder deployment) rather than retrying a doomed `coder create` for the
-# full MAX_WAIT_SECONDS -- that failure mode wastes 45 minutes per job with no
+# whole job timeout -- that failure mode would waste hours per job with no
 # indication of the real problem. See docs/admin/server-setup.md for the
 # one-time `make push-all-templates` setup step.
 if ! templates_json=$(coder templates list --output json 2>&1); then
@@ -155,13 +156,13 @@ while true; do
     continue # a slot just freed up -- retry now instead of sleeping
   fi
 
-  if [[ "$waited" -ge "$MAX_WAIT_SECONDS" ]]; then
+  if [[ "$MAX_WAIT_SECONDS" -gt 0 && "$waited" -ge "$MAX_WAIT_SECONDS" ]]; then
     echo "ERROR: all $CI_LOCK_SLOTS staging box lock slot(s) still busy after ${MAX_WAIT_SECONDS}s -- giving up" >&2
     echo "Last error: $last_err" >&2
     exit 1
   fi
 
-  echo "All $CI_LOCK_SLOTS staging box lock slot(s) busy; waiting ${POLL_SECONDS}s (${waited}s/${MAX_WAIT_SECONDS}s so far)..."
+  echo "All $CI_LOCK_SLOTS staging box lock slot(s) busy; waiting ${POLL_SECONDS}s (${waited}s so far)..."
   sleep "$POLL_SECONDS"
   waited=$((waited + POLL_SECONDS))
 done

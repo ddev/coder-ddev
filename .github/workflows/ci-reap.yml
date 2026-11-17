@@ -65,8 +65,8 @@ jobs:
 
       - name: Reap stale CI workspaces and template versions
         env:
-          # Must stay above the integration jobs' 75-minute timeout-minutes, or the
-          # janitor deletes workspaces that live jobs are still using.
+          # Must stay above the longest time a job keeps its workspace (under an
+          # hour), or the janitor deletes workspaces that live jobs still use.
           AGE_MINUTES: ${{ github.event.inputs.age_minutes || '80' }}
           DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
         run: ./scripts/ci-reap-staging.sh $([[ "$DRY_RUN" == "true" ]] || echo --force)

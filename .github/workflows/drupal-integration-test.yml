@@ -51,12 +51,32 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
+# Docs-only changes skip this workflow: docs-check.yml covers them, and a
+# docs PR has no reason to queue heavy workspaces on the shared staging box.
+# A mixed change still runs, because paths-ignore skips only when every
+# changed file matches.
 on:
   schedule:
     - cron: '0 4 * * *'
   push:
     branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+      - '*/README.md'
+      - 'mkdocs.yml'
+      - '.readthedocs.yaml'
+      - '.markdownlint.jsonc'
+      - '.linkspector.yml'
   pull_request:
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+      - '*/README.md'
+      - 'mkdocs.yml'
+      - '.readthedocs.yaml'
+      - '.markdownlint.jsonc'
+      - '.linkspector.yml'
   workflow_dispatch:
     inputs:
       debug_enabled:
@@ -72,9 +92,10 @@ jobs:
     # To re-enable: restore `if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.owner.login == github.repository_owner }}`
     if: false
     runs-on: [self-hosted, sysbox]
-    # Long enough to cover queued time behind other box-provisioning jobs
-    # (see scripts/ci-acquire-staging-lock.sh) plus this job's own runtime.
-    timeout-minutes: 75
+    # GitHub's maximum for hosted runners. A job waits in the
+    # ci-acquire-staging-lock.sh queue as long as it takes instead of failing;
+    # the work after the lock takes under an hour.
+    timeout-minutes: 360
     strategy:
       matrix:
         drupal_version: ["12", "11"]
@@ -243,9 +264,10 @@ jobs:
     name: Drupal ${{ matrix.drupal_version }} (plain, GH)
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.owner.login == github.repository_owner }}
     runs-on: ubuntu-latest
-    # Long enough to cover queued time behind other box-provisioning jobs
-    # (see scripts/ci-acquire-staging-lock.sh) plus this job's own runtime.
-    timeout-minutes: 75
+    # GitHub's maximum for hosted runners. A job waits in the
+    # ci-acquire-staging-lock.sh queue as long as it takes instead of failing;
+    # the work after the lock takes under an hour.
+    timeout-minutes: 360
     strategy:
       # PRs run a single Drupal version (smoke); push-to-main and nightly run the
       # full matrix. Cuts per-PR workspace load on staging. See ci-reap.yml.
@@ -383,9 +405,10 @@ jobs:
     # To re-enable: restore `if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.owner.login == github.repository_owner }}`
     if: false
     runs-on: [self-hosted, sysbox]
-    # Long enough to cover queued time behind other box-provisioning jobs
-    # (see scripts/ci-acquire-staging-lock.sh) plus this job's own runtime.
-    timeout-minutes: 75
+    # GitHub's maximum for hosted runners. A job waits in the
+    # ci-acquire-staging-lock.sh queue as long as it takes instead of failing;
+    # the work after the lock takes under an hour.
+    timeout-minutes: 360
     defaults:
       run:
         shell: bash -euo pipefail {0}
@@ -579,9 +602,10 @@ jobs:
     name: Drupal issue fork ${{ vars.DRUPAL_TEST_ISSUE_FORK || '3585397' }} (GH)
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.owner.login == github.repository_owner }}
     runs-on: ubuntu-latest
-    # Long enough to cover queued time behind other box-provisioning jobs
-    # (see scripts/ci-acquire-staging-lock.sh) plus this job's own runtime.
-    timeout-minutes: 75
+    # GitHub's maximum for hosted runners. A job waits in the
+    # ci-acquire-staging-lock.sh queue as long as it takes instead of failing;
+    # the work after the lock takes under an hour.
+    timeout-minutes: 360
     defaults:
       run:
         shell: bash -euo pipefail {0}

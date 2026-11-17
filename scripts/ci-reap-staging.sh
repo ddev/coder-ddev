@@ -27,19 +27,18 @@
 #
 # Why the version-age floor matters: a job pushes an inactive template
 # version, then may wait behind ci-acquire-staging-lock.sh for a free slot
-# (up to MAX_WAIT_SECONDS there, currently 45m) before creating a workspace
-# from it. Archiving "unused" versions the instant this janitor runs -- as it
+# (as long as it takes, up to the job's 360-minute timeout) before creating
+# a workspace from it. Archiving "unused" versions the instant this janitor runs -- as it
 # used to -- can archive a version that's mid-wait, not abandoned, causing
 # `coder create` to fail with "template version archived". VERSION_AGE_MINUTES
-# must stay comfortably above that worst-case wait.
+# must stay above that worst-case wait.
 #
 # Why the running-workspace age floor matters: a test job holds its workspace
-# (and its ci-slot-* lock) for as long as the job runs, and jobs run up to
-# their 75-minute `timeout-minutes`. A Drupal setup with slow Composer
-# downloads can spend 20+ minutes in `ddev poser` alone. A lower threshold
-# deletes workspaces out from under live jobs, which then fail with
-# "agent is shutting down". AGE_MINUTES must stay above the job timeout, so
-# anything older than it cannot belong to a running job.
+# (and its ci-slot-* lock) from lock to cleanup, which takes up to about
+# 45 minutes in passing jobs. A Drupal contrib setup spends about 20 minutes in
+# `ddev poser` alone. A lower threshold deletes workspaces out from under live
+# jobs, which then fail with "agent is shutting down". AGE_MINUTES must stay
+# above that runtime, with margin, so anything older is stuck or orphaned.
 #
 # By default runs in dry-run mode (prints what would be deleted).
 # Pass --force (or set DRY_RUN=false) to actually delete/archive.
@@ -49,7 +48,7 @@
 # Environment overrides:
 #   CI_OWNER            Coder username that owns CI workspaces (default: ci-bot)
 #   AGE_MINUTES         Age threshold in minutes for running workspaces (default: 80)
-#   VERSION_AGE_MINUTES Age threshold in minutes for unused template versions (default: 60)
+#   VERSION_AGE_MINUTES Age threshold in minutes for unused template versions (default: 380)
 #   DRY_RUN             true|false (default: true; --force sets false)
 #   TEMPLATES           space-separated template names to archive versions for
 #
@@ -62,7 +61,7 @@ set -euo pipefail
 
 CI_OWNER="${CI_OWNER:-ci-bot}"
 AGE_MINUTES="${AGE_MINUTES:-80}"
-VERSION_AGE_MINUTES="${VERSION_AGE_MINUTES:-60}"
+VERSION_AGE_MINUTES="${VERSION_AGE_MINUTES:-380}"
 DRY_RUN="${DRY_RUN:-true}"
 TEMPLATES="${TEMPLATES:-drupal-core drupal-contrib freeform}"
 
