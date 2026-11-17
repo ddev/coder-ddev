@@ -5,13 +5,17 @@
 # Runs as the runner's post-session hook and before every runner start, so
 # never while a session uses the directory (each runner has --capacity 1).
 # Nothing a session left is deleted unless a commit or remote already holds it:
-# - Leftover changes in the runner's clones go into a "runner-rescue" stash.
+# - Leftover changes in the runner's clones go into a "runner-rescue" stash,
+#   kept by a ref under refs/runner-rescue/. The runner clears the stash
+#   reflog between sessions, so `git stash list` no longer shows the stash;
+#   list rescues with `git for-each-ref refs/runner-rescue`.
 # - Worktrees are removed, after stashing their changes the same way.
 # - Other clones, and broken worktrees, are deleted if they hold nothing
 #   unpushed, and otherwise moved to the rescue directory,
 #   ~/.local/state/claude-runner-rescue/<runner>/<time>/.
-# Every action is logged in the rescue directory's "log". Rescue stashes and
+# Every action is logged in the rescue directory's "log". Rescue refs and
 # directories older than CLAUDE_RUNNER_RESCUE_DAYS (default 30) are removed.
+# Portable to macOS: bash 3.2 and BSD date, find and sed.
 set -u
 runner_dir="${1:?usage: claude-runner-sweep <runner dir>}"
 runner_dir="${runner_dir%/}"
@@ -28,7 +32,7 @@ export GIT_AUTHOR_NAME="${GIT_AUTHOR_NAME:-Claude runner}" GIT_AUTHOR_EMAIL="${G
 export GIT_COMMITTER_NAME="${GIT_COMMITTER_NAME:-Claude runner}" GIT_COMMITTER_EMAIL="${GIT_COMMITTER_EMAIL:-noreply@anthropic.com}"
 
 note() {
-  printf '%s %s %s %s %s\n' "$(date -Is)" "$runner" "$session" "${uuid:--}" "$*" >>"$rescue_root/log"
+  printf '%s %s %s %s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$runner" "$session" "${uuid:--}" "$*" >>"$rescue_root/log"
   echo "claude-runner-sweep: $*"
 }
 
@@ -54,7 +58,17 @@ rescue_stash() {
       return 1
     fi
   fi
-  note "stashed changes in $dir as \"$msg\""
+  # The stash reflog doesn't survive to the next session; a ref does.
+  local ref slug
+  slug=$(printf '%s' "$session-$what" | tr -c 'A-Za-z0-9._-' '-')
+  ref="refs/runner-rescue/$stamp-$slug"
+  local n=1
+  while git -C "$dir" show-ref -q --verify "$ref"; do
+    n=$((n + 1))
+    ref="refs/runner-rescue/$stamp-$slug-$n"
+  done
+  git -C "$dir" update-ref "$ref" refs/stash 2>/dev/null || ref="refs/stash"
+  note "stashed changes in $dir as \"$msg\" ($ref)"
 }
 
 # True when deleting this checkout loses nothing: no changes, no stashes and
@@ -90,10 +104,20 @@ for dir in "$runner_dir"/*/*/; do
 done
 
 # Runner clones first, so their worktrees are gone before the second pass.
-for dir in "${candidates[@]}"; do
+for dir in ${candidates[@]+"${candidates[@]}"}; do
   is_runner_clone "$dir" || continue
+  # Older sweeps kept rescues only as stashes. When refs/stash is one that no
+  # rescue ref holds, give it a ref before another stash replaces it.
+  old=$(git -C "$dir" rev-parse -q --verify refs/stash 2>/dev/null)
+  if [ -n "$old" ] && git -C "$dir" log -1 --format=%s "$old" 2>/dev/null | grep -q runner-rescue &&
+    ! git -C "$dir" for-each-ref --format='%(objectname)' refs/runner-rescue/ 2>/dev/null | grep -qx "$old"; then
+    ref="refs/runner-rescue/$(git -C "$dir" log -1 --format=%ct "$old")-earlier-sweep"
+    git -C "$dir" update-ref "$ref" "$old" && note "kept the earlier rescue stash in $dir as $ref"
+  fi
+  # git prints worktree paths with symlinks resolved, as with macOS /var.
+  real=$(cd "$dir" && pwd -P)
   while read -r wt; do
-    [ "$wt" = "$dir" ] && continue
+    [ "$wt" = "$dir" ] || [ "$wt" = "$real" ] && continue
     if [ -d "$wt" ]; then
       rescue_stash "$wt" "worktree $(basename "$wt")" || continue
       if git -C "$dir" worktree remove --force "$wt" 2>/dev/null; then
@@ -103,17 +127,14 @@ for dir in "${candidates[@]}"; do
   done < <(git -C "$dir" worktree list --porcelain 2>/dev/null | sed -n 's/^worktree //p')
   git -C "$dir" worktree prune 2>/dev/null
   rescue_stash "$dir" "checkout"
-  # Drop expired rescue stashes, highest index (oldest) first, so the lower
-  # indexes stay valid.
   cutoff=$(($(date +%s) - keep_days * 86400))
-  git -C "$dir" stash list --format='%gd %ct %gs' 2>/dev/null | sort -t'{' -k2 -rn |
-    while read -r ref ct subject; do
-      case "$subject" in *runner-rescue*) ;; *) continue ;; esac
-      [ "$ct" -lt "$cutoff" ] && git -C "$dir" stash drop --quiet "$ref" 2>/dev/null
+  git -C "$dir" for-each-ref --format='%(refname) %(committerdate:unix)' refs/runner-rescue/ 2>/dev/null |
+    while read -r ref ct; do
+      [ "$ct" -lt "$cutoff" ] && git -C "$dir" update-ref -d "$ref" 2>/dev/null
     done
 done
 
-for dir in "${candidates[@]}"; do
+for dir in ${candidates[@]+"${candidates[@]}"}; do
   [ -e "$dir" ] || continue
   is_runner_clone "$dir" && continue
   if disposable "$dir"; then

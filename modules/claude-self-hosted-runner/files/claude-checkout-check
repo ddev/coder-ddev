@@ -20,12 +20,12 @@ sid=$(jq -r '.session_id // empty' <<<"$input" 2>/dev/null)
 if [ -n "$sid" ] && [ -f "$rescue_root/log" ] && grep -qF -- "$sid" "$rescue_root/log"; then
   echo "This session was released earlier, and the runner saved what it had left uncommitted. Entries in $rescue_root/log:"
   grep -F -- "$sid" "$rescue_root/log" | tail -10
-  echo "Stashes are in the checkout named there (find them with: git -C <checkout> stash list | grep runner-rescue). Before restoring one, tell the user what it holds."
+  echo "Stashes are in the checkout named there (find them with: git -C <checkout> for-each-ref refs/runner-rescue, and restore one with git stash apply <ref>). Before restoring one, tell the user what it holds."
 fi
 status=$(git -C "$dir" status --porcelain 2>/dev/null) || exit 0
 [ -n "$status" ] || exit 0
 count=$(printf '%s\n' "$status" | wc -l)
 echo "The checkout $dir is not clean at the start of this session: an earlier session left $count changed or untracked path(s)."
-echo "They are not part of your task. Save them with: git stash push --include-untracked -m \"leftovers from an earlier session\". Then continue in this checkout; do not make a worktree or a new clone to avoid them. See \"Leave the checkout clean\" in the coder-shared-workspace skill."
+echo "They are not part of your task. Save them with: git stash push --include-untracked -m \"leftovers from an earlier session\" && git update-ref refs/runner-rescue/\$(date -u +%Y%m%d-%H%M%S)-leftovers refs/stash. Then continue in this checkout; do not make a worktree or a new clone to avoid them. See \"Leave the checkout clean\" in the coder-shared-workspace skill."
 printf '%s\n' "$status" | head -20
 [ "$count" -le 20 ] || echo "... and $((count - 20)) more"

@@ -28,9 +28,10 @@ since another session can start at any time.
   branches or git state under another runner's directory.
 - A runner keeps its checkouts from one session to the next. After every
   session, `claude-runner-sweep` cleans them: it stashes uncommitted changes
-  as `runner-rescue` stashes, removes worktrees, and moves other clones to
-  `~/.local/state/claude-runner-rescue/`. See "Leave the checkout clean"
-  below.
+  and keeps each stash under `refs/runner-rescue/` (list them with
+  `git for-each-ref refs/runner-rescue`), removes worktrees, and moves other
+  clones to `~/.local/state/claude-runner-rescue/`. See "Leave the checkout
+  clean" below.
 - Work in the checkout the runner gave you. Do not make a new clone, and
   never make a worktree or clone to get around files an earlier session
   left behind. If a task needs a second checkout, ask the user first.
@@ -44,7 +45,8 @@ change what it generates, such as DDEV's image tags.
 
 - If the hook reports leftovers, they are not yours. Save them, then carry
   on in the same checkout:
-  `git stash push --include-untracked -m "leftovers from an earlier session"`.
+  `git stash push --include-untracked -m "leftovers from an earlier session" && git update-ref "refs/runner-rescue/$(date -u +%Y%m%d-%H%M%S)-leftovers" refs/stash`.
+  The ref keeps the stash after the runner clears the stash list.
   Do not commit, delete or restore them.
 - The runner can end your session without warning once the user has sent
   nothing for 30 minutes. Before you finish a turn and wait for the user,
