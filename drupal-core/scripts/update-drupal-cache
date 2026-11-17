@@ -9,7 +9,8 @@
 # the real remote, avoiding several hundred MB of network transfer per workspace.
 #
 # Using a bare repo is intentional: there is no working tree to keep in sync and
-# no "Your branch is behind" noise. git fetch --all --prune is all that is needed.
+# no "Your branch is behind" noise. Branches and tags are fetched straight into
+# refs/heads and refs/tags (a bare clone has no fetch refspec of its own).
 #
 # Initial setup (one-time, run as the seed-directory owner):
 #   git clone --bare https://git.drupalcode.org/project/drupal.git ~/cache/drupal-core-seed
@@ -70,7 +71,15 @@ echo "Started:        $(date)"
 echo ""
 
 echo "Fetching Drupal core git objects..."
-git -C "$SEED_DIR" fetch --all --prune
+if [ "$IS_BARE" = "true" ]; then
+  # `git clone --bare` configures no fetch refspec, so a plain
+  # `git fetch --all` only writes FETCH_HEAD and leaves every branch where
+  # the initial clone put it. Fetch branches and tags into place explicitly.
+  git -C "$SEED_DIR" fetch --prune origin \
+    '+refs/heads/*:refs/heads/*' '+refs/tags/*:refs/tags/*'
+else
+  git -C "$SEED_DIR" fetch --all --prune
+fi
 
 if [ "$IS_BARE" = "false" ]; then
   echo "Fast-forwarding local main branch..."

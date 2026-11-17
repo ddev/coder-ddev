@@ -552,13 +552,13 @@ STATUS_HEADER
       _t=$SECONDS
       DRUPAL_REMOTE="https://git.drupalcode.org/project/drupal.git"
       if git -C "$CACHE_SEED" rev-parse --is-bare-repository 2>/dev/null | grep -q true; then
-        # Bare cache: init repo, add all remotes (cache, origin, issue fork if
-        # applicable), fetch cache first (fast local copy of all objects), then
-        # fetch origin and issue fork for only the delta.
+        # Bare cache: init repo, add origin (and the issue fork if applicable),
+        # copy the cache's branches and tags in as origin's refs (fast local
+        # copy of all objects), then fetch origin and issue fork for only the
+        # delta.
         log_setup "Initialising Drupal core repo (bare cache + origin delta)..."
         mkdir -p "$DRUPAL_DIR"
         git -C "$DRUPAL_DIR" init -q >> "$SETUP_LOG" 2>&1
-        git -C "$DRUPAL_DIR" remote add drupalcache "$CACHE_SEED"
         git -C "$DRUPAL_DIR" remote add origin "$DRUPAL_REMOTE"
         if [ "$USING_ISSUE_FORK" = "true" ] && [ -n "$ISSUE_FORK" ]; then
           # --no-tags: the fork's tags duplicate core's ~800 tags from origin.
@@ -566,13 +566,22 @@ STATUS_HEADER
         fi
         # Fetches use -q so the log isn't flooded with one line per branch/tag
         # (core has ~800 refs); errors still go to stderr and land in the log.
+        #
+        # The cache's refs land directly under refs/remotes/origin/*, not under
+        # a separate cache remote. That matters twice:
+        # - The origin fetch below can only skip objects that local refs point
+        #   to. Refs under a temporary remote vanish with `git remote remove`,
+        #   which left nothing to negotiate with, so every workspace downloaded
+        #   all of core's history again (3-10 minutes, and sometimes failed).
+        # - When the origin fetch fails, origin/main and the version branches
+        #   still exist from the cache, so the checkout below works.
         _f=$SECONDS
-        git -C "$DRUPAL_DIR" fetch -q drupalcache >> "$SETUP_LOG" 2>&1
-        log_setup "  Fetched local cache ($((SECONDS - _f))s)"
-        # Remove the local cache remote now — objects are in the local repo and
-        # keeping it causes ambiguous-ref errors when checking out branches that
-        # exist in both drupalcache and origin.
-        git -C "$DRUPAL_DIR" remote remove drupalcache
+        if git -C "$DRUPAL_DIR" fetch -q --no-tags "$CACHE_SEED" \
+          '+refs/heads/*:refs/remotes/origin/*' '+refs/tags/*:refs/tags/*' >> "$SETUP_LOG" 2>&1; then
+          log_setup "  Fetched local cache ($((SECONDS - _f))s)"
+        else
+          log_setup "  ⚠ Fetch from local cache failed — fetching everything from origin"
+        fi
         _f=$SECONDS
         if git -C "$DRUPAL_DIR" fetch -q origin >> "$SETUP_LOG" 2>&1; then
           log_setup "  Fetched origin ($((SECONDS - _f))s)"
@@ -587,7 +596,13 @@ STATUS_HEADER
             log_setup "  ⚠ Fetch from issue fork failed"
           fi
         fi
-        git -C "$DRUPAL_DIR" checkout -b main --track origin/main >> "$SETUP_LOG" 2>&1
+        if ! git -C "$DRUPAL_DIR" checkout -b main --track origin/main >> "$SETUP_LOG" 2>&1; then
+          # Without this, a failed checkout left an empty working tree that
+          # setup reported as cloned, and the failure only surfaced later as
+          # "Failed to install Drupal".
+          log_setup "✗ Failed to check out main (no origin/main from cache or origin)"
+          SETUP_FAILED=true
+        fi
       elif [ -d "$CACHE_SEED/.git" ]; then
         # Non-bare (legacy) cache: use as --reference hint to avoid re-downloading
         # objects that already exist locally.
@@ -598,11 +613,11 @@ STATUS_HEADER
         log_setup "Cloning Drupal core..."
         git clone -q "$DRUPAL_REMOTE" "$DRUPAL_DIR" >> "$SETUP_LOG" 2>&1
       fi
-      if [ -d "$DRUPAL_DIR/.git" ]; then
+      if [ "$SETUP_FAILED" != "true" ] && [ -d "$DRUPAL_DIR/.git" ]; then
         log_setup "✓ Drupal core cloned ($((SECONDS - _t))s)"
         update_status "✓ Git clone: Success"
       else
-        log_setup "✗ Failed to clone Drupal core"
+        [ -d "$DRUPAL_DIR/.git" ] || log_setup "✗ Failed to clone Drupal core"
         update_status "✗ Git clone: Failed"
         SETUP_FAILED=true
       fi

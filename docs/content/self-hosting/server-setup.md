@@ -880,10 +880,9 @@ This deploys three templates:
 The `drupal-core` template can provision workspaces faster using a **seed cache** on the host. The cache is a **bare** git clone of drupal/drupal. When a workspace starts, the startup script:
 
 1. Creates a fresh git repo in the workspace directory
-2. Adds the bare cache as a local remote and fetches from it (fast — reuses local objects, no network)
-3. Removes the cache remote
-4. Fetches from `git.drupalcode.org` for any commits newer than the cache
-5. Checks out `main` (or the issue branch)
+2. Fetches the bare cache's branches and tags as `origin`'s (fast — reuses local objects, no network)
+3. Fetches from `git.drupalcode.org` for any commits newer than the cache
+4. Checks out `main` (or the issue branch), from the cache's refs if `git.drupalcode.org` can't be reached
 
 This avoids downloading hundreds of MB per workspace and eliminates working-tree issues that a non-bare cache causes.
 
@@ -897,7 +896,7 @@ The seed directory IS the bare clone root — no subdirectory nesting. No workin
 
 ### Install the hourly update timer
 
-The update script runs `git fetch --all --prune` to keep the bare cache current. Because there is no working tree, no `git merge` is needed. Install it as an hourly systemd timer:
+The update script fetches every branch and tag into the bare cache to keep it current. Because there is no working tree, no `git merge` is needed. Install it as an hourly systemd timer:
 
 ```bash
 REPO=~/workspace/coder-ddev   # adjust if your repo is elsewhere
@@ -1023,10 +1022,10 @@ The `update-drupal-cache` script handles both bare and non-bare repos automatica
 **Update script fails:**
 
 ```bash
-git -C ~/cache/drupal-core-seed fetch --all --prune
+git -C ~/cache/drupal-core-seed fetch --prune origin '+refs/heads/*:refs/heads/*' '+refs/tags/*:refs/tags/*'
 # If this fails, check network connectivity or re-clone:
 rm -rf ~/cache/drupal-core-seed
-git clone https://git.drupalcode.org/project/drupal.git ~/cache/drupal-core-seed
+git clone --bare https://git.drupalcode.org/project/drupal.git ~/cache/drupal-core-seed
 ```
 
 ---

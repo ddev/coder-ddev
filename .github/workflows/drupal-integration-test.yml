@@ -235,6 +235,16 @@ jobs:
           fi
           echo "OK: anonymous request redirected to Coder login (site is private by default)"
 
+      - &dump-setup
+        # The checks above only report an exit code; the cause is in the
+        # workspace's setup log, which is gone once the workspace is deleted.
+        name: Dump setup status
+        if: failure()
+        run: |
+          coder ssh ${{ env.WORKSPACE_NAME }} -- cat /home/coder/SETUP_STATUS.txt || true
+          echo "--- last 60 lines of setup log ---"
+          coder ssh ${{ env.WORKSPACE_NAME }} -- tail -60 /tmp/drupal-setup.log || true
+
       - &delete-workspace
         name: Delete workspace
         if: always()
@@ -389,6 +399,7 @@ jobs:
           fi
           echo "OK: anonymous request reached the public Drupal site (drupal_site_public=true works)"
 
+      - *dump-setup
       - *delete-workspace
 
       - name: Release staging box lock
@@ -576,6 +587,7 @@ jobs:
           fi
           echo "OK: anonymous request redirected to Coder login (site is private by default)"
 
+      - *dump-setup
       - name: Delete workspace
         if: always()
         run: coder delete ${{ env.WORKSPACE_NAME }} --yes || true
@@ -778,6 +790,7 @@ jobs:
           fi
           echo "OK: anonymous request redirected to Coder login (site is private by default)"
 
+      - *dump-setup
       - name: Delete workspace
         if: always()
         run: coder delete ${{ env.WORKSPACE_NAME }} --yes || true
