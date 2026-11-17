@@ -30,8 +30,10 @@ directory. The workspace rewrites this README on every start.
   `/tmp/claude-runner-<n>.log`.
 - Live sessions, their checkouts and unpushed commits: `claude-sessions`.
 - Checkouts: `~/workspace/runner-<n>/<owner>/<repo>`.
-- Work a session left uncommitted: `git stash list | grep runner-rescue` in
-  the checkout. Extra clones with unpushed commits are moved to
+- Work a session left uncommitted: `git for-each-ref refs/runner-rescue` in
+  the checkout, and `git stash apply <ref>` to restore one. The runner
+  clears the stash list between sessions, so `git stash list` doesn't show
+  them. Extra clones with unpushed commits are moved to
   `~/.local/state/claude-runner-rescue/`, and its `log` lists every change.
   Both are kept for 30 days.
 
