@@ -790,8 +790,11 @@ COMPOSE_EOF
           fi
         fi
         # An expired or revoked token fails the same opaque way, so verify before use.
+        # Probe /rate_limit, not /user: /user answers 403 to GitHub App installation
+        # tokens such as CI's GITHUB_TOKEN, which rejected every CI token. /rate_limit
+        # accepts any token type, answers 401 to a bad one, and costs no quota.
         if [ -n "$${_COMPOSER_GITHUB_TOKEN}" ] && \
-           ! curl -sSf --max-time 10 -o /dev/null -H "Authorization: Bearer $${_COMPOSER_GITHUB_TOKEN}" https://api.github.com/user 2>/dev/null; then
+           ! curl -sSf --max-time 10 -o /dev/null -H "Authorization: Bearer $${_COMPOSER_GITHUB_TOKEN}" https://api.github.com/rate_limit 2>/dev/null; then
           log_setup "⚠ GitHub token rejected by api.github.com — using anonymous Composer downloads"
           _COMPOSER_GITHUB_TOKEN=""
         fi
