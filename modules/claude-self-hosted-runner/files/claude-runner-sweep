@@ -98,7 +98,7 @@ candidates=()
 for dir in "$runner_dir"/*/*/; do
   dir="${dir%/}"
   case "$dir" in
-    "$runner_dir"/_sessions/* | "$runner_dir"/sessions/* | "$runner_dir"/.*) continue ;;
+    "$runner_dir"/_sessions/* | "$runner_dir"/.*) continue ;;
   esac
   [ -e "$dir/.git" ] && candidates+=("$dir")
 done
