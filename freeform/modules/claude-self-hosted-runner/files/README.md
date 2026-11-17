@@ -58,6 +58,11 @@ who can start sessions in the environment, and runs them as this
 workspace's user, with its SSH agent. Share the environment only with
 people you trust with those keys.
 
+For a runner your whole organization shares, let a dedicated Coder user own
+the workspace, and don't add its Coder key to anyone's GitHub account.
+Sessions then push only over HTTPS, as the person who started them. Don't
+connect to a shared runner workspace with a forwarded SSH agent.
+
 ## Troubleshooting
 
 - A session fails before Claude starts, and the log shows
