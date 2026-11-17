@@ -30,9 +30,8 @@ since another session can start at any time.
   session, `claude-runner-sweep` cleans them: it stashes uncommitted changes
   and keeps each stash under `refs/runner-rescue/` (list them with
   `git for-each-ref refs/runner-rescue`), removes worktrees, and moves other
-  clones to
-  `~/.local/state/claude-runner-rescue/`. See "Leave the checkout clean"
-  below.
+  clones to `~/.local/state/claude-runner-rescue/`. See "Leave the checkout
+  clean" below.
 - Work in the checkout the runner gave you. Do not make a new clone, and
   never make a worktree or clone to get around files an earlier session
   left behind. If a task needs a second checkout, ask the user first.
