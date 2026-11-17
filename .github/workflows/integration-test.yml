@@ -41,16 +41,34 @@ name: Integration Tests
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
+# Docs-only changes skip this workflow: docs-check.yml covers them, and a
+# docs PR has no reason to queue heavy workspaces on the shared staging box.
+# A mixed change still runs, because paths-ignore skips only when every
+# changed file matches.
 on:
   push:
     branches: [main]
     paths-ignore:
       - 'drupal-core/**'
       - 'drupal-contrib/**'
+      - 'docs/**'
+      - '*.md'
+      - '*/README.md'
+      - 'mkdocs.yml'
+      - '.readthedocs.yaml'
+      - '.markdownlint.jsonc'
+      - '.linkspector.yml'
   pull_request:
     paths-ignore:
       - 'drupal-core/**'
       - 'drupal-contrib/**'
+      - 'docs/**'
+      - '*.md'
+      - '*/README.md'
+      - 'mkdocs.yml'
+      - '.readthedocs.yaml'
+      - '.markdownlint.jsonc'
+      - '.linkspector.yml'
   schedule:
     - cron: '0 3 * * *'
   workflow_dispatch:
@@ -87,9 +105,10 @@ jobs:
     # To re-enable: restore `if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.owner.login == github.repository_owner }}`
     if: false
     runs-on: [self-hosted, sysbox]
-    # Long enough to cover queued time behind other box-provisioning jobs
-    # (see scripts/ci-acquire-staging-lock.sh) plus this job's own runtime.
-    timeout-minutes: 75
+    # GitHub's maximum for hosted runners. A job waits in the
+    # ci-acquire-staging-lock.sh queue as long as it takes instead of failing;
+    # the work after the lock takes under an hour.
+    timeout-minutes: 360
     strategy:
       matrix:
         include:
@@ -306,9 +325,10 @@ jobs:
     name: Integration test GH (${{ matrix.template }})
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.owner.login == github.repository_owner }}
     runs-on: ubuntu-latest
-    # Long enough to cover queued time behind other box-provisioning jobs
-    # (see scripts/ci-acquire-staging-lock.sh) plus this job's own runtime.
-    timeout-minutes: 75
+    # GitHub's maximum for hosted runners. A job waits in the
+    # ci-acquire-staging-lock.sh queue as long as it takes instead of failing;
+    # the work after the lock takes under an hour.
+    timeout-minutes: 360
     strategy:
       matrix:
         include:
