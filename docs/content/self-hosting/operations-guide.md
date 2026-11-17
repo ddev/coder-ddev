@@ -410,23 +410,69 @@ The restore test restores the latest dump into a scratch database, prints its us
 
 When `coder-backup.service` fails, `coder-backup-failed.service` posts to Discord through the relay from [Step 11 of the server setup](server-setup.md#step-11-set-up-discord-notifications). A backup that stops running entirely does not fail, so also monitor the age of `/var/lib/coder-backup/last-success`, which holds the time of the last successful backup. In Icinga Director, add a service on the host that runs `check_file_age` with `-f /var/lib/coder-backup/last-success -w 93600 -c 180000`, which warns after 26 hours and goes critical after 50.
 
+#### Practice a recovery
+
+A backup that has never been recovered isn't known to work. Once a quarter, and after any change to the backup setup, recover it on a machine other than the server, with only the secrets from 1Password. This is the situation after a server is lost.
+
+`scripts/coder-backup-verify.sh` needs only Docker. It downloads the latest backup with duplicity in an Ubuntu container, and loads the database dump into a scratch PostgreSQL 16 container. Then it lists the users, templates and workspaces in the dump, and the time of its newest audit log entry.
+
+1. Write the backup secrets to a private env file. This example reads them with the 1Password CLI:
+
+    ```bash
+    ITEM="op://YOUR_VAULT/YOUR_BACKUP_ITEM"
+    umask 077
+    cat > ~/tmp/coder-backup.env <<EOF
+    BACKUP_TARGET=s3://$(op read "$ITEM/bucket")/coder.example.com
+    PASSPHRASE=$(op read "$ITEM/duplicity passphrase")
+    AWS_ACCESS_KEY_ID=$(op read "$ITEM/AWS_ACCESS_KEY_ID")
+    AWS_SECRET_ACCESS_KEY=$(op read "$ITEM/AWS_SECRET_ACCESS_KEY")
+    AWS_DEFAULT_REGION=$(op read "$ITEM/region")
+    EOF
+    ```
+
+2. Run the script from a checkout of this repository:
+
+    ```bash
+    scripts/coder-backup-verify.sh ~/tmp/coder-backup.env
+    ```
+
+3. Check the output:
+    - "Chain end time" is from the last nightly backup.
+    - `/var/backups/coder/coder.dump`, `/root/coder-pg-password` and `/etc/coder.d/coder.env` are present.
+    - The users, templates and workspaces match `coder users list` and `coder list -a` on the live server, apart from changes made since the backup.
+
+4. Delete the env file, because it contains the secrets. The script has already deleted the restored files:
+
+    ```bash
+    rm ~/tmp/coder-backup.env
+    ```
+
+`/etc/coder-backup.env` itself is not in the backup, because its secrets come from 1Password.
+
 #### Restore after losing the server
 
-1. Rebuild the host by following the [server setup](server-setup.md) through PostgreSQL (Step 5). Install `duplicity` and `python3-boto3`, and write `/etc/coder-backup.env` from 1Password.
-2. Restore the backup to a staging directory, then copy back what you need:
+1. Rebuild the host by following the [server setup](server-setup.md) through Step 5, but skip "Create the Coder database and user". Install `duplicity` and `python3-boto3`, and write `/etc/coder-backup.env` from 1Password as shown in [Install](#install).
+2. Restore the backup to a staging directory:
 
     ```bash
     sudo bash -c 'set -a; source /etc/coder-backup.env; set +a; duplicity restore "$BACKUP_TARGET" /root/restore'
     ```
 
-3. Restore the database before starting Coder. The dump owns its objects as `coder`, so create that user first with the password from `/root/restore/root/coder-pg-password`:
+3. Restore the database before starting Coder. The dump assigns its objects to the `coder` user, so create that user first with the old password:
 
     ```bash
-    sudo -u postgres createdb -O coder coder
-    sudo -u postgres pg_restore --dbname coder /root/restore/var/backups/coder/coder.dump
+    sudo -u postgres psql -v pw="$(sudo cat /root/restore/root/coder-pg-password)" <<'EOF'
+    CREATE USER coder WITH PASSWORD :'pw';
+    CREATE DATABASE coder OWNER coder;
+    EOF
+    sudo cat /root/restore/var/backups/coder/coder.dump | sudo -u postgres pg_restore --dbname coder
+    sudo install -m 600 /root/restore/root/coder-pg-password /root/coder-pg-password
     ```
 
-4. Copy `/etc/coder.d`, `/etc/letsencrypt` and the other files from `/root/restore` into place, then continue with the remaining setup steps.
+    The `postgres` user can't read `/root`, so `pg_restore` reads the dump from standard input.
+
+4. Copy `/etc/coder.d`, `/etc/letsencrypt` and the other files you need from `/root/restore` into place with `sudo cp -a`.
+5. Continue the server setup from Step 6. Where a step creates a file that the backup holds, use the restored file instead. The database already holds the users, templates and API tokens, so skip the steps that create them.
 
 ### Workspace Data Backup
 
