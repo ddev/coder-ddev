@@ -131,14 +131,18 @@ never prune Docker images or volumes another session may use.
 
 HTTPS git (the clone, fetch, and pushes to `origin`) and the GitHub MCP
 tools act as the GitHub account connected to the claude.ai account that
-started this session, through Anthropic's proxy.
+started this session, through Anthropic's proxy. The MCP tools reach only
+the repositories attached to the session.
 
-- `gh` here is the workspace's own `/usr/bin/gh`, which isn't logged in.
-  Use the GitHub MCP tools for pull requests, issues and the API. Don't
-  report the missing `gh` login as a problem.
-- Don't run `gh auth login`, and don't store or export `GH_TOKEN` or
-  `GITHUB_TOKEN`. A login or token in this workspace would make every later
-  session act as that account, whoever started it.
+`gh` here is the workspace's own `gh`, and acts as whoever logged it in,
+normally the workspace owner.
+
+- Run `gh auth status`. With a login, `gh` works fully, GraphQL included,
+  for every repository that account can reach. Use it when the user's
+  instructions say to.
+- Without a login, use the GitHub MCP tools. Don't report the missing
+  login as a problem, and don't run `gh auth login` or set `GH_TOKEN`
+  yourself; that is the user's decision.
 
 ## Pushing over SSH
 
@@ -154,8 +158,9 @@ workspace owner, who may not be the person who started this session.
   through the session's git proxy, which reaches only the repositories
   attached to the session.
 - Leave `origin` as the runner cloned it.
-- `ssh -T git@github.com` greets the account SSH pushes act as. If it
-  differs from the GitHub account the MCP tools report (`get_me`), or the
-  session has no GitHub MCP tools, ask the user before pushing over SSH.
+- `ssh -T git@github.com` greets the account SSH pushes act as. Compare it
+  with the account the MCP tools report (`get_me`), or with
+  `gh api user --jq .login` when `gh` has a login. If they differ, or you
+  have neither to compare, ask the user before pushing over SSH.
 - On `Permission denied (publickey)`, ask the user to forward an agent or
   add the Coder key to GitHub. Never create, copy or print keys.

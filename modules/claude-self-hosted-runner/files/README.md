@@ -43,10 +43,12 @@ Connectors on claude.ai. Every person who starts sessions here needs that
 connection. The GitHub MCP tools in a session use the same account. A
 session started without a repository gets no clone and no GitHub MCP tools.
 
-`gh` in a session is this workspace's own `/usr/bin/gh`. It isn't logged in,
-so it doesn't work, and sessions use the GitHub MCP tools instead. Don't run
-`gh auth login` or store a `GH_TOKEN` here: every session, whoever started
-it, would then act on GitHub as you.
+`gh` in a session is this workspace's own `gh`. Run `gh auth login` here
+once, and sessions use your login, with GraphQL and every repository you
+can reach. Then add a line such as "Use `gh` for GitHub operations; it is
+logged in as me." to `~/.claude/CLAUDE.md`, because sessions use `gh` only
+when your instructions say so. Without a login, sessions use the GitHub MCP
+tools, which reach only the repositories attached to the session.
 
 SSH remotes use this workspace's SSH agent: your forwarded agent, or your
 Coder key, which is the same in all your workspaces. SSH pushes act as you
@@ -66,8 +68,8 @@ environment with other people.
   the session must reconnect GitHub on claude.ai, then start the session
   again. Until then each runner that picks it up exits and restarts, which
   is expected.
-- `gh` in a session says it isn't logged in: expected. Sessions use the
-  GitHub MCP tools.
+- `gh` in a session says it isn't logged in: run `gh auth login` in the
+  workspace, or let sessions use the GitHub MCP tools.
 
 ## Stop the runner
 

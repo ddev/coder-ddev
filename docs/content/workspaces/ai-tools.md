@@ -126,16 +126,18 @@ On every start, the runner runs in the `tmux` session `claude-runner` (`tmux att
 
 ### Who acts on GitHub
 
-The runner uses Anthropic-managed git. A session reaches GitHub in three ways, and only two of them follow the person who started it:
+The runner uses Anthropic-managed git. A session reaches GitHub in four ways. Two of them act as the account that started the session, and two act as you, the workspace owner:
 
 | Path | Acts as |
 |---|---|
 | HTTPS git: the clone, fetch, and pushes to `origin` | The GitHub account connected to the claude.ai account that started the session |
 | The GitHub MCP tools in a session | The same connected account, through Anthropic's proxy |
+| `gh` | Whoever is logged in to `gh` in the workspace: you, after `gh auth login`. Without a login, `gh` doesn't work. |
 | SSH remotes (`git@github.com:…`) | Every key in the workspace SSH agent: the workspace owner's forwarded agent, or the owner's Coder key |
 
-- **Everyone who starts sessions must connect GitHub** in claude.ai, under **Settings → Connectors → GitHub**. Nothing in the workspace stands in for it. When the connection is missing or has expired, the session fails before Claude starts, and `/tmp/claude-runner-<n>.log` shows `Repository access validation failed` with `GitHub authentication required. Please reconnect your GitHub account.` Reconnect, then start the session again. Until then the runner exits and restarts after each attempt, and the session may be retried on other runners.
-- **`gh` in a session is the workspace's own `gh`.** Sessions don't get a `gh` that acts as their own account; they use the GitHub MCP tools instead. On a runner workspace with no `gh` login, `gh` reports that it isn't logged in, which is expected. If you run `gh auth login`, or store a `GH_TOKEN` or `GITHUB_TOKEN`, in the workspace, every session uses that login, whoever started it. Don't do that in a workspace that other people's sessions use.
+- **Connect GitHub** in claude.ai, under **Settings → Connectors → GitHub**. Nothing in the workspace stands in for it. When the connection is missing or has expired, the session fails before Claude starts, and `/tmp/claude-runner-<n>.log` shows `Repository access validation failed` with `GitHub authentication required. Please reconnect your GitHub account.` Reconnect, then start the session again. Until then the runner exits and restarts after each attempt, and the session may be retried on other runners.
+- **Log in to `gh` once in the workspace** with `gh auth login`. Sessions then use your login for `gh`, with GraphQL and every repository you can reach. Without a login, sessions use the GitHub MCP tools, which reach only the repositories attached to the session.
+- **Tell Claude to use `gh`.** Claude's built-in instructions in a runner session prefer the GitHub MCP tools, and use `gh` only when your own instructions name it. Add a line such as "Use `gh` for GitHub operations; it is logged in as me." to `~/.claude/CLAUDE.md`. The runner copies `~/.claude` into every session.
 - **Your Coder key is the same in all your workspaces.** `coder publickey` prints one key per Coder user, so adding it to GitHub lets SSH push as you from every runner workspace you own, for every session on it.
 - **SSH offers every key the agent holds.** With an agent forwarded from your computer, sessions can sign with all of its keys, not only your GitHub key, for as long as you stay connected.
 
