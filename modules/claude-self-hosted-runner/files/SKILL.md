@@ -155,7 +155,7 @@ workspace owner, who may not be the person who started this session.
   attached to the session.
 - Leave `origin` as the runner cloned it.
 - `ssh -T git@github.com` greets the account SSH pushes act as. If it
-  differs from the GitHub account the MCP tools report (`get_me`), ask the
-  user before pushing over SSH.
+  differs from the GitHub account the MCP tools report (`get_me`), or the
+  session has no GitHub MCP tools, ask the user before pushing over SSH.
 - On `Permission denied (publickey)`, ask the user to forward an agent or
   add the Coder key to GitHub. Never create, copy or print keys.

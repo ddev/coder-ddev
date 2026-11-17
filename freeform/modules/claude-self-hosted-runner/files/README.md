@@ -40,7 +40,8 @@ directory. The workspace rewrites this README on every start.
 Sessions clone, fetch and push to `origin` over HTTPS as the GitHub account
 connected to the claude.ai account that started them, under Settings →
 Connectors on claude.ai. Every person who starts sessions here needs that
-connection. The GitHub MCP tools in a session use the same account.
+connection. The GitHub MCP tools in a session use the same account. A
+session started without a repository gets no clone and no GitHub MCP tools.
 
 `gh` in a session is this workspace's own `/usr/bin/gh`. It isn't logged in,
 so it doesn't work, and sessions use the GitHub MCP tools instead. Don't run
