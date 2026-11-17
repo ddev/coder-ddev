@@ -93,8 +93,10 @@ done
 # Runner clones first, so their worktrees are gone before the second pass.
 for dir in ${candidates[@]+"${candidates[@]}"}; do
   is_runner_clone "$dir" || continue
+  # git prints worktree paths with symlinks resolved, as with macOS /var.
+  real=$(cd "$dir" && pwd -P)
   while read -r wt; do
-    [ "$wt" = "$dir" ] && continue
+    [ "$wt" = "$dir" ] || [ "$wt" = "$real" ] && continue
     if [ -d "$wt" ]; then
       rescue_stash "$wt" "worktree $(basename "$wt")" || continue
       if git -C "$dir" worktree remove --force "$wt" 2>/dev/null; then
