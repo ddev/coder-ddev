@@ -223,13 +223,13 @@ sudo systemctl enable --now docker
 
 ### Configure the firewall
 
-Enable UFW and open the ports needed by Coder and the registry mirror. Port 5665 is for the Icinga2 monitoring agent and should be restricted to the monitoring server's IP:
+Enable UFW and open the ports needed by Coder and the registry mirror. Port 5665 is for the Icinga2 monitoring agent and should be restricted to the monitoring server's IP. Port 5000 is the registry mirror (Step 3), which only this host's workspaces need, so it allows only Docker's addresses:
 
 ```bash
 sudo ufw allow 22
 sudo ufw allow 80
 sudo ufw allow 443
-sudo ufw allow 5000
+sudo ufw allow from 172.16.0.0/12 to any port 5000 proto tcp comment 'registry mirror: workspaces only'
 sudo ufw allow from 45.79.99.253 to any port 5665/tcp
 sudo ufw enable
 sudo ufw status
@@ -245,12 +245,11 @@ To                         Action      From
 443                        ALLOW       Anywhere
 80                         ALLOW       Anywhere
 22                         ALLOW       Anywhere
-5000                       ALLOW       Anywhere
+5000/tcp                   ALLOW       172.16.0.0/12              # registry mirror: workspaces only
 5665/tcp                   ALLOW       45.79.99.253
 443 (v6)                   ALLOW       Anywhere (v6)
 80 (v6)                    ALLOW       Anywhere (v6)
 22 (v6)                    ALLOW       Anywhere (v6)
-5000 (v6)                  ALLOW       Anywhere (v6)
 ```
 
 ---
@@ -301,11 +300,20 @@ proxy:
 EOF
 ```
 
-### Open the firewall port
+### Firewall
+
+The UFW rule from Step 2 allows port 5000 only from `172.16.0.0/12`, Docker's default address range. Workspaces reach the mirror at the host's public name, and the host sees those connections coming from their Docker addresses. Check that every Docker network on the host is inside that range:
 
 ```bash
-sudo ufw allow 5000/tcp
+docker network inspect $(docker network ls -q) --format '{{.Name}} {{range .IPAM.Config}}{{.Subnet}} {{end}}'
+grep -A5 default-address-pools /etc/docker/daemon.json
 ```
+
+Add a matching `ufw allow from <subnet> to any port 5000 proto tcp` rule for any subnet outside it.
+
+Keep the mirror off the public internet. Otherwise anyone can pull images through it, which uses the host's bandwidth and fills the disk it shares with Coder and the workspaces.
+
+The systemd unit below runs the mirror with `--network host`, so UFW controls port 5000. An older unit that publishes the port with `-p 0.0.0.0:5000:5000` bypasses UFW, because Docker's rules for a published port take effect first. To fix such a unit, replace that line with `--network host`, then run `sudo systemctl daemon-reload` and `sudo systemctl restart registry-mirror`.
 
 ### Create a systemd unit
 
@@ -324,9 +332,12 @@ RestartSec=5
 # Clean up any previous instance
 ExecStartPre=-/usr/bin/docker rm -f registry-mirror
 
+# --network host, not -p: Docker's rules for a published port take effect
+# before UFW's, so a published port 5000 would be open to everyone whatever
+# UFW says.
 ExecStart=/usr/bin/docker run --rm \
   --name registry-mirror \
-  -p 0.0.0.0:5000:5000 \
+  --network host \
   -v /opt/registry/config.yml:/etc/distribution/config.yml:ro \
   -v /opt/registry/data:/var/lib/registry \
   registry:3
