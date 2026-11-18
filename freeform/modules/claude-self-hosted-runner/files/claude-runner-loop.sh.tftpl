@@ -7,7 +7,9 @@ set -u
 n="$1"
 base="${base_dir}/runner-$n"
 mkdir -p "$base"
-export PATH="$HOME/.local/bin:$HOME/.npm-global/bin:/home/linuxbrew/.linuxbrew/bin:$PATH"
+# Homebrew goes last, as in the image, so its curl and openssl never shadow the
+# system ones. Its CA bundle lacks the mkcert CA that DDEV sites use.
+export PATH="$HOME/.local/bin:$HOME/.npm-global/bin:$PATH:/home/linuxbrew/.linuxbrew/bin"
 export GIT_CONFIG_GLOBAL="$base/.gitconfig"
 # The workspace SSH agent relay (shared/ssh-agent-setup.sh): the user's
 # forwarded agent when one is connected, otherwise the Coder workspace key.
