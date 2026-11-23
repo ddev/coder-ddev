@@ -1079,7 +1079,7 @@ BASHPROFILE_WELCOME
     # PATH because ~/.bashrc returns early for non-interactive shells.
     if [ -x ~/.coder-startup.sh ]; then
       echo "Running user startup hook ~/.coder-startup.sh (log: /tmp/coder-startup-user.log)"
-      PATH="$HOME/.local/bin:$HOME/.npm-global/bin:/home/linuxbrew/.linuxbrew/bin:$PATH" \
+      PATH="$HOME/.local/bin:$HOME/.npm-global/bin:$PATH:/home/linuxbrew/.linuxbrew/bin" \
         nohup setsid ~/.coder-startup.sh > /tmp/coder-startup-user.log 2>&1 < /dev/null &
     fi
 
