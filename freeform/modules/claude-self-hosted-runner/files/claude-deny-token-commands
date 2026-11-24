@@ -11,7 +11,7 @@ set -uo pipefail
 cmd="$(jq -r '.tool_input.command // empty' 2>/dev/null)"
 [ -n "$cmd" ] || exit 0
 
-pattern='external-auth[[:space:]]+access-token|gh[[:space:]]+auth[[:space:]]+token|git[[:space:]]+credential[[:space:]]+fill'
+pattern='external-auth[[:space:]]+access-token|gh[[:space:]]+auth[[:space:]]+token|git[[:space:]]+credential[[:space:]]+fill|find-generic-password|find-internet-password|gh-read/token'
 if printf '%s' "$cmd" | grep -qE "$pattern"; then
   cat >&2 <<'EOF'
 Blocked: this command would print a credential (a GitHub or Coder token) into the session, where it can end up in a commit, a PR or a log. Don't run it, and don't quote it in backticks or $() inside a double-quoted string, which runs it. To read GitHub outside the session's repositories, use gh-read; it fetches the token itself. To put text that mentions such a command into a commit or PR, write the text to a file and pass it with git commit -F or --body-file.
