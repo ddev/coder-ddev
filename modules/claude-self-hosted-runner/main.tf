@@ -45,6 +45,10 @@ locals {
   # reads, including the ones a runner starts with its own config directory.
   # Claude Code skips it when claude.ai delivers server-managed settings.
   managed_settings = jsonencode({
+    permissions = {
+      # gh-read refuses anything that writes; see files/gh-read.
+      allow = ["Bash(gh-read:*)"]
+    }
     hooks = {
       SessionStart = [{
         # Not "compact" or "clear": by then the changes are the session's own.

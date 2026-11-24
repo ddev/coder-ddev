@@ -1,0 +1,127 @@
+#!/usr/bin/env bash
+# gh-read: read-only GitHub CLI for Claude Code runner sessions.
+#
+# Sessions get a proxied `gh` that only reaches the repositories attached to
+# the session. This wrapper runs the real gh with the workspace owner's own
+# GitHub token from Coder external auth, so a session can read issues, pull
+# requests, comments, code and CI runs anywhere on GitHub, and search it.
+#
+# It accepts only read commands. That is a guard against mistakes, not a
+# security boundary: what the token itself may do is set by the GitHub app
+# behind Coder's "github" external-auth provider.
+set -euo pipefail
+
+prog=gh-read
+provider="${GH_READ_PROVIDER:-github}"
+
+die() {
+  echo "$prog: $*" >&2
+  exit 2
+}
+
+usage() {
+  cat <<'EOF'
+gh-read: read-only gh using your own GitHub login from Coder.
+
+Allowed:
+  gh-read api [-X GET] <endpoint> [-f/-F params] [--jq ...] [--paginate]
+  gh-read api graphql -f query='query { ... }'
+  gh-read search issues|prs|code|commits|repos ...
+  gh-read issue view|list|status ...      gh-read pr view|list|diff|checks|status ...
+  gh-read repo view|list ...              gh-read run view|list ...
+  gh-read release view|list ...           gh-read workflow view|list ...
+  gh-read label list ...                  gh-read gist view|list ...
+
+Examples:
+  gh-read issue view 123 -R socktainer/socktainer --comments
+  gh-read pr diff 45 -R libracoder/kiri
+  gh-read api repos/docker/compose/issues/11658/comments --jq '.[].body'
+  gh-read search issues --repo docker/compose mutagen
+EOF
+}
+
+[ $# -ge 1 ] || { usage; exit 2; }
+
+cmd="$1"
+sub="${2:-}"
+
+check_api() {
+  shift # "api"
+  local method="" has_fields=false endpoint="" a
+  while [ $# -gt 0 ]; do
+    a="$1"
+    case "$a" in
+      -X | --method) method="${2:-}"; shift ;;
+      -X* ) method="${a#-X}" ;;
+      --method=*) method="${a#--method=}" ;;
+      -f | -F | --field | --raw-field) has_fields=true; shift ;;
+      -f* | -F* | --field=* | --raw-field=*) has_fields=true ;;
+      --input | --input=*) die "--input is not allowed" ;;
+      -H | --header | -q | --jq | -t | --template | --cache | --hostname | -p | --preview) shift ;;
+      -*) ;;
+      *) if [ -z "$endpoint" ]; then endpoint="$a"; fi ;;
+    esac
+    shift
+  done
+  method="$(printf '%s' "$method" | tr '[:lower:]' '[:upper:]')"
+  if [ "$endpoint" = "graphql" ]; then
+    # gh api graphql always POSTs; allow queries, refuse mutations.
+    if printf '%s\n' "${ORIG_ARGS[@]}" | grep -qiE '(^|[^a-z_])mutation([^a-z_]|$)'; then
+      die "GraphQL mutations are not allowed"
+    fi
+    return 0
+  fi
+  case "$method" in
+    "") if $has_fields; then die "-f/-F without -X GET would POST; add -X GET"; fi ;;
+    GET | HEAD) ;;
+    *) die "method $method is not allowed; gh-read only reads" ;;
+  esac
+}
+
+ORIG_ARGS=("$@")
+case "$cmd" in
+  -h | --help | help) usage; exit 0 ;;
+  api) check_api "$@" ;;
+  search) ;;
+  issue) [[ "$sub" =~ ^(view|list|status)$ ]] || die "gh issue $sub is not allowed" ;;
+  pr) [[ "$sub" =~ ^(view|list|diff|checks|status)$ ]] || die "gh pr $sub is not allowed" ;;
+  repo | release | workflow | gist) [[ "$sub" =~ ^(view|list)$ ]] || die "gh $cmd $sub is not allowed" ;;
+  run) [[ "$sub" =~ ^(view|list)$ ]] || die "gh run $sub is not allowed" ;;
+  label) [ "$sub" = list ] || die "gh label $sub is not allowed" ;;
+  *) die "gh $cmd is not allowed (run gh-read --help)" ;;
+esac
+
+# Token source, in order:
+#  1. Coder external auth, in a Coder workspace (the owner's own login).
+#  2. Elsewhere (for example a macOS runner), a read-only token kept for this
+#     machine: the macOS Keychain item named by GH_READ_KEYCHAIN_SERVICE, or
+#     the file GH_READ_TOKEN_FILE (mode 600). Make it a fine-grained token
+#     with "Public repositories (read-only)" and no other permissions.
+token_file="${GH_READ_TOKEN_FILE:-$HOME/.config/gh-read/token}"
+keychain_service="${GH_READ_KEYCHAIN_SERVICE:-gh-read-token}"
+token=""
+if [ -n "${CODER_AGENT_TOKEN:-}${CODER_AGENT_URL:-}" ] && coder_bin="$(command -v coder)"; then
+  if ! token="$("$coder_bin" external-auth access-token "$provider" 2>/dev/null)" || [ -z "$token" ] || [[ "$token" == http* ]]; then
+    url="${CODER_AGENT_URL:-https://coder.ddev.com/}"
+    die "no GitHub login in Coder for this workspace's owner. The owner must link GitHub once at ${url%/}/external-auth/${provider} (or reconnect it if it expired), then retry."
+  fi
+elif command -v security >/dev/null 2>&1 &&
+  token="$(security find-generic-password -s "$keychain_service" -w 2>/dev/null)" && [ -n "$token" ]; then
+  :
+elif [ -r "$token_file" ]; then
+  token="$(tr -d '[:space:]' <"$token_file")"
+fi
+[ -n "$token" ] || die "no GitHub token: not in a Coder workspace, no Keychain item \"$keychain_service\", and no $token_file. Ask the machine's owner to set one up."
+
+# The real gh, not the session's proxied shim, with an empty config dir so
+# the machine's own gh login and aliases play no part.
+real_gh=""
+for g in /usr/bin/gh /usr/local/bin/gh /opt/homebrew/bin/gh /home/linuxbrew/.linuxbrew/bin/gh; do
+  [ -x "$g" ] && { real_gh="$g"; break; }
+done
+[ -n "$real_gh" ] || die "gh is not installed"
+
+cfg="$(mktemp -d)"
+trap 'rm -rf "$cfg"' EXIT
+GH_CONFIG_DIR="$cfg" GH_TOKEN="$token" GH_PROMPT_DISABLED=1 GH_NO_UPDATE_NOTIFIER=1 \
+  "$real_gh" "$@"
