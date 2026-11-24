@@ -61,6 +61,10 @@ access-token github`). No `gh auth login` is needed: link GitHub once at
 refuses commands that write, but that only guards against mistakes: the
 token can do whatever the GitHub app behind Coder's external auth allows.
 
+Sessions can't run commands that print a credential, such as
+`gh auth token` or `coder external-auth access-token`. A hook refuses them,
+so a token can't end up in a commit, a PR or a log.
+
 SSH remotes use this workspace's SSH agent: your forwarded agent, or your
 Coder key, which is the same in all your workspaces. SSH pushes act as you
 in every session. The workspace adds GitHub's host keys to

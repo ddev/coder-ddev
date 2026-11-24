@@ -89,7 +89,8 @@ The `freeform` template is unique: it keeps ddev-router running so multiple DDEV
 ## Tool Preferences
 
 - Use `jq` (not `python3 -m json.tool`) for JSON pretty-printing and querying
-- For `git commit -m` and `gh pr create --body`, write the message to a file first (e.g. under the scratchpad directory) and pass it via `git commit -F <file>` / `gh pr create --body-file <file>`, rather than inlining a heredoc on the command line. Multi-paragraph messages containing backticks, apostrophes, or other shell-special characters reliably break inline heredoc quoting.
+- For `git commit -m` and `gh pr create --body`, write the message to a file first (e.g. under the scratchpad directory) and pass it via `git commit -F <file>` / `gh pr create --body-file <file>`, rather than inlining a heredoc on the command line. Multi-paragraph messages containing backticks, apostrophes, or other shell-special characters reliably break inline heredoc quoting. Write the file with the editor tool, not a shell command. Inside a double-quoted string, such as `bash -c "..."`, backticks and `$(...)` run the command they quote. A commit message that quoted `coder external-auth access-token github` that way once pushed the owner's GitHub token to this repository, and GitHub revoked it.
+- Never run a command that prints a credential (`coder external-auth access-token`, `gh auth token`, `git credential fill`), even to check that one exists. Runner sessions refuse these commands through a hook (`modules/claude-self-hosted-runner/files/claude-deny-token-commands`).
 
 ## Before Pushing / Pre-push Checklist
 
