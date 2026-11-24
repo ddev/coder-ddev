@@ -15,6 +15,14 @@ output "startup_script" {
       mkdir -p ~/.claude-runner
       chmod 700 ~/.claude-runner
       echo '${base64encode(file("${path.module}/files/README.md"))}' | base64 -d > ~/.claude-runner/README.md
+      # Read-only gh with the owner's Coder GitHub login, for repositories
+      # outside the session's own; /etc/claude-code/CLAUDE.md tells sessions
+      # about it. Neither needs the environment secret.
+      mkdir -p ~/.local/bin
+      echo '${base64encode(file("${path.module}/files/gh-read"))}' | base64 -d > ~/.local/bin/gh-read
+      chmod +x ~/.local/bin/gh-read
+      sudo mkdir -p /etc/claude-code
+      echo '${base64encode(file("${path.module}/files/managed-CLAUDE.md"))}' | base64 -d | sudo tee /etc/claude-code/CLAUDE.md >/dev/null
       if [ "$CLAUDE_REMOTE_CONTROL_ENABLED" = "true" ]; then
         CLAUDE_RUNNER_MSG="✗ Claude Code self-hosted runner NOT started: Claude Code remote control is also enabled, and the runner rewrites ~/.gitconfig before every session. Turn one of them off."
       elif [ ! -s "${local.secret_file}" ]; then

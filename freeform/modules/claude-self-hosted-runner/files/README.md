@@ -52,6 +52,15 @@ logged in as me." to `~/.claude/CLAUDE.md`, because sessions use `gh` only
 when your instructions say so. Without a login, sessions use the GitHub MCP
 tools, which reach only the repositories attached to the session.
 
+To read and search the rest of GitHub (issues, pull requests, comments,
+code and CI runs in any repository you can read), sessions use `gh-read`, a
+read-only `gh` that uses your Coder GitHub login (`coder external-auth
+access-token github`). No `gh auth login` is needed: link GitHub once at
+`<coder URL>/external-auth/github`, and reconnect there if it expires.
+`/etc/claude-code/CLAUDE.md` tells every session about it. `gh-read`
+refuses commands that write, but that only guards against mistakes: the
+token can do whatever the GitHub app behind Coder's external auth allows.
+
 SSH remotes use this workspace's SSH agent: your forwarded agent, or your
 Coder key, which is the same in all your workspaces. SSH pushes act as you
 in every session. The workspace adds GitHub's host keys to
