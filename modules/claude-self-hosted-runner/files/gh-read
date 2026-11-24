@@ -91,18 +91,32 @@ case "$cmd" in
   *) die "gh $cmd is not allowed (run gh-read --help)" ;;
 esac
 
-coder_bin="$(command -v coder || true)"
-[ -n "$coder_bin" ] || die "the coder CLI is not on PATH, so the GitHub token can't be fetched"
-
-if ! token="$("$coder_bin" external-auth access-token "$provider" 2>/dev/null)" || [ -z "$token" ] || [[ "$token" == http* ]]; then
-  url="${CODER_AGENT_URL:-https://coder.ddev.com/}"
-  die "no GitHub login in Coder for this workspace's owner. The owner must link GitHub once at ${url%/}/external-auth/${provider} (or reconnect it if it expired), then retry."
+# Token source, in order:
+#  1. Coder external auth, in a Coder workspace (the owner's own login).
+#  2. Elsewhere (for example a macOS runner), a read-only token kept for this
+#     machine: the macOS Keychain item named by GH_READ_KEYCHAIN_SERVICE, or
+#     the file GH_READ_TOKEN_FILE (mode 600). Make it a fine-grained token
+#     with "Public repositories (read-only)" and no other permissions.
+token_file="${GH_READ_TOKEN_FILE:-$HOME/.config/gh-read/token}"
+keychain_service="${GH_READ_KEYCHAIN_SERVICE:-gh-read-token}"
+token=""
+if [ -n "${CODER_AGENT_TOKEN:-}${CODER_AGENT_URL:-}" ] && coder_bin="$(command -v coder)"; then
+  if ! token="$("$coder_bin" external-auth access-token "$provider" 2>/dev/null)" || [ -z "$token" ] || [[ "$token" == http* ]]; then
+    url="${CODER_AGENT_URL:-https://coder.ddev.com/}"
+    die "no GitHub login in Coder for this workspace's owner. The owner must link GitHub once at ${url%/}/external-auth/${provider} (or reconnect it if it expired), then retry."
+  fi
+elif command -v security >/dev/null 2>&1 &&
+  token="$(security find-generic-password -s "$keychain_service" -w 2>/dev/null)" && [ -n "$token" ]; then
+  :
+elif [ -r "$token_file" ]; then
+  token="$(tr -d '[:space:]' <"$token_file")"
 fi
+[ -n "$token" ] || die "no GitHub token: not in a Coder workspace, no Keychain item \"$keychain_service\", and no $token_file. Ask the machine's owner to set one up."
 
 # The real gh, not the session's proxied shim, with an empty config dir so
-# the workspace's own gh login and aliases play no part.
+# the machine's own gh login and aliases play no part.
 real_gh=""
-for g in /usr/bin/gh /usr/local/bin/gh /home/linuxbrew/.linuxbrew/bin/gh; do
+for g in /usr/bin/gh /usr/local/bin/gh /opt/homebrew/bin/gh /home/linuxbrew/.linuxbrew/bin/gh; do
   [ -x "$g" ] && { real_gh="$g"; break; }
 done
 [ -n "$real_gh" ] || die "gh is not installed"
