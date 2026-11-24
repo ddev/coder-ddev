@@ -62,6 +62,24 @@ takes sessions from anyone who can start sessions in the environment, and
 runs them as you, with your SSH agent and Coder key. Don't share the
 environment with other people.
 
+## Commit identity
+
+Commits a session makes name the GitHub account connected to the claude.ai
+account that started it, the same account its HTTPS pushes act as. A
+SessionStart hook, `~/.local/bin/claude-session-identity`, asks GitHub for
+that account through the session's git proxy and sets `GIT_AUTHOR_*` and
+`GIT_COMMITTER_*`: the account's profile name, and its public email or else
+its `users.noreply.github.com` address. It never uses this workspace's own
+`gh` login. If the lookup fails, commits fall back to
+`Claude <noreply@anthropic.com>` from `/etc/gitconfig`.
+
+Commits are not signed. If a repository requires signed commits, re-sign
+the branch on your own computer and force-push:
+
+```bash
+git rebase --exec 'git commit --amend --no-edit -n -S' origin/main
+```
+
 ## Troubleshooting
 
 - A session fails before Claude starts, and the log shows

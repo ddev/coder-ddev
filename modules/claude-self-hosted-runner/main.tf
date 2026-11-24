@@ -49,10 +49,17 @@ locals {
       SessionStart = [{
         # Not "compact" or "clear": by then the changes are the session's own.
         matcher = "startup|resume"
-        hooks = [{
-          type    = "command"
-          command = "/home/coder/.local/bin/claude-checkout-check ${var.base_dir}"
-        }]
+        hooks = [
+          {
+            type    = "command"
+            command = "/home/coder/.local/bin/claude-checkout-check ${var.base_dir}"
+          },
+          {
+            # Commits name the GitHub account of whoever started the session.
+            type    = "command"
+            command = "/home/coder/.local/bin/claude-session-identity"
+          },
+        ]
       }]
     }
   })
