@@ -1,6 +1,9 @@
 # Installed by the claude-self-hosted-runner module. The runner deletes
 # ~/.gitconfig and ~/.config/git before every session, so session git
 # settings live here instead.
+# A SessionStart hook, claude-session-identity, sets GIT_AUTHOR_* and
+# GIT_COMMITTER_* to the GitHub account of whoever started the session. This
+# identity is only the fallback for when that lookup fails.
 [user]
 	name = Claude
 	email = noreply@anthropic.com

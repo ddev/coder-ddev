@@ -310,6 +310,14 @@ run "claude_runner_enabled" {
     error_message = "each runner must get a hooks dir whose post-session hook sweeps its checkouts"
   }
   assert {
+    condition     = strcontains(base64decode(regex("echo '([A-Za-z0-9+/=]+)' \\| base64 -d \\| sudo tee /etc/claude-code/managed-settings.d/coder-runner.json", coder_agent.main.startup_script)[0]), "/home/coder/.local/bin/claude-session-identity")
+    error_message = "startup script must install the SessionStart hook that sets the commit identity to the session's GitHub account"
+  }
+  assert {
+    condition     = strcontains(base64decode(regex("echo '([A-Za-z0-9+/=]+)' \\| base64 -d > ~/.local/bin/claude-session-identity", coder_agent.main.startup_script)[0]), "CLAUDE_ENV_FILE")
+    error_message = "startup script must install claude-session-identity"
+  }
+  assert {
     condition     = strcontains(base64decode(regex("echo '([A-Za-z0-9+/=]+)' \\| base64 -d > ~/.claude-runner/README.md", coder_agent.main.startup_script)[0]), "~/.claude-runner/environment-secret")
     error_message = "startup script must create ~/.claude-runner with a README that says where to save the secret"
   }

@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+# SessionStart hook for Claude Code self-hosted runner sessions: commits name
+# the GitHub account connected to the claude.ai account that started the
+# session, not Claude.
+#
+# With --use-anthropic-git-proxy, the session's git reaches github.com through
+# a local proxy that adds that account's credential. This asks the same proxy
+# for GitHub's /user, the way the session's gh shim does, and writes
+# GIT_AUTHOR_* and GIT_COMMITTER_* to $CLAUDE_ENV_FILE, which Claude Code
+# applies to the session's Bash commands:
+#   name:  the account's profile name, else its login
+#   email: the account's public email, else <id>+<login>@users.noreply.github.com
+# Both are tied to that GitHub account, so commits are credited to it.
+#
+# Never uses the machine's own gh login, which belongs to the runner's owner,
+# not to whoever started the session. When the lookup fails it changes
+# nothing, and commits fall back to the identity in the system git config.
+#
+# Nothing is signed. Sign on your own computer before opening a PR.
+set -u
+
+log() { echo "claude-session-identity: $*; commits use the default git identity" >&2; }
+
+if [ -z "${CLAUDE_ENV_FILE:-}" ]; then
+  log "no CLAUDE_ENV_FILE"
+  exit 0
+fi
+proxy=$(git config --global --get http.https://github.com/.proxy 2>/dev/null)
+ca="${CLAUDE_CONFIG_DIR:-}/ccr/ca-bundle.crt"
+if [ -z "$proxy" ] || [ ! -r "$ca" ]; then
+  log "no Anthropic git proxy in this session"
+  exit 0
+fi
+
+user=""
+for _ in 1 2 3; do
+  if user=$(curl -fsS --max-time 10 -x "$proxy" --cacert "$ca" \
+    -H 'Authorization: token proxy-injected' \
+    -H 'Accept: application/vnd.github+json' \
+    https://api.github.com/user 2>/dev/null); then
+    break
+  fi
+  user=""
+  sleep 1
+done
+if [ -z "$user" ]; then
+  log "GitHub /user through the session proxy failed"
+  exit 0
+fi
+
+login=$(jq -r '.login // empty' <<<"$user")
+id=$(jq -r '.id // empty' <<<"$user")
+name=$(jq -r '.name // empty' <<<"$user")
+email=$(jq -r '.email // empty' <<<"$user")
+case "$id" in
+  '' | *[!0-9]*)
+    log "unexpected /user response"
+    exit 0
+    ;;
+esac
+if [ -z "$login" ]; then
+  log "unexpected /user response"
+  exit 0
+fi
+name="${name:-$login}"
+email="${email:-$id+$login@users.noreply.github.com}"
+
+{
+  printf 'export GIT_AUTHOR_NAME=%q GIT_AUTHOR_EMAIL=%q\n' "$name" "$email"
+  printf 'export GIT_COMMITTER_NAME=%q GIT_COMMITTER_EMAIL=%q\n' "$name" "$email"
+} >>"$CLAUDE_ENV_FILE"
+# SessionStart output reaches Claude as context.
+echo "Git commits in this session are authored as $name <$email>, from the GitHub account (@$login) connected to whoever started the session."
