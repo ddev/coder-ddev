@@ -50,6 +50,14 @@ locals {
       allow = ["Bash(gh-read:*)"]
     }
     hooks = {
+      # Refuses Bash commands that print a credential; see the script.
+      PreToolUse = [{
+        matcher = "Bash"
+        hooks = [{
+          type    = "command"
+          command = "/home/coder/.local/bin/claude-deny-token-commands"
+        }]
+      }]
       SessionStart = [{
         # Not "compact" or "clear": by then the changes are the session's own.
         matcher = "startup|resume"

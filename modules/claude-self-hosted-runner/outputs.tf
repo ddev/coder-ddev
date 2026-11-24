@@ -57,6 +57,8 @@ output "startup_script" {
         chmod +x ~/.local/bin/claude-runner-sweep
         echo '${base64encode(file("${path.module}/files/claude-session-identity"))}' | base64 -d > ~/.local/bin/claude-session-identity
         chmod +x ~/.local/bin/claude-session-identity
+        echo '${base64encode(file("${path.module}/files/claude-deny-token-commands"))}' | base64 -d > ~/.local/bin/claude-deny-token-commands
+        chmod +x ~/.local/bin/claude-deny-token-commands
         sudo mkdir -p /etc/claude-code/managed-settings.d
         echo '${base64encode(local.managed_settings)}' | base64 -d | sudo tee /etc/claude-code/managed-settings.d/coder-runner.json >/dev/null
         mkcert -install >/dev/null 2>&1 || true
