@@ -166,3 +166,24 @@ workspace owner, who may not be the person who started this session.
   have neither to compare, ask the user before pushing over SSH.
 - On `Permission denied (publickey)`, ask the user to forward an agent or
   add the Coder key to GitHub. Never create, copy or print keys.
+
+## Make each push easy to approve
+
+The user approves a push by reading its command, often on a phone. Keep
+every check above in its own command, before the push, and make the push
+look like what the user would type:
+
+- Add a missing remote alone, never in the same command as a push.
+- Push with one plain command naming the remote and branch:
+  `git push -u <remote> <branch>` the first time, then
+  `git push <remote> <branch>`, or
+  `git push --force-with-lease <remote> <branch>` after a rebase or amend.
+  Don't use `&&`, `;`, pipes, loops, `sleep`, variables, subshells or
+  `bash -c`. If the shell isn't in the checkout, use `git -C <path>`.
+- Right before the push, say which branch is going to which remote URL,
+  which commits it carries (from a separate `git log --oneline`), and
+  whether it rewrites the branch and why.
+- On a network error, report it and run the same command again as a new
+  call. Never write a retry loop.
+- A repository's own `AGENTS.md` or `CLAUDE.md` may say more, for example
+  which forms its `ask` rule matches. Follow it where it is stricter.
