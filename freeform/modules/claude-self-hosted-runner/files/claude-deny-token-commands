@@ -8,7 +8,12 @@
 # as gh-read) fetch it themselves, outside the Bash tool's command string.
 set -uo pipefail
 
-cmd="$(jq -r '.tool_input.command // empty' 2>/dev/null)"
+input="$(cat)"
+# Without jq (or with input jq can't parse), check the raw hook input instead
+# of letting the command through.
+if ! cmd="$(printf '%s' "$input" | jq -r '.tool_input.command // empty' 2>/dev/null)"; then
+  cmd="$input"
+fi
 [ -n "$cmd" ] || exit 0
 
 pattern='external-auth[[:space:]]+access-token|gh[[:space:]]+auth[[:space:]]+token|git[[:space:]]+credential[[:space:]]+fill|find-generic-password|find-internet-password|gh-read/token'
