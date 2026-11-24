@@ -10,6 +10,11 @@ output "startup_script" {
     # Claude Code self-hosted runner, in tmux session "claude-runner".
     CLAUDE_RUNNER_ENABLED="${local.enabled}"
     CLAUDE_REMOTE_CONTROL_ENABLED="${var.remote_control_enabled}"
+    # ~/WELCOME.txt persists across restarts in freeform, so drop the status
+    # line an earlier start left there; only the current one is shown below.
+    if [ -f ~/WELCOME.txt ]; then
+      sed -i '/Claude Code self-hosted runner/d' ~/WELCOME.txt
+    fi
     if [ "$CLAUDE_RUNNER_ENABLED" = "true" ]; then
       # Created before the checks below, so the secret has an obvious home.
       mkdir -p ~/.claude-runner
