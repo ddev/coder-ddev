@@ -6,6 +6,20 @@ the root `VERSION` file. The installation uses
 
 This template is experimental. Its display name says so on the templates page.
 
+## Source development checkpoint (2026-11-27)
+
+Branch `20261126_jamesabrahams_source_destination` contains unfinished Source
+support paired with the workbench branch `codex/source-destination`. The new
+immutable destination parameter selects the Storybook-only Source installer,
+keeps credentials outside the public docroot, and suppresses automatic migration
+startup for Source. Existing workspace destinations cannot be changed in place.
+
+The dashboard session attachment helper is included for subsequent wiring into
+the template. Workspace connection controls, packaging and end-to-end migration
+validation remain incomplete. This is a local checkpoint, not a reviewed release
+or a template promotion. Tests and live workspace trials were deferred at the
+operator's request when creating this checkpoint.
+
 ## Shared assets
 
 Like the other templates, this directory holds vendored copies of

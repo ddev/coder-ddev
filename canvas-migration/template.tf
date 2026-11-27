@@ -90,6 +90,24 @@ data "coder_parameter" "start_building_ui" {
   order        = 5
 }
 
+data "coder_parameter" "migration_destination" {
+  name         = "migration_destination"
+  display_name = "Destination CMS"
+  description  = "Source installs Storybook and connects to an existing Source site through the migration dashboard. No Acquia platform key is used."
+  type         = "string"
+  default      = "coder"
+  mutable      = false
+  order        = 2
+  option {
+    name  = "Drupal CMS on Coder"
+    value = "coder"
+  }
+  option {
+    name  = "Existing Acquia Source site"
+    value = "source"
+  }
+}
+
 data "coder_parameter" "migration_source_url" {
   name         = "migration_source_url"
   display_name = "Migration source URL (optional)"
@@ -426,6 +444,7 @@ BASHCOMP
     CODER_WORKSPACE_OWNER_EMAIL = data.coder_workspace_owner.me.email
     CODER_PROJECT_NAMES         = join(",", local.project_names)
     MIGRATION_SOURCE_URL        = data.coder_parameter.migration_source_url.value
+    MIGRATION_DESTINATION       = data.coder_parameter.migration_destination.value
     MIGRATION_GIT_REPOSITORY    = data.coder_parameter.migration_git_repository.value
     MIGRATION_PROJECT_DIR       = "${local.workspace_home}/${local.project_names[0]}"
     HOME                        = "/home/coder"
@@ -484,7 +503,7 @@ module "claude_remote_control" {
   default_skip_permissions = true
   project_directory        = "${local.workspace_home}/${local.project_names[0]}"
   # Compared as a string: the tftest mock returns "" for unset parameters.
-  launch_script = data.coder_parameter.start_building_ui.value == "true" ? file("${path.module}/start-building-ui.sh") : ""
+  launch_script = data.coder_parameter.start_building_ui.value == "true" && data.coder_parameter.migration_destination.value != "source" ? file("${path.module}/start-building-ui.sh") : ""
 }
 
 module "claude_self_hosted_runner" {

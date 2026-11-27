@@ -11,6 +11,16 @@ state="$HOME/.local/state/canvas-migration"
 mkdir -p "$state"
 exec 9>"$state/lock"
 flock -n 9 || { echo 'Migration setup is already running.'; exit 1; }
+destination="${MIGRATION_DESTINATION:-coder}"
+[[ "$destination" == coder || "$destination" == source ]] || { echo 'Invalid migration destination.'; exit 1; }
+previous=""
+[[ ! -f "$state/destination" ]] || previous="$(cat "$state/destination")"
+if [[ -f "$state/installed" && -z "$previous" ]]; then previous=coder; fi
+if [[ -n "$previous" && "$previous" != "$destination" ]]; then
+  echo 'This workspace belongs to a different destination. Create a new workspace; existing storage is unchanged.' >&2
+  exit 1
+fi
+printf '%s\n' "$destination" > "$state/destination"
 exec > >(tee -a "$state/setup.log") 2>&1
 trap 'rc=$?; if (( rc != 0 )); then printf "failed; see Migration setup log\n" > "$state/status"; fi' EXIT
 printf 'starting\n' > "$state/status"
@@ -27,17 +37,30 @@ if [[ ! -f "$state/installed" ]]; then
     echo 'Inspect the log and repair the project before running migration-setup --verify-existing.'
     [[ "${1:-}" == '--verify-existing' ]] || exit 1
   else
-    printf 'installing Drupal CMS, Canvas, Storybook and MCP\n' > "$state/status"
+    printf 'installing %s workspace\n' "$destination" > "$state/status"
     curl --fail --silent --show-error --location --retry 3 \
       https://aibp.drupalstarforge.ai/install.sh -o "$state/installer.sh"
-    bash "$state/installer.sh" \
-      https://gitlab.com/freelygive/canvas-storybook-ai@feat/coder \
-      --config drupal-cms-coder --name "$project" --yolo
+    if [[ "$destination" == source ]]; then
+      bash "$state/installer.sh" \
+        https://gitlab.com/freelygive/canvas-storybook-ai \
+        --ref 917a01a6e1477d857f7521234d495346847cfb37 \
+        --config source --name "$project" --yolo
+    else
+      bash "$state/installer.sh" \
+        https://gitlab.com/freelygive/canvas-storybook-ai@feat/coder \
+        --config drupal-cms-coder --name "$project" --yolo
+    fi
   fi
 fi
 
 cd "$HOME/$project"
 [[ -f .ddev/config.yaml ]] || { echo 'Missing DDEV configuration.'; false; }
+if [[ "$destination" == source ]]; then
+  # Credentials and the component repository must be outside the served docroot.
+  mkdir -p public
+  ddev config --docroot=public
+  ddev coder-setup
+fi
 # JSON is valid YAML. jq safely encodes quotes and newlines in optional user input.
 jq -n --arg source "${MIGRATION_SOURCE_URL:-}" --arg repo "${MIGRATION_GIT_REPOSITORY:-}" \
   '{web_environment: ["MIGRATION_SOURCE_URL=" + $source, "MIGRATION_GIT_REPOSITORY=" + $repo]}' \
@@ -49,12 +72,18 @@ else
   ddev start
 fi
 
+if [[ "$destination" == coder ]]; then
 printf 'checking Drupal and MCP\n' > "$state/status"
 ddev drush status --field=bootstrap | grep -qx Successful
 jq -e '.mcpServers.drupal.headersHelper and .mcpServers.storybook.url' .mcp.json >/dev/null
 [[ -x .claude/mcp-headers.sh ]]
 # Validate the credential exchange without logging its token.
 .claude/mcp-headers.sh | jq -e '.Authorization | startswith("Bearer ") and length > 7' >/dev/null
+else
+  tmp="$(mktemp)"
+  jq '.mcpServers.storybook = {type:"http",url:"http://localhost:6005/mcp"}' .mcp.json > "$tmp"
+  mv "$tmp" .mcp.json
+fi
 printf 'checking Storybook\n' > "$state/status"
 curl --fail --silent --show-error --retry 12 --retry-delay 5 --retry-all-errors \
   --max-time 10 "http://localhost:6005/" -o /dev/null
@@ -107,6 +136,40 @@ connection. If tools are missing or a request fails, explain which connection is
 unavailable and suggest checking `/mcp`; do not ask the user to set everything
 up again or claim both servers are connected without evidence.
 GUIDANCE
+
+if [[ "$destination" == source ]]; then
+  cat > .claude/rules/coder-workspace.md <<'SOURCE_GUIDANCE'
+# Acquia Source migration workspace
+
+Storybook and the migration agent run here; the destination CMS is an existing
+Acquia Source site. There is no local Drupal installation. Use `ddev npm` for
+Canvas CLI and component work. Use the `source` MCP server for destination
+content and `storybook` for component previews. Start with `/building-ui`.
+
+Connect the site's per-site API client through the migration dashboard, then
+check the workspace connections before migration. Never request a personal
+Acquia platform key. Do not create sites through the platform API.
+
+Credentials live in ignored private files. Do not print .env, OAuth tokens,
+headers-helper output or client secrets. The Source headers helper obtains a
+fresh token for each connection. If authentication fails, stop destination
+writes and ask the operator to reconnect in the dashboard. Lost contact does
+not mean migration finished or stopped.
+
+MIGRATION_SOURCE_URL is the read-only origin to migrate. The destination and
+public site URL are the values configured by the operator, not this workspace's
+local PHP app. Git publication and Canvas publication are separate decisions;
+follow the migration preferences supplied by the dashboard.
+SOURCE_GUIDANCE
+  if [[ ! -f "$state/source-browser-tools" ]]; then
+    if npm install -g agent-browser && npx --yes playwright install --with-deps chromium; then
+      touch "$state/source-browser-tools"
+    else
+      echo 'Browser tooling needs repair before visual migration checks.' >&2
+      exit 1
+    fi
+  fi
+fi
 
 touch "$state/installed"
 printf 'ready\n' > "$state/status"
